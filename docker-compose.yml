@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: moi-vibaram-server
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - MONGO_URI=mongodb+srv://leelatechgudal_db_user:GjwJVNLkMNx0P1P0@leelatechcluster.pqkloc9.mongodb.net/?appName=LeelaTechCluster
+      - JWT_SECRET=REPLACE_ME_WITH_64_BYTE_RANDOM_HEX
+      - JWT_EXPIRES_IN=15m
+      - CLIENT_URL=http://localhost:80
+      - EMAIL_USER=your_gmail@gmail.com
+      - EMAIL_PASS=your_app_password
+    depends_on:
+      - mongodb
+
+  # Frontend Client
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: moi-vibaram-client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  # Database (Optional if using MongoDB Atlas)
+  mongodb:
+    image: mongo:7
+    container_name: moi-vibaram-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
