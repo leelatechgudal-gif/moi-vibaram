@@ -15,7 +15,7 @@ services:
       - MONGO_URI=mongodb+srv://leelatechgudal_db_user:GjwJVNLkMNx0P1P0@leelatechcluster.pqkloc9.mongodb.net/?appName=LeelaTechCluster
       - JWT_SECRET=REPLACE_ME_WITH_64_BYTE_RANDOM_HEX
       - JWT_EXPIRES_IN=15m
-      - CLIENT_URL=http://localhost:80
+      - CLIENT_URL=http://host.docker.internal:80 # use localhost if not using docker 
       - EMAIL_USER=your_gmail@gmail.com
       - EMAIL_PASS=your_app_password
     depends_on:

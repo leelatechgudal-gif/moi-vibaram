@@ -38,8 +38,9 @@ Install and start:
 ```bash
 npm install
 npm run dev
-```
 
+```
+## User host.docker.internal instead of localhost when runnig with Docker
 Backend runs at: **http://localhost:5000**
 
 ---
