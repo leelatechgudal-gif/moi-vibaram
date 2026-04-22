@@ -11,6 +11,7 @@ const navItems = [
     { icon: '📅', key: 'upcomingEvents', path: '/upcoming' },
     { icon: '📊', key: 'balanceSheet', path: '/balance-sheet' },
     { icon: '📋', key: 'masterSheet', path: '/master-sheet' },
+    { icon: '📂', key: 'Bulk Upload', path: '/bulk-upload' },
     { icon: '🔍', key: 'search', path: '/search' },
     { icon: '👤', key: 'profile', path: '/profile' },
 ]
@@ -52,12 +53,21 @@ export default function Navbar() {
                         {t(item.key)}
                     </NavLink>
                 ))}
+                {user?.role === 'admin' && (
+                    <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
+                        <span className="nav-icon">🛡️</span> Admin Dashboard
+                    </NavLink>
+                )}
             </nav>
             <div className="sidebar-footer">
-                <div style={{ marginBottom: 10 }}>
+                <div style={{ marginBottom: 10, display: 'flex', gap: 10 }}>
                     <button className="lang-toggle" onClick={toggleLang}>
                         🌐 {lang === 'en' ? 'தமிழ்' : 'English'}
                     </button>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+                    <div>📞 Customer Care: +91 98765 43210</div>
+                    <div><a href="mailto:feedback@moivibaram.com" style={{ color: 'var(--primary)', textDecoration: 'none' }}>✉️ Send Feedback</a></div>
                 </div>
                 {user && (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>

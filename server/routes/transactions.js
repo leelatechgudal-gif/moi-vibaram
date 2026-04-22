@@ -7,13 +7,30 @@ const auth = require('../middleware/auth');
 // GET /api/transactions - All transactions (with optional filters)
 router.get('/', auth, async (req, res) => {
     try {
-        const { eventId, type } = req.query;
+        const { eventId, type, page, limit } = req.query;
         const filter = { userId: req.userId };
         if (eventId) filter.eventId = eventId;
         if (type) filter.type = type;
 
-        const transactions = await Transaction.find(filter).populate('eventId').sort({ date: -1 });
-        res.json(transactions);
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit) || 20;
+
+        if (pageNum) {
+            const skip = (pageNum - 1) * limitNum;
+            const total = await Transaction.countDocuments(filter);
+            const transactions = await Transaction.find(filter).populate('eventId').sort({ date: -1 }).skip(skip).limit(limitNum);
+            res.json({
+                data: transactions,
+                total,
+                page: pageNum,
+                totalPages: Math.ceil(total / limitNum),
+                hasMore: pageNum * limitNum < total
+            });
+        } else {
+            // Legacy behavior for unpaginated requests
+            const transactions = await Transaction.find(filter).populate('eventId').sort({ date: -1 });
+            res.json(transactions);
+        }
     } catch (err) {
         console.error("[transactions]", err);
         res.status(500).json({ message: "Request failed. Please try again." });
@@ -24,9 +41,9 @@ router.get('/', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
     try {
         const {
-            eventId, partyName, spouseName, nickname, occupation,
+            eventId, partyName, initial, fatherName, motherName, spouseName, nickname, occupation,
             location, street, mobile, type, cashAmount, date,
-            seerVarisai, remarks,
+            seerVarisai, remarks, thaiMama, labels
         } = req.body;
 
         const event = await Event.findOne({ _id: eventId, userId: req.userId });
@@ -35,12 +52,14 @@ router.post('/', auth, async (req, res) => {
         const transaction = new Transaction({
             userId: req.userId,
             eventId,
-            partyName, spouseName, nickname, occupation,
+            partyName, initial, fatherName, motherName, spouseName, nickname, occupation,
             location, street, mobile, type,
             cashAmount: cashAmount || 0,
             date: date || Date.now(),
             seerVarisai,
             remarks,
+            thaiMama,
+            labels
         });
         await transaction.save();
         const populated = await transaction.populate('eventId');
@@ -51,13 +70,36 @@ router.post('/', auth, async (req, res) => {
     }
 });
 
-// PUT /api/transactions/:id - Edit transaction
+// POST /api/transactions/bulk - Bulk create Moi entries
+router.post('/bulk', auth, async (req, res) => {
+    try {
+        const { transactions } = req.body;
+        if (!Array.isArray(transactions) || transactions.length === 0) {
+            return res.status(400).json({ message: 'No transactions provided' });
+        }
+
+        const toInsert = transactions.map(t => ({
+            ...t,
+            userId: req.userId,
+            date: t.date ? new Date(t.date) : Date.now(),
+            cashAmount: parseFloat(t.cashAmount) || 0
+        }));
+
+        await Transaction.insertMany(toInsert);
+        res.status(201).json({ message: `${toInsert.length} entries added successfully` });
+    } catch (err) {
+        console.error("[transactions bulk]", err);
+        res.status(500).json({ message: "Bulk insert failed. Please check your data." });
+    }
+});
+
+
 router.put('/:id', auth, async (req, res) => {
     try {
         const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.userId });
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
-        const fields = ['partyName', 'spouseName', 'nickname', 'occupation', 'location', 'street', 'mobile', 'type', 'cashAmount', 'date', 'seerVarisai', 'remarks'];
+        const fields = ['partyName', 'initial', 'fatherName', 'motherName', 'spouseName', 'nickname', 'occupation', 'location', 'street', 'mobile', 'type', 'cashAmount', 'date', 'seerVarisai', 'remarks', 'thaiMama', 'labels'];
         fields.forEach(f => { if (req.body[f] !== undefined) transaction[f] = req.body[f]; });
         await transaction.save();
         const populated = await transaction.populate('eventId');
@@ -90,6 +132,7 @@ router.get('/balance-sheet', auth, async (req, res) => {
             const key = t.mobile || t.partyName;
             if (!partyMap[key]) {
                 partyMap[key] = {
+                    initial: t.initial,
                     partyName: t.partyName,
                     spouseName: t.spouseName,
                     mobile: t.mobile,
@@ -158,10 +201,10 @@ router.get('/master-sheet', auth, async (req, res) => {
 // Escape special regex chars to prevent ReDoS attacks
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// GET /api/transactions/search?q=&location=&eventId=
+// GET /api/transactions/search?q=&location=&eventId=&page=&limit=
 router.get('/search', auth, async (req, res) => {
     try {
-        const { q, location, eventId } = req.query;
+        const { q, location, eventId, page, limit } = req.query;
         const filter = { userId: req.userId };
         if (eventId) filter.eventId = eventId;
         if (location) filter.location = new RegExp(escapeRegex(location), 'i');
@@ -171,14 +214,46 @@ router.get('/search', auth, async (req, res) => {
                 { partyName: new RegExp(safeQ, 'i') },
                 { nickname: new RegExp(safeQ, 'i') },
                 { mobile: new RegExp(safeQ, 'i') },
+                { street: new RegExp(safeQ, 'i') },
+                { fatherName: new RegExp(safeQ, 'i') },
+                { motherName: new RegExp(safeQ, 'i') },
+                { labels: new RegExp(safeQ, 'i') },
             ];
         }
 
-        const results = await Transaction.find(filter).populate('eventId').sort({ date: -1 });
-        res.json(results);
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit) || 20;
+
+        if (pageNum) {
+            const skip = (pageNum - 1) * limitNum;
+            const total = await Transaction.countDocuments(filter);
+            const results = await Transaction.find(filter).populate('eventId').sort({ date: -1 }).skip(skip).limit(limitNum);
+            res.json({
+                data: results,
+                total,
+                page: pageNum,
+                totalPages: Math.ceil(total / limitNum),
+                hasMore: pageNum * limitNum < total
+            });
+        } else {
+            const results = await Transaction.find(filter).populate('eventId').sort({ date: -1 });
+            res.json(results);
+        }
     } catch (err) {
         console.error('[search]', err);
         res.status(500).json({ message: 'Search failed. Please try again.' });
+    }
+});
+
+// GET /api/transactions/:id
+router.get('/:id', auth, async (req, res) => {
+    try {
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.userId }).populate('eventId');
+        if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
+        res.json(transaction);
+    } catch (err) {
+        console.error("[transactions]", err);
+        res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
 

@@ -10,17 +10,37 @@ export default function Search() {
     const [results, setResults] = useState([])
     const [loading, setLoading] = useState(false)
     const [searched, setSearched] = useState(false)
+    const [page, setPage] = useState(1)
+    const [hasMore, setHasMore] = useState(false)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [totalResults, setTotalResults] = useState(0)
     const printRef = useRef()
 
-    const doSearch = async (e) => {
+    const doSearch = async (e, pageNum = 1) => {
         e?.preventDefault()
-        setLoading(true)
+        if (pageNum === 1) setLoading(true)
+        else setLoadingMore(true)
         setSearched(true)
         try {
-            const res = await transactionsAPI.search({ q: query, location })
-            setResults(res.data)
+            const res = await transactionsAPI.search({ q: query, location, page: pageNum, limit: 10 })
+            const { data, hasMore: more, total } = res.data
+            if (pageNum === 1) {
+                setResults(data)
+            } else {
+                setResults(prev => [...prev, ...data])
+            }
+            setPage(pageNum)
+            setHasMore(more)
+            setTotalResults(total)
         } finally {
             setLoading(false)
+            setLoadingMore(false)
+        }
+    }
+
+    const loadMore = () => {
+        if (!loadingMore && hasMore) {
+            doSearch(null, page + 1)
         }
     }
 
@@ -79,7 +99,7 @@ export default function Search() {
                 ) : (
                     <div ref={printRef} className="card table-wrap">
                         <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-muted)' }}>
-                            {results.length} result(s) found
+                            Showing {results.length} of {totalResults} result(s) found
                         </div>
                         <table className="table">
                             <thead>
@@ -116,6 +136,13 @@ export default function Search() {
                                 ))}
                             </tbody>
                         </table>
+                        {hasMore && (
+                            <div style={{ textAlign: 'center', marginTop: 16 }}>
+                                <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
+                                    {loadingMore ? <span className="spinner" /> : 'Load More'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )
             )}

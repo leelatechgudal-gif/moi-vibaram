@@ -9,6 +9,7 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@simplewebauthn/browser": "^13.3.0",
         "axios": "^1.6.8",
         "html5-qrcode": "^2.3.8",
         "i18next": "^23.11.2",

@@ -36,6 +36,38 @@ router.get('/profile', auth, async (req, res) => {
     }
 });
 
+// GET /api/users/admin/all
+router.get('/admin/all', auth, async (req, res) => {
+    try {
+        const adminUser = await User.findById(req.userId);
+        if (adminUser.role !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden: Admins only' });
+        }
+        const { page, limit } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit) || 20;
+
+        if (pageNum) {
+            const skip = (pageNum - 1) * limitNum;
+            const total = await User.countDocuments();
+            const users = await User.find().select('-passwordHash -otpCode -otpExpiry -webAuthnCredentials -activeSessions').sort({ createdAt: -1 }).skip(skip).limit(limitNum);
+            res.json({
+                data: users,
+                total,
+                page: pageNum,
+                totalPages: Math.ceil(total / limitNum),
+                hasMore: pageNum * limitNum < total
+            });
+        } else {
+            const users = await User.find().select('-passwordHash -otpCode -otpExpiry -webAuthnCredentials -activeSessions').sort({ createdAt: -1 });
+            res.json(users);
+        }
+    } catch (err) {
+        console.error('[users]', err);
+        res.status(500).json({ message: 'Failed to fetch users' });
+    }
+});
+
 // PUT /api/users/profile
 router.put('/profile', auth, async (req, res) => {
     try {

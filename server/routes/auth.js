@@ -32,7 +32,11 @@ router.post('/register', async (req, res) => {
         await user.save();
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
-        res.status(201).json({ token, user: { _id: user._id, name, email, mobile, location, street, qrCode } });
+        
+        user.activeSessions = [token];
+        await user.save();
+
+        res.status(201).json({ token, user: { _id: user._id, name, email, mobile, location, street, qrCode, role: user.role } });
     } catch (err) {
         console.error('[register]', err);
         res.status(500).json({ message: 'Registration failed. Please try again.' });
@@ -49,10 +53,31 @@ router.post('/login', async (req, res) => {
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
 
+        if (user.activeSessions && user.activeSessions.length >= 3) {
+            // Clean up expired tokens first
+            const validSessions = user.activeSessions.filter(t => {
+                try {
+                    jwt.verify(t, process.env.JWT_SECRET);
+                    return true;
+                } catch(e) {
+                    return false;
+                }
+            });
+            if (validSessions.length >= 3) {
+                return res.status(403).json({ message: 'Maximum 3 logins permitted. Please logout from another device.' });
+            }
+            user.activeSessions = validSessions;
+        }
+
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+        
+        if (!user.activeSessions) user.activeSessions = [];
+        user.activeSessions.push(token);
+        await user.save();
+
         res.json({
             token,
-            user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode }
+            user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role }
         });
     } catch (err) {
         console.error('[login]', err);
@@ -112,6 +137,33 @@ router.post('/verify-otp', async (req, res) => {
     } catch (err) {
         console.error('[verify-otp]', err);
         res.status(500).json({ message: 'Reset failed. Please try again.' });
+    }
+});
+
+// POST /api/auth/logout
+router.post('/logout', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (token) {
+            // We verify but ignore expiration so even expired tokens can be logged out.
+            let decoded;
+            try {
+                decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+            } catch (e) {
+                // If it fails verification completely, do nothing
+            }
+            if (decoded) {
+                const user = await User.findById(decoded.userId);
+                if (user && user.activeSessions) {
+                    user.activeSessions = user.activeSessions.filter(t => t !== token);
+                    await user.save();
+                }
+            }
+        }
+        res.json({ message: 'Logged out successfully' });
+    } catch (err) {
+        console.error('[logout]', err);
+        res.status(500).json({ message: 'Logout failed.' });
     }
 });
 

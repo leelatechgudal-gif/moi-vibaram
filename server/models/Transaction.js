@@ -15,6 +15,9 @@ const transactionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
     partyName: { type: String, required: true },
+    initial: String,
+    fatherName: String,
+    motherName: String,
     spouseName: String,
     nickname: String,
     occupation: String,
@@ -24,8 +27,15 @@ const transactionSchema = new mongoose.Schema({
     type: { type: String, enum: ['received', 'paid'], required: true },
     cashAmount: { type: Number, default: 0 },
     date: { type: Date, default: Date.now },
+    thaiMama: { type: Boolean, default: false },
+    labels: [{ type: String }], // For user-defined labels/groups
     seerVarisai: seerVarisaiSchema,
     remarks: String,
+    editHistory: [{ // Audit log for modifications
+        editedAt: { type: Date, default: Date.now },
+        editedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        changes: mongoose.Schema.Types.Mixed // Store what was changed
+    }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

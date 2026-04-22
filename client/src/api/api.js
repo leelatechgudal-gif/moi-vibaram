@@ -27,6 +27,7 @@ export const authAPI = {
     login: data => api.post('/auth/login', data),
     forgotPassword: data => api.post('/auth/forgot-password', data),
     verifyOTP: data => api.post('/auth/verify-otp', data),
+    logout: () => api.post('/auth/logout'),
 };
 
 export const usersAPI = {
@@ -44,8 +45,10 @@ export const eventsAPI = {
 };
 
 export const transactionsAPI = {
+    getById: id => api.get(`/transactions/${id}`),
     getAll: params => api.get('/transactions', { params }),
     create: data => api.post('/transactions', data),
+    bulkCreate: data => api.post('/transactions/bulk', data),
     update: (id, data) => api.put(`/transactions/${id}`, data),
     delete: id => api.delete(`/transactions/${id}`),
     getBalanceSheet: () => api.get('/transactions/balance-sheet'),

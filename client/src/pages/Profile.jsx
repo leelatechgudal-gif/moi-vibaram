@@ -4,6 +4,8 @@ import { usersAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useReactToPrint } from 'react-to-print'
+import { startRegistration } from '@simplewebauthn/browser'
+import api from '../api/api'
 
 export default function Profile() {
     const { t } = useTranslation()
@@ -70,6 +72,22 @@ export default function Profile() {
     const qrValue = profileData
         ? JSON.stringify({ name: profileData.name, mobile: profileData.mobile, location: profileData.location, street: profileData.street })
         : ''
+
+    const setupFingerprint = async () => {
+        try {
+            const resp = await api.post('/webauthn/register-options');
+            const attResp = await startRegistration(resp.data);
+            const verificationResp = await api.post('/webauthn/register-verify', attResp);
+            if (verificationResp.data.verified) {
+                alert('Fingerprint registered successfully!');
+            } else {
+                alert('Verification failed');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to setup fingerprint. Ensure you are on a secure context (HTTPS/localhost) and your device supports biometrics.');
+        }
+    };
 
     if (loading) return <div className="flex-center" style={{ height: 300 }}><span className="spinner" /></div>
 
@@ -180,6 +198,13 @@ export default function Profile() {
                     <button className="btn btn-primary btn-sm mt-8 no-print" onClick={handlePrint}>
                         🖨️ Download / Print QR
                     </button>
+                    
+                    <div style={{ marginTop: 32, borderTop: '1px solid var(--glass-border)', paddingTop: 16 }}>
+                        <h4 style={{ fontWeight: 600, marginBottom: 12 }}>🔒 Security</h4>
+                        <button className="btn btn-secondary btn-sm" onClick={setupFingerprint} style={{ width: '100%', justifyContent: 'center' }}>
+                            👆 Setup Fingerprint Login
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

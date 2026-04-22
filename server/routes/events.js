@@ -27,8 +27,25 @@ const upload = multer({
 // GET /api/events - My events list
 router.get('/', auth, async (req, res) => {
     try {
-        const events = await Event.find({ userId: req.userId }).sort({ date: -1 });
-        res.json(events);
+        const { page, limit } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit) || 20;
+
+        if (pageNum) {
+            const skip = (pageNum - 1) * limitNum;
+            const total = await Event.countDocuments({ userId: req.userId });
+            const events = await Event.find({ userId: req.userId }).sort({ date: -1 }).skip(skip).limit(limitNum);
+            res.json({
+                data: events,
+                total,
+                page: pageNum,
+                totalPages: Math.ceil(total / limitNum),
+                hasMore: pageNum * limitNum < total
+            });
+        } else {
+            const events = await Event.find({ userId: req.userId }).sort({ date: -1 });
+            res.json(events);
+        }
     } catch (err) {
         console.error('[events]', err);
         res.status(500).json({ message: 'Request failed. Please try again.' });
@@ -38,6 +55,10 @@ router.get('/', auth, async (req, res) => {
 // GET /api/events/upcoming - Events where Moi has not been paid back
 router.get('/upcoming', auth, async (req, res) => {
     try {
+        const { page, limit } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit) || 20;
+
         // Find all parties that I received Moi from, and check if I have paid them back
         const received = await Transaction.find({ userId: req.userId, type: 'received' }).populate('eventId');
         const paid = await Transaction.find({ userId: req.userId, type: 'paid' });
@@ -52,6 +73,7 @@ router.get('/upcoming', auth, async (req, res) => {
             const key = t.mobile || t.partyName;
             if (!partyMap[key]) {
                 partyMap[key] = {
+                    initial: t.initial,
                     partyName: t.partyName,
                     mobile: t.mobile,
                     location: t.location,
@@ -63,7 +85,22 @@ router.get('/upcoming', auth, async (req, res) => {
             partyMap[key].cashAmount += t.cashAmount || 0;
         });
 
-        res.json(Object.values(partyMap));
+        const allUpcoming = Object.values(partyMap);
+        
+        if (pageNum) {
+            const total = allUpcoming.length;
+            const skip = (pageNum - 1) * limitNum;
+            const paginated = allUpcoming.slice(skip, skip + limitNum);
+            res.json({
+                data: paginated,
+                total,
+                page: pageNum,
+                totalPages: Math.ceil(total / limitNum),
+                hasMore: pageNum * limitNum < total
+            });
+        } else {
+            res.json(allUpcoming);
+        }
     } catch (err) {
         console.error('[events]', err);
         res.status(500).json({ message: 'Request failed. Please try again.' });

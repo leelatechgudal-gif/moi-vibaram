@@ -9,18 +9,40 @@ export default function Dashboard() {
     const { t } = useTranslation()
     const { user } = useAuth()
     const [data, setData] = useState(null)
-    const [recent, setRecent] = useState([])
+    const [expandedEvent, setExpandedEvent] = useState(null)
+    const [searchQuery, setSearchQuery] = useState('')
     const [loading, setLoading] = useState(true)
+    
+    // Pagination state for event transactions
+    const [eventTxMap, setEventTxMap] = useState({})
+    const [eventPages, setEventPages] = useState({})
+    const [eventHasMore, setEventHasMore] = useState({})
+    const [loadingTx, setLoadingTx] = useState(false)
     const printRef = useRef()
 
     useEffect(() => {
-        Promise.all([transactionsAPI.getMasterSheet(), transactionsAPI.getAll({})])
-            .then(([ms, tx]) => {
-                setData(ms.data)
-                setRecent(tx.data.slice(0, 5))
-            })
+        transactionsAPI.getMasterSheet()
+            .then(res => setData(res.data))
             .finally(() => setLoading(false))
     }, [])
+
+    const loadEventTransactions = async (eventId, pageNum = 1) => {
+        setLoadingTx(true);
+        try {
+            const res = await transactionsAPI.getAll({ eventId, page: pageNum, limit: 10 });
+            const { data, hasMore } = res.data;
+            setEventTxMap(prev => ({
+                ...prev,
+                [eventId]: pageNum === 1 ? data : [...(prev[eventId] || []), ...data]
+            }));
+            setEventPages(prev => ({ ...prev, [eventId]: pageNum }));
+            setEventHasMore(prev => ({ ...prev, [eventId]: hasMore }));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoadingTx(false);
+        }
+    };
 
     const handlePrint = useReactToPrint({ content: () => printRef.current })
     const handleShare = () => {
@@ -69,38 +91,118 @@ export default function Dashboard() {
 
                     <div className="card">
                         <div className="flex-between mb-16">
-                            <h3 style={{ fontWeight: 700 }}>Recent Transactions</h3>
-                            <Link to="/master-sheet" className="auth-link" style={{ fontSize: 13 }}>View All →</Link>
+                            <h3 style={{ fontWeight: 700 }}>Events Summary</h3>
+                            <Link to="/master-sheet" className="auth-link" style={{ fontSize: 13 }}>View Master Sheet →</Link>
                         </div>
-                        {recent.length === 0 ? (
+                        {!data?.events || data.events.length === 0 ? (
                             <div className="empty-state">
                                 <div className="empty-icon">📭</div>
-                                <div>No transactions yet. <Link to="/transactions/new" className="auth-link">Create your first Moi</Link></div>
+                                <div>No events found. <Link to="/transactions/new" className="auth-link">Create your first Moi</Link></div>
                             </div>
                         ) : (
-                            <div className="table-wrap">
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>{t('partyName')}</th>
-                                            <th>{t('eventName')}</th>
-                                            <th>{t('type')}</th>
-                                            <th>{t('amount')}</th>
-                                            <th>{t('date')}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {recent.map(tx => (
-                                            <tr key={tx._id}>
-                                                <td><strong>{tx.partyName}</strong><br /><span className="text-muted">{tx.location}</span></td>
-                                                <td>{tx.eventId?.eventName}</td>
-                                                <td><span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>{t(tx.type)}</span></td>
-                                                <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
-                                                <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {data.events.map(event => {
+                                    const isExpanded = expandedEvent === event._id;
+                                    const eventTx = eventTxMap[event._id] || [];
+                                    
+                                    const filteredTx = eventTx.filter(t => 
+                                        t.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                        t.mobile?.includes(searchQuery) ||
+                                        t.location?.toLowerCase().includes(searchQuery.toLowerCase())
+                                    );
+
+                                    return (
+                                        <div key={event._id} style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+                                            <div 
+                                                style={{ padding: 16, background: 'var(--glass)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                                onClick={() => {
+                                                    if (!isExpanded && !eventTxMap[event._id]) {
+                                                        loadEventTransactions(event._id, 1);
+                                                    }
+                                                    setExpandedEvent(isExpanded ? null : event._id);
+                                                    setSearchQuery('');
+                                                }}
+                                            >
+                                                <div>
+                                                    <div style={{ fontWeight: 700, fontSize: 16 }}>{event.eventName}</div>
+                                                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                                                        {new Date(event.date).toLocaleDateString('en-IN')} {event.location && `• ${event.location}`}
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 16, alignItems: 'center', textAlign: 'right' }}>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Invested</div>
+                                                        <div className="text-success" style={{ fontWeight: 600 }}>{fmt(event.totalPaid)}</div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Received</div>
+                                                        <div className="text-primary" style={{ fontWeight: 600 }}>{fmt(event.totalReceived)}</div>
+                                                    </div>
+                                                    <div style={{ fontSize: 18 }}>{isExpanded ? '🔽' : '▶️'}</div>
+                                                </div>
+                                            </div>
+                                            
+                                            {isExpanded && (
+                                                <div style={{ padding: 16, borderTop: '1px solid var(--border)' }}>
+                                                    <div style={{ marginBottom: 16 }}>
+                                                        <input 
+                                                            type="search" 
+                                                            className="form-control" 
+                                                            placeholder="Search loaded transactions..." 
+                                                            value={searchQuery}
+                                                            onChange={e => setSearchQuery(e.target.value)}
+                                                        />
+                                                    </div>
+                                                    {loadingTx && eventTx.length === 0 ? (
+                                                        <div className="flex-center"><span className="spinner" /></div>
+                                                    ) : filteredTx.length === 0 ? (
+                                                        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No transactions found.</div>
+                                                    ) : (
+                                                        <div className="table-wrap">
+                                                            <table className="table">
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>{t('partyName')}</th>
+                                                                        <th>{t('type')}</th>
+                                                                        <th>{t('amount')}</th>
+                                                                        <th>{t('date')}</th>
+                                                                        <th>Action</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {filteredTx.map(tx => (
+                                                                        <tr key={tx._id}>
+                                                                            <td><strong>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong><br /><span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span></td>
+                                                                            <td><span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>{t(tx.type)}</span></td>
+                                                                            <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
+                                                                            <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                                                            <td>
+                                                                                <Link to={`/transactions/edit/${tx._id}`} className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: 11 }}>
+                                                                                    ✏️ Edit
+                                                                                </Link>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                            {eventHasMore[event._id] && !searchQuery && (
+                                                                <div style={{ textAlign: 'center', marginTop: 16 }}>
+                                                                    <button 
+                                                                        className="btn btn-secondary" 
+                                                                        onClick={() => loadEventTransactions(event._id, (eventPages[event._id] || 1) + 1)}
+                                                                        disabled={loadingTx}
+                                                                    >
+                                                                        {loadingTx ? <span className="spinner" /> : 'Load More Transactions'}
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

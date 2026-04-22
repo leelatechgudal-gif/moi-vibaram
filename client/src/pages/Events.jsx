@@ -2,12 +2,23 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { eventsAPI } from '../api/api'
 import { useReactToPrint } from 'react-to-print'
+import { useNavigate } from 'react-router-dom'
 
-const EVENT_NAMES = ['Wedding', 'Engagement', 'Seemantham', 'Birthday', 'Housewarming', 'Thread Ceremony', 'Ear Piercing', 'Other']
+const EVENT_NAMES = [
+    { en: 'Wedding', ta: 'திருமணம்' },
+    { en: 'Engagement', ta: 'நிச்சயதார்த்தம்' },
+    { en: 'Seemantham', ta: 'சீமந்தம்' },
+    { en: 'Vasantha Vila', ta: 'வசந்த விழா' },
+    { en: 'Birthday', ta: 'பிறந்தநாள்' },
+    { en: 'Housewarming', ta: 'புதுமனை புகுவிழா' },
+    { en: 'Ear Piercing', ta: 'காதணி விழா' },
+    { en: 'Puberty Ceremony', ta: 'பூப்புனித நீராட்டு விழா' },
+    { en: 'Other', ta: 'மற்றவை' }
+]
 
 function EventModal({ event, onClose, onSave }) {
     const { t } = useTranslation()
-    const [form, setForm] = useState(event || { eventName: '', date: '', venue: '', location: '', city: '' })
+    const [form, setForm] = useState(event || { eventName: '', customEventName: '', date: '', venue: '', location: '', city: '' })
     const [file, setFile] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -20,7 +31,13 @@ function EventModal({ event, onClose, onSave }) {
         setError('')
         try {
             const fd = new FormData()
-            Object.entries(form).forEach(([k, v]) => v && fd.append(k, v))
+            const submitForm = { ...form };
+            if (submitForm.eventName === 'Other' && submitForm.customEventName) {
+                submitForm.eventName = submitForm.customEventName;
+            }
+            delete submitForm.customEventName;
+
+            Object.entries(submitForm).forEach(([k, v]) => v && fd.append(k, v))
             if (file) fd.append('invitation', file)
             const res = event?._id ? await eventsAPI.update(event._id, fd) : await eventsAPI.create(fd)
             onSave(res.data)
@@ -40,11 +57,17 @@ function EventModal({ event, onClose, onSave }) {
                 <form onSubmit={onSubmit}>
                     <div className="form-group">
                         <label className="form-label">{t('eventName')} *</label>
-                        <select className="form-control" name="eventName" value={form.eventName} onChange={onChange} required>
+                        <select className="form-control" name="eventName" value={EVENT_NAMES.find(n => n.en === form.eventName) ? form.eventName : (form.eventName ? 'Other' : '')} onChange={onChange} required>
                             <option value="">Select event type...</option>
-                            {EVENT_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+                            {EVENT_NAMES.map(n => <option key={n.en} value={n.en}>{n.en} - {n.ta}</option>)}
                         </select>
                     </div>
+                    {(form.eventName === 'Other' || (!EVENT_NAMES.find(n => n.en === form.eventName) && form.eventName)) && (
+                        <div className="form-group">
+                            <label className="form-label">Custom Event Name *</label>
+                            <input className="form-control" name="customEventName" value={form.customEventName || (EVENT_NAMES.find(n => n.en === form.eventName) ? '' : form.eventName)} onChange={onChange} required placeholder="Enter event name" />
+                        </div>
+                    )}
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">{t('date')} *</label>
@@ -86,19 +109,39 @@ export default function Events() {
     const { t } = useTranslation()
     const [events, setEvents] = useState([])
     const [loading, setLoading] = useState(true)
+    const [page, setPage] = useState(1)
+    const [hasMore, setHasMore] = useState(false)
+    const [loadingMore, setLoadingMore] = useState(false)
     const [showModal, setShowModal] = useState(false)
     const [editing, setEditing] = useState(null)
     const printRef = useRef()
+    const navigate = useNavigate()
 
-    useEffect(() => { fetchEvents() }, [])
+    useEffect(() => { fetchEvents(1) }, [])
 
-    const fetchEvents = async () => {
-        setLoading(true)
+    const fetchEvents = async (pageNum = 1) => {
+        if (pageNum === 1) setLoading(true)
+        else setLoadingMore(true)
         try {
-            const res = await eventsAPI.getAll()
-            setEvents(res.data)
+            const res = await eventsAPI.getAll({ page: pageNum, limit: 10 })
+            const { data, hasMore: more } = res.data
+            
+            if (pageNum === 1) {
+                setEvents(data)
+            } else {
+                setEvents(prev => [...prev, ...data])
+            }
+            setPage(pageNum)
+            setHasMore(more)
         } finally {
             setLoading(false)
+            setLoadingMore(false)
+        }
+    }
+
+    const loadMore = () => {
+        if (!loadingMore && hasMore) {
+            fetchEvents(page + 1)
         }
     }
 
@@ -160,13 +203,13 @@ export default function Events() {
                         </thead>
                         <tbody>
                             {events.map((e, i) => (
-                                <tr key={e._id}>
+                                <tr key={e._id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/master-sheet?event=${e._id}`)}>
                                     <td className="text-muted" style={{ fontSize: 12 }}>{i + 1}</td>
                                     <td><strong>{e.eventName}</strong></td>
                                     <td>{new Date(e.date).toLocaleDateString('en-IN')}</td>
                                     <td>{e.venue || '—'}</td>
                                     <td>{[e.location, e.city].filter(Boolean).join(', ') || '—'}</td>
-                                    <td className="no-print">
+                                    <td className="no-print" onClick={(ev) => ev.stopPropagation()}>
                                         <div className="flex gap-8">
                                             <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(e); setShowModal(true) }}>✏️</button>
                                             <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e._id)}>🗑️</button>
@@ -176,6 +219,13 @@ export default function Events() {
                             ))}
                         </tbody>
                     </table>
+                    {hasMore && (
+                        <div style={{ textAlign: 'center', marginTop: 16 }}>
+                            <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
+                                {loadingMore ? <span className="spinner" /> : 'Load More'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 

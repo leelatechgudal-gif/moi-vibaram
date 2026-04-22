@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
+import { Link } from 'react-router-dom'
 import { useReactToPrint } from 'react-to-print'
 
 export default function BalanceSheet() {
@@ -64,7 +65,7 @@ export default function BalanceSheet() {
                                         >
                                             <td className="text-muted">{i + 1}</td>
                                             <td>
-                                                <strong>{p.partyName}</strong>
+                                                <strong>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
                                                 {p.spouseName && <span className="text-muted" style={{ display: 'block', fontSize: 11 }}>& {p.spouseName}</span>}
                                             </td>
                                             <td>{p.mobile || '—'}</td>
@@ -91,6 +92,7 @@ export default function BalanceSheet() {
                                                                     <th>Type</th>
                                                                     <th>Amount</th>
                                                                     <th>Remarks</th>
+                                                                    <th>Action</th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
@@ -105,6 +107,11 @@ export default function BalanceSheet() {
                                                                         </td>
                                                                         <td className="text-primary">{fmt(tx.cashAmount)}</td>
                                                                         <td className="text-muted">{tx.remarks || '—'}</td>
+                                                                        <td>
+                                                                            <Link to={`/transactions/edit/${tx._id}`} className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: 11 }}>
+                                                                                ✏️ Edit
+                                                                            </Link>
+                                                                        </td>
                                                                     </tr>
                                                                 ))}
                                                             </tbody>

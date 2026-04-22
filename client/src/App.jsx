@@ -8,11 +8,14 @@ import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import Events from './pages/Events'
 import CreateMoi from './pages/CreateMoi'
+import EditMoi from './pages/EditMoi'
 import UpcomingEvents from './pages/UpcomingEvents'
 import BalanceSheet from './pages/BalanceSheet'
 import MasterSheet from './pages/MasterSheet'
 import Profile from './pages/Profile'
 import Search from './pages/Search'
+import AdminDashboard from './pages/AdminDashboard'
+import BulkUpload from './pages/BulkUpload'
 
 function Protected({ children }) {
     const { isAuthenticated } = useAuth()
@@ -36,11 +39,14 @@ function AppRoutes() {
                                     <Route path="/" element={<Dashboard />} />
                                     <Route path="/events" element={<Events />} />
                                     <Route path="/transactions/new" element={<CreateMoi />} />
+                                    <Route path="/transactions/edit/:id" element={<EditMoi />} />
                                     <Route path="/upcoming" element={<UpcomingEvents />} />
                                     <Route path="/balance-sheet" element={<BalanceSheet />} />
                                     <Route path="/master-sheet" element={<MasterSheet />} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/search" element={<Search />} />
+                                    <Route path="/admin" element={<AdminDashboard />} />
+                                    <Route path="/bulk-upload" element={<BulkUpload />} />
                                 </Routes>
                             </div>
                         </div>

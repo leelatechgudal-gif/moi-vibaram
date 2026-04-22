@@ -11,11 +11,16 @@ export function AuthProvider({ children }) {
     const [token, setToken] = useState(() => localStorage.getItem('mv_token'));
 
     const logout = useCallback(() => {
+        if (token) {
+            import('../api/api').then(({ authAPI }) => {
+                authAPI.logout().catch(() => {});
+            });
+        }
         localStorage.removeItem('mv_token');
         localStorage.removeItem('mv_user');
         setUser(null);
         setToken(null);
-    }, []);
+    }, [token]);
 
     // Auto-logout after 15 min inactivity
     useEffect(() => {

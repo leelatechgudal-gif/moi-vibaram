@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { eventsAPI, transactionsAPI } from '../api/api'
 import QrScanner from './QrScanner'
 import { numberToWords } from '../utils/numberToWords'
@@ -18,9 +18,10 @@ const SEER_FIELDS = [
 
 const defaultSeer = () => Object.fromEntries(SEER_FIELDS.map(f => [f.key, { value: '', quantity: '', remarks: '' }]))
 
-export default function CreateMoi() {
+export default function EditMoi() {
     const { t } = useTranslation()
     const navigate = useNavigate()
+    const { id } = useParams()
     const [events, setEvents] = useState([])
     const [showSeer, setShowSeer] = useState(false)
     const [showScanner, setShowScanner] = useState(false)
@@ -38,7 +39,50 @@ export default function CreateMoi() {
 
     useEffect(() => {
         eventsAPI.getAll().then(res => setEvents(res.data))
-    }, [])
+        if (id) {
+            setLoading(true)
+            transactionsAPI.getById(id).then(res => {
+                const tx = res.data;
+                setForm({
+                    eventId: tx.eventId?._id || tx.eventId,
+                    initial: tx.initial || '',
+                    partyName: tx.partyName || '',
+                    fatherName: tx.fatherName || '',
+                    motherName: tx.motherName || '',
+                    spouseName: tx.spouseName || '',
+                    nickname: tx.nickname || '',
+                    occupation: tx.occupation || '',
+                    location: tx.location || '',
+                    street: tx.street || '',
+                    mobile: tx.mobile || '',
+                    type: tx.type || 'received',
+                    cashAmount: tx.cashAmount || '',
+                    date: new Date(tx.date).toISOString().slice(0, 10),
+                    thaiMama: tx.thaiMama || false,
+                    labels: tx.labels ? tx.labels.join(', ') : '',
+                    remarks: tx.remarks || '',
+                    amountWordsLang: 'en'
+                });
+                
+                if (tx.seerVarisai && Object.keys(tx.seerVarisai).length > 0) {
+                    setShowSeer(true);
+                    setSeerVarisai(s => {
+                        const newSeer = { ...s };
+                        Object.entries(tx.seerVarisai).forEach(([k, v]) => {
+                            if (newSeer[k]) {
+                                newSeer[k] = { ...newSeer[k], ...v };
+                            }
+                        });
+                        return newSeer;
+                    });
+                }
+            }).catch(err => {
+                setError('Failed to load transaction data');
+            }).finally(() => {
+                setLoading(false);
+            });
+        }
+    }, [id])
 
     const onChange = e => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -83,8 +127,8 @@ export default function CreateMoi() {
                     }])
                 ) : undefined,
             }
-            await transactionsAPI.create(payload)
-            setSuccess('Moi entry saved successfully!')
+            await transactionsAPI.update(id, payload)
+            setSuccess('Moi entry updated successfully!')
             setTimeout(() => navigate('/balance-sheet'), 1500)
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to save')
@@ -97,8 +141,8 @@ export default function CreateMoi() {
         <div>
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">➕ {t('createMoi')}</h1>
-                    <div className="page-subtitle">Record a new Moi (Seimurai) entry</div>
+                    <h1 className="page-title">✏️ Edit Moi</h1>
+                    <div className="page-subtitle">Update an existing Moi entry</div>
                 </div>
                 <button className="btn btn-secondary btn-sm no-print" onClick={() => setShowScanner(true)}>
                     📷 Scan QR
@@ -254,7 +298,7 @@ export default function CreateMoi() {
 
                 <div className="flex gap-8">
                     <button type="submit" className="btn btn-primary" disabled={loading}>
-                        {loading ? <span className="spinner" /> : `💾 ${t('save')} Moi`}
+                        {loading ? <span className="spinner" /> : `💾 Update Moi`}
                     </button>
                     <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>{t('cancel')}</button>
                 </div>

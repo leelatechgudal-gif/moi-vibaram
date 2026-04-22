@@ -9,22 +9,65 @@ export default function UpcomingEvents() {
     const [loading, setLoading] = useState(true)
     const printRef = useRef()
 
-    useEffect(() => {
-        eventsAPI.getUpcoming()
-            .then(res => setUpcoming(res.data))
-            .finally(() => setLoading(false))
-    }, [])
+    const [page, setPage] = useState(1)
+    const [hasMore, setHasMore] = useState(false)
+    const [loadingMore, setLoadingMore] = useState(false)
+
+    useEffect(() => { fetchUpcoming(1) }, [])
+
+    const fetchUpcoming = async (pageNum = 1) => {
+        if (pageNum === 1) setLoading(true)
+        else setLoadingMore(true)
+        try {
+            const res = await eventsAPI.getUpcoming({ params: { page: pageNum, limit: 10 } })
+            const { data, hasMore: more } = res.data
+            
+            if (pageNum === 1) {
+                setUpcoming(data)
+            } else {
+                setUpcoming(prev => [...prev, ...data])
+            }
+            setPage(pageNum)
+            setHasMore(more)
+        } finally {
+            setLoading(false)
+            setLoadingMore(false)
+        }
+    }
+
+    const loadMore = () => {
+        if (!loadingMore && hasMore) {
+            fetchUpcoming(page + 1)
+        }
+    }
 
     const handlePrint = useReactToPrint({ content: () => printRef.current })
     const handleShare = () => navigator.share?.({ title: 'Upcoming Moi - MOI VIBARAM', text: `${upcoming.length} pending Moi payments` })
     const fmt = n => `₹${(n || 0).toLocaleString('en-IN')}`
 
+    const [searchQuery, setSearchQuery] = useState('')
+
+    const filteredUpcoming = upcoming.filter(u => 
+        u.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        u.mobile?.includes(searchQuery) ||
+        u.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
     return (
         <div>
-            <div className="page-header">
+            <div className="page-header" style={{ flexWrap: 'wrap', gap: 16 }}>
                 <div>
                     <h1 className="page-title">📅 {t('upcomingEvents')}</h1>
                     <div className="page-subtitle">People who gave you Moi but haven't received it back yet</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 250 }}>
+                    <input 
+                        type="search" 
+                        className="form-control" 
+                        placeholder="Search by name, mobile, location..." 
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                    />
                 </div>
                 <div className="flex gap-8 no-print">
                     <button className="btn btn-secondary btn-sm" onClick={handleShare}>📤</button>
@@ -58,10 +101,10 @@ export default function UpcomingEvents() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {upcoming.map((u, i) => (
+                                {filteredUpcoming.map((u, i) => (
                                     <tr key={i}>
                                         <td className="text-muted">{i + 1}</td>
-                                        <td><strong>{u.partyName}</strong></td>
+                                        <td><strong>{u.initial ? `${u.initial} ` : ''}{u.partyName}</strong></td>
                                         <td>{u.mobile || '—'}</td>
                                         <td>{u.location || '—'}</td>
                                         <td>{u.event?.eventName || '—'}</td>
@@ -71,6 +114,13 @@ export default function UpcomingEvents() {
                                 ))}
                             </tbody>
                         </table>
+                        {hasMore && (
+                            <div style={{ textAlign: 'center', marginTop: 16 }}>
+                                <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
+                                    {loadingMore ? <span className="spinner" /> : 'Load More'}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
