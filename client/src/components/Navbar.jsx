@@ -66,8 +66,9 @@ export default function Navbar() {
                     </button>
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
-                    <div>📞 Customer Care: +91 98765 43210</div>
-                    <div><a href="mailto:feedback@moivibaram.com" style={{ color: 'var(--primary)', textDecoration: 'none' }}>✉️ Send Feedback</a></div>
+                    <div>📞 Customer Care: <a href="tel:+918754734313" style={{ color: 'var(--primary)', textDecoration: 'none' }}>+91 87547 34313</a></div>
+                    <div><a href="mailto:anand@leeletech.co.in" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>✉️ Email Feedback</a></div>
+                    <div><a href="https://wa.me/918754734313" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>💬 WhatsApp Feedback</a></div>
                 </div>
                 {user && (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>

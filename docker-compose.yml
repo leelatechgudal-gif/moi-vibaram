@@ -20,6 +20,8 @@ services:
       - EMAIL_PASS=your_app_password
     depends_on:
       - mongodb
+    volumes:
+      - ./uploads:/usr/src/uploads
 
   # Frontend Client
   frontend:

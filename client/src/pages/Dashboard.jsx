@@ -5,6 +5,119 @@ import { transactionsAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useReactToPrint } from 'react-to-print'
 
+function StatDrillDown({ type, onClose }) {
+    const { t } = useTranslation()
+    const [txList, setTxList] = useState([])
+    const [page, setPage] = useState(1)
+    const [hasMore, setHasMore] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+
+    const fetchTx = async (pageNum = 1) => {
+        if (pageNum === 1) setLoading(true)
+        else setLoadingMore(true)
+        try {
+            const res = await transactionsAPI.getAll({ type, page: pageNum, limit: 10 })
+            const { data, hasMore: more } = res.data
+            setTxList(prev => pageNum === 1 ? data : [...prev, ...data])
+            setPage(pageNum)
+            setHasMore(more)
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoading(false)
+            setLoadingMore(false)
+        }
+    }
+
+    useEffect(() => { fetchTx(1) }, [type])
+
+    const filteredTx = txList.filter(t => 
+        t.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        t.mobile?.includes(searchQuery) ||
+        t.location?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    const fmt = n => `₹${(n || 0).toLocaleString('en-IN')}`
+
+    return (
+        <div className="card">
+            <div className="flex-between mb-16">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button className="btn btn-secondary btn-sm" onClick={onClose}>← Back</button>
+                    <h3 style={{ fontWeight: 700, margin: 0 }}>
+                        {type === 'paid' ? 'Moi Invested (Paid)' : 'Moi Received'}
+                    </h3>
+                </div>
+                <Link 
+                    to="/transactions/new" 
+                    state={{ type, fixedType: true }}
+                    className="btn btn-primary btn-sm"
+                >
+                    ➕ Create Moi ({type === 'paid' ? 'I paid' : 'I have received'})
+                </Link>
+            </div>
+
+            <div className="mb-16">
+                <input 
+                    type="search" 
+                    className="form-control" 
+                    placeholder="Search loaded transactions..." 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                />
+            </div>
+
+            {loading && txList.length === 0 ? (
+                <div className="flex-center"><span className="spinner" /></div>
+            ) : filteredTx.length === 0 ? (
+                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No transactions found.</div>
+            ) : (
+                <div className="table-wrap">
+                    <table className="table">
+                        <thead>
+                            <tr>
+                                <th>{t('name')}</th>
+                                <th>{t('event')}</th>
+                                <th>{t('amount')}</th>
+                                <th>{t('date')}</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredTx.map(tx => (
+                                <tr key={tx._id}>
+                                    <td><strong>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong><br /><span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span></td>
+                                    <td>{tx.eventId?.eventName || '—'}</td>
+                                    <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
+                                    <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                    <td>
+                                        <Link to={`/transactions/edit/${tx._id}`} className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: 11 }}>
+                                            ✏️ Edit
+                                        </Link>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {hasMore && !searchQuery && (
+                        <div style={{ textAlign: 'center', marginTop: 16 }}>
+                            <button 
+                                className="btn btn-secondary" 
+                                onClick={() => fetchTx(page + 1)}
+                                disabled={loadingMore}
+                            >
+                                {loadingMore ? <span className="spinner" /> : 'Load More'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function Dashboard() {
     const { t } = useTranslation()
     const { user } = useAuth()
@@ -12,6 +125,7 @@ export default function Dashboard() {
     const [expandedEvent, setExpandedEvent] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [loading, setLoading] = useState(true)
+    const [selectedStat, setSelectedStat] = useState(null)
     
     // Pagination state for event transactions
     const [eventTxMap, setEventTxMap] = useState({})
@@ -72,15 +186,15 @@ export default function Dashboard() {
             ) : (
                 <>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 20, marginBottom: 28 }}>
-                        <div className="stat-card stat-invested">
+                        <div className="stat-card stat-invested" style={{ cursor: 'pointer', outline: selectedStat === 'paid' ? '2px solid var(--primary)' : 'none' }} onClick={() => setSelectedStat(selectedStat === 'paid' ? null : 'paid')}>
                             <div className="stat-label">💰 {t('moiInvested')}</div>
                             <div className="stat-value">{fmt(data?.grandTotalPaid)}</div>
-                            <div className="text-muted" style={{ fontSize: 12, marginTop: 8 }}>Total paid out</div>
+                            <div className="text-muted" style={{ fontSize: 12, marginTop: 8 }}>Total paid out (Click to view)</div>
                         </div>
-                        <div className="stat-card stat-received">
+                        <div className="stat-card stat-received" style={{ cursor: 'pointer', outline: selectedStat === 'received' ? '2px solid var(--primary)' : 'none' }} onClick={() => setSelectedStat(selectedStat === 'received' ? null : 'received')}>
                             <div className="stat-label">📥 {t('moiReceived')}</div>
                             <div className="stat-value">{fmt(data?.grandTotalReceived)}</div>
-                            <div className="text-muted" style={{ fontSize: 12, marginTop: 8 }}>Total received</div>
+                            <div className="text-muted" style={{ fontSize: 12, marginTop: 8 }}>Total received (Click to view)</div>
                         </div>
                         <div className={`stat-card ${(data?.closingBalance || 0) >= 0 ? 'stat-balance-pos' : 'stat-balance-neg'}`}>
                             <div className="stat-label">⚖️ {t('closingBalance')}</div>
@@ -89,8 +203,11 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    <div className="card">
-                        <div className="flex-between mb-16">
+                    {selectedStat ? (
+                        <StatDrillDown type={selectedStat} onClose={() => setSelectedStat(null)} />
+                    ) : (
+                        <div className="card">
+                            <div className="flex-between mb-16">
                             <h3 style={{ fontWeight: 700 }}>Events Summary</h3>
                             <Link to="/master-sheet" className="auth-link" style={{ fontSize: 13 }}>View Master Sheet →</Link>
                         </div>
@@ -204,8 +321,9 @@ export default function Dashboard() {
                                     );
                                 })}
                             </div>
-                        )}
-                    </div>
+                            )}
+                        </div>
+                    )}
                 </>
             )}
         </div>

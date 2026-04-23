@@ -13,6 +13,7 @@ client/dist/
 client/build/
 
 # Uploaded user files
+/uploads/
 server/uploads/
 
 # Logs

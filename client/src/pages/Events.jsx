@@ -123,7 +123,7 @@ export default function Events() {
         if (pageNum === 1) setLoading(true)
         else setLoadingMore(true)
         try {
-            const res = await eventsAPI.getAll({ page: pageNum, limit: 10 })
+            const res = await eventsAPI.getAll({ params: { page: pageNum, limit: 10 } })
             const { data, hasMore: more } = res.data
             
             if (pageNum === 1) {

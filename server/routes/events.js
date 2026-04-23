@@ -9,7 +9,7 @@ const auth = require('../middleware/auth');
 const ALLOWED_INVITATION_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 
 const storage = multer.diskStorage({
-    destination: 'uploads/',
+    destination: (req, file, cb) => cb(null, path.join(__dirname, '../../uploads')),
     filename: (req, file, cb) => cb(null, `inv_${Date.now()}${path.extname(file.originalname)}`),
 });
 const upload = multer({
@@ -86,7 +86,7 @@ router.get('/upcoming', auth, async (req, res) => {
         });
 
         const allUpcoming = Object.values(partyMap);
-        
+
         if (pageNum) {
             const total = allUpcoming.length;
             const skip = (pageNum - 1) * limitNum;

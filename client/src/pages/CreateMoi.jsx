@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { eventsAPI, transactionsAPI } from '../api/api'
 import QrScanner from './QrScanner'
 import { numberToWords } from '../utils/numberToWords'
@@ -21,6 +21,10 @@ const defaultSeer = () => Object.fromEntries(SEER_FIELDS.map(f => [f.key, { valu
 export default function CreateMoi() {
     const { t } = useTranslation()
     const navigate = useNavigate()
+    const location = useLocation()
+    const fixedType = location.state?.fixedType || false
+    const initialType = location.state?.type || 'received'
+
     const [events, setEvents] = useState([])
     const [showSeer, setShowSeer] = useState(false)
     const [showScanner, setShowScanner] = useState(false)
@@ -31,7 +35,7 @@ export default function CreateMoi() {
     const [form, setForm] = useState({
         eventId: '', initial: '', partyName: '', fatherName: '', motherName: '', spouseName: '', nickname: '',
         occupation: '', location: '', street: '', mobile: '',
-        type: 'received', cashAmount: '', date: new Date().toISOString().slice(0, 10),
+        type: initialType, cashAmount: '', date: new Date().toISOString().slice(0, 10),
         thaiMama: false, labels: '', remarks: '', amountWordsLang: 'en'
     })
     const [seerVarisai, setSeerVarisai] = useState(defaultSeer())
@@ -96,9 +100,12 @@ export default function CreateMoi() {
     return (
         <div>
             <div className="page-header">
-                <div>
-                    <h1 className="page-title">➕ {t('createMoi')}</h1>
-                    <div className="page-subtitle">Record a new Moi (Seimurai) entry</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate(-1)}>← Back</button>
+                    <div>
+                        <h1 className="page-title">➕ {t('createMoi')}</h1>
+                        <div className="page-subtitle">Add a new Moi entry</div>
+                    </div>
                 </div>
                 <button className="btn btn-secondary btn-sm no-print" onClick={() => setShowScanner(true)}>
                     📷 Scan QR
@@ -130,7 +137,7 @@ export default function CreateMoi() {
                         </div>
                         <div className="form-group">
                             <label className="form-label">{t('type')} *</label>
-                            <select className="form-control" name="type" value={form.type} onChange={onChange}>
+                            <select className="form-control" name="type" value={form.type} onChange={onChange} disabled={fixedType}>
                                 <option value="received">📥 {t('received')} (They gave me)</option>
                                 <option value="paid">💸 {t('paid')} (I gave them)</option>
                             </select>

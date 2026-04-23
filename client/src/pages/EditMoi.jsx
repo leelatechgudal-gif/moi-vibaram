@@ -140,9 +140,12 @@ export default function EditMoi() {
     return (
         <div>
             <div className="page-header">
-                <div>
-                    <h1 className="page-title">✏️ Edit Moi</h1>
-                    <div className="page-subtitle">Update an existing Moi entry</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate(-1)}>← Back</button>
+                    <div>
+                        <h1 className="page-title">✏️ Edit Moi</h1>
+                        <div className="page-subtitle">Update an existing Moi entry</div>
+                    </div>
                 </div>
                 <button className="btn btn-secondary btn-sm no-print" onClick={() => setShowScanner(true)}>
                     📷 Scan QR

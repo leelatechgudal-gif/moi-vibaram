@@ -37,8 +37,8 @@ export const usersAPI = {
 };
 
 export const eventsAPI = {
-    getAll: () => api.get('/events'),
-    getUpcoming: () => api.get('/events/upcoming'),
+    getAll: config => api.get('/events', config),
+    getUpcoming: config => api.get('/events/upcoming', config),
     create: formData => api.post('/events', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
     update: (id, formData) => api.put(`/events/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
     delete: id => api.delete(`/events/${id}`),
