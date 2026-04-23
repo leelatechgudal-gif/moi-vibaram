@@ -7,11 +7,11 @@ export default defineConfig({
         port: 5173,
         proxy: {
             '/api': {
-                target: 'http://localhost:5001',  //use localhost if not using docker 
+                target: 'http://host.docker.internal:5001',  //use localhost if not using docker 
                 changeOrigin: true,
             },
             '/uploads': {
-                target: 'http://localhost:5001', //use localhost if not using docker
+                target: 'http://host.docker.internal:5001', //use localhost if not using docker
                 changeOrigin: true,
             },
         },
