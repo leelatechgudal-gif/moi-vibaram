@@ -37,9 +37,9 @@ const apiLimiter = rateLimit({
 // CORS
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 
-// Body parsers — limit to 1mb to prevent payload attacks
-app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+// Body parsers — limit to 20mb to support bulk uploads and photos
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Static uploads (no directory listing)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
