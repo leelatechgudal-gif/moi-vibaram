@@ -18,8 +18,6 @@ services:
       - CLIENT_URL=http://host.docker.internal:80 # use localhost if not using docker 
       - EMAIL_USER=anand@leelatech.co.in
       - EMAIL_PASS=your_app_password
-    depends_on:
-      - mongodb
     volumes:
       - ./uploads:/usr/src/uploads
 
