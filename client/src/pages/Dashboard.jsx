@@ -88,7 +88,18 @@ function StatDrillDown({ type, onClose }) {
                         <tbody>
                             {filteredTx.map(tx => (
                                 <tr key={tx._id}>
-                                    <td><strong>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong><br /><span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span></td>
+                                    <td>
+                                        <Link 
+                                            to={`/person-detail?partyName=${encodeURIComponent(tx.partyName)}&mobile=${tx.mobile || ''}&spouseName=${encodeURIComponent(tx.spouseName || '')}&location=${encodeURIComponent(tx.location || '')}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{ textDecoration: 'none', color: 'inherit' }}
+                                            className="hover-underline"
+                                        >
+                                            <strong style={{ color: 'var(--primary)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                        </Link>
+                                        <br />
+                                        <span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span>
+                                    </td>
                                     <td>{tx.eventId?.eventName || tx.eventName || '—'}</td>
                                     <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
                                     <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
@@ -289,7 +300,18 @@ export default function Dashboard() {
                                                                 <tbody>
                                                                     {filteredTx.map(tx => (
                                                                         <tr key={tx._id}>
-                                                                            <td><strong>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong><br /><span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span></td>
+                                                                            <td>
+                                                                                <Link 
+                                                                                    to={`/person-detail?partyName=${encodeURIComponent(tx.partyName)}&mobile=${tx.mobile || ''}&spouseName=${encodeURIComponent(tx.spouseName || '')}&location=${encodeURIComponent(tx.location || '')}`}
+                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                    style={{ textDecoration: 'none', color: 'inherit' }}
+                                                                                    className="hover-underline"
+                                                                                >
+                                                                                    <strong style={{ color: 'var(--primary)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                                                                </Link>
+                                                                                <br />
+                                                                                <span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span>
+                                                                            </td>
                                                                             <td><span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>{t(tx.type)}</span></td>
                                                                             <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
                                                                             <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
