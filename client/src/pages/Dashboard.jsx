@@ -89,7 +89,7 @@ function StatDrillDown({ type, onClose }) {
                             {filteredTx.map(tx => (
                                 <tr key={tx._id}>
                                     <td><strong>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong><br /><span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span></td>
-                                    <td>{tx.eventId?.eventName || '—'}</td>
+                                    <td>{tx.eventId?.eventName || tx.eventName || '—'}</td>
                                     <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
                                     <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
                                     <td>

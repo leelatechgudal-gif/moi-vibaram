@@ -65,7 +65,14 @@ export default function BalanceSheet() {
                                         >
                                             <td className="text-muted">{i + 1}</td>
                                             <td>
-                                                <strong>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
+                                                <Link 
+                                                    to={`/person-detail?partyName=${encodeURIComponent(p.partyName)}&mobile=${p.mobile || ''}&spouseName=${encodeURIComponent(p.spouseName || '')}&location=${encodeURIComponent(p.location || '')}`}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    style={{ textDecoration: 'none', color: 'inherit' }}
+                                                    className="hover-underline"
+                                                >
+                                                    <strong style={{ color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
+                                                </Link>
                                                 {p.spouseName && <span className="text-muted" style={{ display: 'block', fontSize: 11 }}>& {p.spouseName}</span>}
                                             </td>
                                             <td>{p.mobile || '—'}</td>
@@ -99,7 +106,7 @@ export default function BalanceSheet() {
                                                                 {p.transactions.map(tx => (
                                                                     <tr key={tx._id}>
                                                                         <td>{new Date(tx.date).toLocaleDateString('en-IN')}</td>
-                                                                        <td>{tx.eventId?.eventName || '—'}</td>
+                                                                         <td>{tx.eventId?.eventName || tx.eventName || '—'}</td>
                                                                         <td>
                                                                             <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
                                                                                 {t(tx.type)}

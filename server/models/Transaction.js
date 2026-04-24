@@ -13,7 +13,8 @@ const seerVarisaiSchema = new mongoose.Schema({
 
 const transactionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
+    eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' }, // Optional for 'paid' transactions
+    eventName: String, // Used when eventId is not available (typically for 'paid' transactions)
     partyName: { type: String, required: true },
     initial: String,
     fatherName: String,

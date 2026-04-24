@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 
 const TEMPLATE_HEADERS = [
     'Initial', 'Name', 'FatherName', 'MotherName', 'SpouseName', 
-    'Nickname', 'Location', 'Street', 'Mobile', 'Amount', 'Date', 'Remarks', 'Labels'
+    'Nickname', 'Location', 'Street', 'Mobile', 'Amount', 'Date', 'EventName', 'Remarks', 'Labels'
 ];
 
 export default function BulkUpload() {
@@ -70,6 +70,7 @@ export default function BulkUpload() {
                         if (h === 'mobile') item.mobile = val;
                         if (h === 'amount') item.cashAmount = val;
                         if (h === 'date') item.date = val;
+                        if (h === 'eventname' || h === 'event') item.eventName = val;
                         if (h === 'remarks') item.remarks = val;
                         if (h === 'labels') item.labels = String(val).split(';').map(l => l.trim());
                     });
@@ -87,7 +88,7 @@ export default function BulkUpload() {
     };
 
     const handleUpload = async () => {
-        if (!selectedEventId) return setError('Please select an event first');
+        if (globalType === 'received' && !selectedEventId) return setError('Please select an event first');
         if (parsedData.length === 0) return setError('No data to upload');
 
         setLoading(true);
@@ -96,7 +97,8 @@ export default function BulkUpload() {
         try {
             const transactions = parsedData.map(t => ({
                 ...t,
-                eventId: selectedEventId,
+                eventId: globalType === 'received' ? selectedEventId : (t.eventId || undefined),
+                eventName: globalType === 'paid' ? (t.eventName || 'External Event') : undefined,
                 type: globalType,
                 // Basic cleanup
                 cashAmount: parseFloat(t.cashAmount) || 0
@@ -127,17 +129,19 @@ export default function BulkUpload() {
 
             <div className="card">
                 <div className="form-grid">
-                    <div className="form-group">
-                        <label className="form-label">Select Event *</label>
-                        <select className="form-control" value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}>
-                            <option value="">-- Choose Event --</option>
-                            {events.map(e => (
-                                <option key={e._id} value={e._id}>
-                                    {e.eventName} ({new Date(e.date).toLocaleDateString('en-IN')})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {globalType === 'received' && (
+                        <div className="form-group">
+                            <label className="form-label">Select Event *</label>
+                            <select className="form-control" value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}>
+                                <option value="">-- Choose Event --</option>
+                                {events.map(e => (
+                                    <option key={e._id} value={e._id}>
+                                        {e.eventName} ({new Date(e.date).toLocaleDateString('en-IN')})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     <div className="form-group">
                         <label className="form-label">Global Moi Type</label>
                         <select className="form-control" value={globalType} onChange={e => setGlobalType(e.target.value)}>
@@ -174,7 +178,7 @@ export default function BulkUpload() {
                                 <thead>
                                     <tr>
                                         <th>Name</th>
-                                        <th>Location</th>
+                                        <th>{globalType === 'received' ? 'Location' : 'Event'}</th>
                                         <th>Amount</th>
                                         <th>Date</th>
                                         <th>Status</th>
@@ -184,7 +188,7 @@ export default function BulkUpload() {
                                     {parsedData.map((row, idx) => (
                                         <tr key={idx}>
                                             <td><strong>{row.initial ? `${row.initial} ` : ''}{row.partyName}</strong></td>
-                                            <td>{row.location || '—'}</td>
+                                            <td>{globalType === 'received' ? (row.location || '—') : (row.eventName || '—')}</td>
                                             <td style={{ fontWeight: 600 }}>₹{row.cashAmount}</td>
                                             <td className="text-muted">{row.date || 'Auto'}</td>
                                             <td>

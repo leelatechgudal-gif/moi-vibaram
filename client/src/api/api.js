@@ -53,6 +53,7 @@ export const transactionsAPI = {
     delete: id => api.delete(`/transactions/${id}`),
     getBalanceSheet: () => api.get('/transactions/balance-sheet'),
     getMasterSheet: () => api.get('/transactions/master-sheet'),
+    getPersonDetail: params => api.get('/transactions/person-detail', { params }),
     search: params => api.get('/transactions/search', { params }),
 };
 

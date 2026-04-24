@@ -16,6 +16,7 @@ import Profile from './pages/Profile'
 import Search from './pages/Search'
 import AdminDashboard from './pages/AdminDashboard'
 import BulkUpload from './pages/BulkUpload'
+import PersonDetail from './pages/PersonDetail'
 
 function Protected({ children }) {
     const { isAuthenticated } = useAuth()
@@ -47,6 +48,7 @@ function AppRoutes() {
                                     <Route path="/search" element={<Search />} />
                                     <Route path="/admin" element={<AdminDashboard />} />
                                     <Route path="/bulk-upload" element={<BulkUpload />} />
+                                    <Route path="/person-detail" element={<PersonDetail />} />
                                 </Routes>
                             </div>
                         </div>

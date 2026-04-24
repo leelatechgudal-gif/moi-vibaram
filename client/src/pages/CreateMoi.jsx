@@ -33,7 +33,7 @@ export default function CreateMoi() {
     const [success, setSuccess] = useState('')
 
     const [form, setForm] = useState({
-        eventId: '', initial: '', partyName: '', fatherName: '', motherName: '', spouseName: '', nickname: '',
+        eventId: '', eventName: '', initial: '', partyName: '', fatherName: '', motherName: '', spouseName: '', nickname: '',
         occupation: '', location: '', street: '', mobile: '',
         type: initialType, cashAmount: '', date: new Date().toISOString().slice(0, 10),
         thaiMama: false, labels: '', remarks: '', amountWordsLang: 'en'
@@ -71,7 +71,8 @@ export default function CreateMoi() {
 
     const onSubmit = async e => {
         e.preventDefault()
-        if (!form.eventId) { setError('Please select an event'); return }
+        if (form.type === 'received' && !form.eventId) { setError('Please select an event'); return }
+        if (form.type === 'paid' && !form.eventName) { setError('Please enter event name'); return }
         setLoading(true)
         setError('')
         try {
@@ -128,12 +129,23 @@ export default function CreateMoi() {
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">{t('eventName')} *</label>
-                            <select className="form-control" name="eventId" value={form.eventId} onChange={onChange} required>
-                                <option value="">Select event...</option>
-                                {events.map(e => (
-                                    <option key={e._id} value={e._id}>{e.eventName} — {new Date(e.date).toLocaleDateString('en-IN')}</option>
-                                ))}
-                            </select>
+                            {form.type === 'received' ? (
+                                <select className="form-control" name="eventId" value={form.eventId} onChange={onChange} required>
+                                    <option value="">Select event...</option>
+                                    {events.map(e => (
+                                        <option key={e._id} value={e._id}>{e.eventName} — {new Date(e.date).toLocaleDateString('en-IN')}</option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <input 
+                                    className="form-control" 
+                                    name="eventName" 
+                                    value={form.eventName} 
+                                    onChange={onChange} 
+                                    required 
+                                    placeholder="Enter event name (e.g. Raj's Wedding)" 
+                                />
+                            )}
                         </div>
                         <div className="form-group">
                             <label className="form-label">{t('type')} *</label>

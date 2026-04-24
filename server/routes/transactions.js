@@ -37,21 +37,65 @@ router.get('/', auth, async (req, res) => {
     }
 });
 
+// GET /api/transactions/person-detail - Detailed history for a specific person
+router.get('/person-detail', auth, async (req, res) => {
+    try {
+        const { partyName, mobile, spouseName, location, fatherName, motherName } = req.query;
+        
+        const filter = { userId: req.userId };
+        const searchOr = [
+            { partyName: partyName },
+            { nickname: partyName }
+        ];
+
+        if (mobile) searchOr.push({ mobile: mobile });
+        if (spouseName) searchOr.push({ spouseName: spouseName });
+        
+        filter.$or = searchOr;
+
+        // Optionally filter by location if it's very specific
+        if (location) filter.location = location;
+
+        const transactions = await Transaction.find(filter).populate('eventId').sort({ date: -1 });
+
+        const totalReceived = transactions.filter(t => t.type === 'received').reduce((s, t) => s + (t.cashAmount || 0), 0);
+        const totalPaid = transactions.filter(t => t.type === 'paid').reduce((s, t) => s + (t.cashAmount || 0), 0);
+
+        res.json({
+            person: { partyName, mobile, spouseName, location, fatherName, motherName },
+            transactions,
+            totalReceived,
+            totalPaid,
+            balance: totalReceived - totalPaid
+        });
+    } catch (err) {
+        console.error("[transactions person-detail]", err);
+        res.status(500).json({ message: "Request failed. Please try again." });
+    }
+});
+
 // POST /api/transactions - Create Moi entry
 router.post('/', auth, async (req, res) => {
     try {
         const {
-            eventId, partyName, initial, fatherName, motherName, spouseName, nickname, occupation,
+            eventId, eventName, partyName, initial, fatherName, motherName, spouseName, nickname, occupation,
             location, street, mobile, type, cashAmount, date,
             seerVarisai, remarks, thaiMama, labels
         } = req.body;
 
-        const event = await Event.findOne({ _id: eventId, userId: req.userId });
-        if (!event) return res.status(404).json({ message: 'Event not found' });
+        if (type === 'received' && !eventId) {
+            return res.status(400).json({ message: 'Event is required for received Moi' });
+        }
+
+        if (eventId) {
+            const event = await Event.findOne({ _id: eventId, userId: req.userId });
+            if (!event) return res.status(404).json({ message: 'Event not found' });
+        }
 
         const transaction = new Transaction({
             userId: req.userId,
-            eventId,
+            eventId: eventId || undefined,
+            eventName,
             partyName, initial, fatherName, motherName, spouseName, nickname, occupation,
             location, street, mobile, type,
             cashAmount: cashAmount || 0,
@@ -81,6 +125,7 @@ router.post('/bulk', auth, async (req, res) => {
         const toInsert = transactions.map(t => ({
             ...t,
             userId: req.userId,
+            eventId: t.eventId || undefined,
             date: t.date ? new Date(t.date) : Date.now(),
             cashAmount: parseFloat(t.cashAmount) || 0
         }));
@@ -158,7 +203,6 @@ router.get('/balance-sheet', auth, async (req, res) => {
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
-
 // GET /api/transactions/master-sheet - Event-wise summary
 router.get('/master-sheet', auth, async (req, res) => {
     try {
@@ -169,11 +213,9 @@ router.get('/master-sheet', auth, async (req, res) => {
         let grandTotalReceived = 0;
 
         const eventSummary = events.map(e => {
-            const evtTxns = transactions.filter(t => t.eventId.toString() === e._id.toString());
+            const evtTxns = transactions.filter(t => t.eventId && t.eventId.toString() === e._id.toString());
             const totalPaid = evtTxns.filter(t => t.type === 'paid').reduce((s, t) => s + (t.cashAmount || 0), 0);
             const totalReceived = evtTxns.filter(t => t.type === 'received').reduce((s, t) => s + (t.cashAmount || 0), 0);
-            grandTotalPaid += totalPaid;
-            grandTotalReceived += totalReceived;
             return {
                 _id: e._id,
                 eventName: e.eventName,
@@ -185,6 +227,10 @@ router.get('/master-sheet', auth, async (req, res) => {
                 balance: totalReceived - totalPaid,
             };
         });
+
+        // Calculate grand totals from ALL transactions
+        grandTotalPaid = transactions.filter(t => t.type === 'paid').reduce((s, t) => s + (t.cashAmount || 0), 0);
+        grandTotalReceived = transactions.filter(t => t.type === 'received').reduce((s, t) => s + (t.cashAmount || 0), 0);
 
         res.json({
             events: eventSummary,
