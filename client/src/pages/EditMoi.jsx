@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { eventsAPI, transactionsAPI } from '../api/api'
 import QrScanner from './QrScanner'
 import { numberToWords } from '../utils/numberToWords'
+import { ArrowLeft, Edit2, QrCode, ClipboardList, Gift, Coins, Banknote, User, Save } from 'lucide-react'
 
 const SEER_FIELDS = [
     { key: 'dress', icon: '👗' },
@@ -143,21 +144,21 @@ export default function EditMoi() {
         <div>
             <div className="page-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate(-1)}>← Back</button>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate(-1)}><ArrowLeft size={16} style={{ marginRight: 4 }} /> Back</button>
                     <div>
-                        <h1 className="page-title">✏️ Edit Moi</h1>
+                        <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Edit2 size={28} /> Edit Moi</h1>
                         <div className="page-subtitle">Update an existing Moi entry</div>
                     </div>
                 </div>
                 <button className="btn btn-secondary btn-sm no-print" onClick={() => setShowScanner(true)}>
-                    📷 Scan QR
+                    <QrCode size={16} style={{ marginRight: 6 }} /> Scan QR
                 </button>
             </div>
 
             {showScanner && (
                 <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowScanner(false)}>
                     <div className="modal" style={{ maxWidth: 400 }}>
-                        <div className="modal-title">📷 Scan Party QR Code</div>
+                        <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><QrCode size={20} /> Scan Party QR Code</div>
                         <QrScanner onScan={onQRScan} onClose={() => setShowScanner(false)} />
                     </div>
                 </div>
@@ -166,7 +167,7 @@ export default function EditMoi() {
             <form onSubmit={onSubmit}>
                 {/* Event & Type */}
                 <div className="card" style={{ marginBottom: 16 }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: 16 }}>📋 Event Details</h3>
+                    <h3 style={{ fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={20} /> Event Details</h3>
                     <div className="form-grid">
                         <div className="form-group">
                             <label className="form-label">{t('eventName')} *</label>
@@ -191,8 +192,8 @@ export default function EditMoi() {
                         <div className="form-group">
                             <label className="form-label">{t('type')} *</label>
                             <select className="form-control" name="type" value={form.type} onChange={onChange}>
-                                <option value="received">📥 {t('received')} (They gave me)</option>
-                                <option value="paid">💸 {t('paid')} (I gave them)</option>
+                                <option value="received">{t('received')} (They gave me)</option>
+                                <option value="paid">{t('paid')} (I gave them)</option>
                             </select>
                         </div>
                         <div className="form-group">
@@ -200,7 +201,7 @@ export default function EditMoi() {
                             <input className="form-control" name="date" type="date" value={form.date} onChange={onChange} />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">💰 Cash {t('amount')} (₹) *</label>
+                            <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Banknote size={14} /> Cash {t('amount')} (₹) *</label>
                             <input className="form-control" name="cashAmount" type="number" min="0" value={form.cashAmount} onChange={onChange} placeholder="0" required />
                             {form.cashAmount && (
                                 <div style={{ fontSize: 12, marginTop: 4, color: 'var(--primary)', display: 'flex', justifyContent: 'space-between' }}>
@@ -217,7 +218,7 @@ export default function EditMoi() {
 
                 {/* Party Details */}
                 <div className="card" style={{ marginBottom: 16 }}>
-                    <h3 style={{ fontWeight: 700, marginBottom: 16 }}>👤 Party Details</h3>
+                    <h3 style={{ fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}><User size={20} /> Party Details</h3>
                     <div className="form-grid">
                         <div className="form-group" style={{ display: 'flex', gap: 8 }}>
                             <div style={{ flex: '0 0 80px' }}>
@@ -281,7 +282,7 @@ export default function EditMoi() {
                 {/* Seer Varisai */}
                 <div className="card" style={{ marginBottom: 16 }}>
                     <div className="flex-between">
-                        <h3 style={{ fontWeight: 700 }}>🎁 {t('seerVarisai')}</h3>
+                        <h3 style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><Gift size={20} /> {t('seerVarisai')}</h3>
                         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                             <input type="checkbox" checked={showSeer} onChange={e => setShowSeer(e.target.checked)} />
                             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Include gifts in kind</span>
@@ -314,7 +315,7 @@ export default function EditMoi() {
 
                 <div className="flex gap-8">
                     <button type="submit" className="btn btn-primary" disabled={loading}>
-                        {loading ? <span className="spinner" /> : `💾 Update Moi`}
+                        {loading ? <span className="spinner" /> : <><Save size={16} style={{ marginRight: 6 }} /> Update Moi</>}
                     </button>
                     <button type="button" className="btn btn-secondary" onClick={() => navigate(-1)}>{t('cancel')}</button>
                 </div>

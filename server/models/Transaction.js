@@ -15,16 +15,7 @@ const transactionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' }, // Optional for 'paid' transactions
     eventName: String, // Used when eventId is not available (typically for 'paid' transactions)
-    partyName: { type: String, required: true },
-    initial: String,
-    fatherName: String,
-    motherName: String,
-    spouseName: String,
-    nickname: String,
-    occupation: String,
-    location: String,
-    street: String,
-    mobile: String,
+    partyId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     type: { type: String, enum: ['received', 'paid'], required: true },
     cashAmount: { type: Number, default: 0 },
     date: { type: Date, default: Date.now },

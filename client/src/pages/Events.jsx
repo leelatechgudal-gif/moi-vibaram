@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { eventsAPI } from '../api/api'
 import { useReactToPrint } from 'react-to-print'
 import { useNavigate } from 'react-router-dom'
+import { Tent, Share2, Printer, Plus, Edit2, Trash2 } from 'lucide-react'
 
 const EVENT_NAMES = [
     { en: 'Wedding', ta: 'திருமணம்' },
@@ -51,8 +52,8 @@ function EventModal({ event, onClose, onSave }) {
     return (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
             <div className="modal">
-                <div className="modal-title">
-                    🎉 {event?._id ? 'Edit Event' : 'New Event'}
+                <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Tent size={20} /> {event?._id ? 'Edit Event' : 'New Event'}
                 </div>
                 <form onSubmit={onSubmit}>
                     <div className="form-group">
@@ -172,10 +173,10 @@ export default function Events() {
                     <div className="page-subtitle">{events.length} event(s) total</div>
                 </div>
                 <div className="flex gap-8 no-print">
-                    <button className="btn btn-secondary btn-sm" onClick={handleShare}>📤</button>
-                    <button className="btn btn-secondary btn-sm" onClick={handlePrint}>🖨️</button>
+                    <button className="btn btn-secondary btn-sm" onClick={handleShare}><Share2 size={16} /></button>
+                    <button className="btn btn-secondary btn-sm" onClick={handlePrint}><Printer size={16} /></button>
                     <button className="btn btn-primary btn-sm" onClick={() => { setEditing(null); setShowModal(true) }}>
-                        ➕ {t('addNew')}
+                        <Plus size={16} style={{ marginRight: 4 }} /> {t('addNew')}
                     </button>
                 </div>
             </div>
@@ -184,9 +185,9 @@ export default function Events() {
                 <div className="flex-center" style={{ height: 200 }}><span className="spinner" /></div>
             ) : events.length === 0 ? (
                 <div className="card empty-state">
-                    <div className="empty-icon">🎉</div>
+                    <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><Tent size={48} strokeWidth={1} /></div>
                     <div>{t('noData')}</div>
-                    <button className="btn btn-primary mt-8" onClick={() => setShowModal(true)}>Create First Event</button>
+                    <button className="btn btn-primary mt-8" onClick={() => setShowModal(true)}><Plus size={16} style={{ marginRight: 4 }} /> Create First Event</button>
                 </div>
             ) : (
                 <div ref={printRef} className="table-wrap card">
@@ -211,8 +212,8 @@ export default function Events() {
                                     <td>{[e.location, e.city].filter(Boolean).join(', ') || '—'}</td>
                                     <td className="no-print" onClick={(ev) => ev.stopPropagation()}>
                                         <div className="flex gap-8">
-                                            <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(e); setShowModal(true) }}>✏️</button>
-                                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e._id)}>🗑️</button>
+                                            <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(e); setShowModal(true) }}><Edit2 size={14} /></button>
+                                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e._id)}><Trash2 size={14} /></button>
                                         </div>
                                     </td>
                                 </tr>

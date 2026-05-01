@@ -6,6 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react'
 import { useReactToPrint } from 'react-to-print'
 import { startRegistration } from '@simplewebauthn/browser'
 import api from '../api/api'
+import { User, Printer, Camera, Save, Smartphone, ShieldCheck, Fingerprint } from 'lucide-react'
 
 export default function Profile() {
     const { t } = useTranslation()
@@ -95,10 +96,10 @@ export default function Profile() {
         <div>
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">👤 {t('profile')}</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><User size={28} /> {t('profile')}</h1>
                     <div className="page-subtitle">Manage your profile and QR code</div>
                 </div>
-                <button className="btn btn-secondary btn-sm no-print" onClick={handlePrint}>🖨️ Print QR</button>
+                <button className="btn btn-secondary btn-sm no-print" onClick={handlePrint}><Printer size={16} style={{ marginRight: 4 }} /> Print QR</button>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
@@ -114,11 +115,11 @@ export default function Profile() {
                             }}>
                                 {profileData?.profilePhoto
                                     ? <img src={profileData.profilePhoto} alt="photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    : '👤'}
+                                    : <User size={40} className="text-muted" />}
                             </div>
                             <div>
                                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => fileRef.current.click()}>
-                                    📷 Change Photo
+                                    <Camera size={16} style={{ marginRight: 6 }} /> Change Photo
                                 </button>
                                 <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onPhotoUpload} />
                                 <div className="text-muted mt-8" style={{ fontSize: 11 }}>Max 5MB</div>
@@ -168,14 +169,14 @@ export default function Profile() {
                         {success && <div className="success-msg">{success}</div>}
 
                         <button type="submit" className="btn btn-primary mt-8" disabled={saving}>
-                            {saving ? <span className="spinner" /> : `💾 ${t('save')} Profile`}
+                            {saving ? <span className="spinner" /> : <><Save size={16} style={{ marginRight: 6 }} /> {t('save')} Profile</>}
                         </button>
                     </form>
                 </div>
 
                 {/* QR Code */}
                 <div className="card" style={{ textAlign: 'center' }} ref={printRef}>
-                    <h3 style={{ fontWeight: 700, marginBottom: 20 }}>📱 My QR Code</h3>
+                    <h3 style={{ fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><Smartphone size={20} /> My QR Code</h3>
                     <div className="qr-section">
                         {qrValue ? (
                             <QRCodeCanvas
@@ -196,13 +197,13 @@ export default function Profile() {
                         Others can scan this to auto-fill your details when adding a Moi entry
                     </div>
                     <button className="btn btn-primary btn-sm mt-8 no-print" onClick={handlePrint}>
-                        🖨️ Download / Print QR
+                        <Printer size={16} style={{ marginRight: 6 }} /> Download / Print QR
                     </button>
                     
                     <div style={{ marginTop: 32, borderTop: '1px solid var(--glass-border)', paddingTop: 16 }}>
-                        <h4 style={{ fontWeight: 600, marginBottom: 12 }}>🔒 Security</h4>
+                        <h4 style={{ fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><ShieldCheck size={18} /> Security</h4>
                         <button className="btn btn-secondary btn-sm" onClick={setupFingerprint} style={{ width: '100%', justifyContent: 'center' }}>
-                            👆 Setup Fingerprint Login
+                            <Fingerprint size={16} style={{ marginRight: 6 }} /> Setup Fingerprint Login
                         </button>
                     </div>
                 </div>

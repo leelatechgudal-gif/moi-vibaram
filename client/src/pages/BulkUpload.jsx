@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { transactionsAPI, eventsAPI } from '../api/api';
 import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx';
+import { UploadCloud, Download, Gift, Coins, Upload } from 'lucide-react';
 
 const TEMPLATE_HEADERS = [
     'Initial', 'Name', 'FatherName', 'MotherName', 'SpouseName', 
@@ -119,11 +120,11 @@ export default function BulkUpload() {
         <div className="container" style={{ maxWidth: 900 }}>
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">📂 Bulk Upload</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><UploadCloud size={28} /> Bulk Upload</h1>
                     <div className="page-subtitle">Import multiple Moi entries from Excel or CSV</div>
                 </div>
                 <button className="btn btn-secondary btn-sm" onClick={downloadTemplate}>
-                    📥 Download Template
+                    <Download size={16} style={{ marginRight: 6 }} /> Download Template
                 </button>
             </div>
 
@@ -145,8 +146,8 @@ export default function BulkUpload() {
                     <div className="form-group">
                         <label className="form-label">Global Moi Type</label>
                         <select className="form-control" value={globalType} onChange={e => setGlobalType(e.target.value)}>
-                            <option value="received">📥 {t('received')} (They gave me)</option>
-                            <option value="paid">💸 {t('paid')} (I gave them)</option>
+                            <option value="received">{t('received')} (They gave me)</option>
+                            <option value="paid">{t('paid')} (I gave them)</option>
                         </select>
                     </div>
                 </div>
@@ -170,7 +171,7 @@ export default function BulkUpload() {
                         <div className="flex-between mb-8">
                             <h3 style={{ fontWeight: 700 }}>Data Preview ({parsedData.length} rows)</h3>
                             <button className="btn btn-primary" onClick={handleUpload} disabled={loading}>
-                                {loading ? <span className="spinner" /> : '🚀 Confirm & Upload All'}
+                                {loading ? <span className="spinner" /> : <><Upload size={16} style={{ marginRight: 6 }} /> Confirm & Upload All</>}
                             </button>
                         </div>
                         <div className="table-wrap" style={{ maxHeight: 400, overflow: 'auto' }}>

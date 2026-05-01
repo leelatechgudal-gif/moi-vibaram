@@ -32,7 +32,7 @@ router.post('/register', async (req, res) => {
         await user.save();
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
-        
+
         user.activeSessions = [token];
         await user.save();
 
@@ -59,18 +59,18 @@ router.post('/login', async (req, res) => {
                 try {
                     jwt.verify(t, process.env.JWT_SECRET);
                     return true;
-                } catch(e) {
+                } catch (e) {
                     return false;
                 }
             });
-            if (validSessions.length >= 3) {
-                return res.status(403).json({ message: 'Maximum 3 logins permitted. Please logout from another device.' });
-            }
+            // if (validSessions.length >= 5) {
+            //     return res.status(403).json({ message: 'Maximum 3 logins permitted. Please logout from another device.' });
+            // }
             user.activeSessions = validSessions;
         }
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
-        
+
         if (!user.activeSessions) user.activeSessions = [];
         user.activeSessions.push(token);
         await user.save();

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
 import { useReactToPrint } from 'react-to-print'
+import { ClipboardList, Share2, Printer, Coins, Gift, Scale } from 'lucide-react'
 
 export default function MasterSheet() {
     const { t } = useTranslation()
@@ -31,12 +32,12 @@ export default function MasterSheet() {
         <div>
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">📋 {t('masterSheet')}</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ClipboardList size={28} /> {t('masterSheet')}</h1>
                     <div className="page-subtitle">Global Moi ledger - all events</div>
                 </div>
                 <div className="flex gap-8 no-print">
-                    <button className="btn btn-secondary btn-sm" onClick={handleShare}>📤</button>
-                    <button className="btn btn-secondary btn-sm" onClick={handlePrint}>🖨️</button>
+                    <button className="btn btn-secondary btn-sm" onClick={handleShare}><Share2 size={16} /></button>
+                    <button className="btn btn-secondary btn-sm" onClick={handlePrint}><Printer size={16} /></button>
                 </div>
             </div>
 
@@ -44,7 +45,7 @@ export default function MasterSheet() {
                 <div className="flex-center" style={{ height: 200 }}><span className="spinner" /></div>
             ) : !data || data.events.length === 0 ? (
                 <div className="card empty-state">
-                    <div className="empty-icon">📋</div>
+                    <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><ClipboardList size={48} strokeWidth={1} /></div>
                     <div>{t('noData')}</div>
                 </div>
             ) : (
@@ -52,15 +53,15 @@ export default function MasterSheet() {
                     {/* Summary Cards */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
                         <div className="stat-card stat-invested">
-                            <div className="stat-label">💰 Total {t('moiInvested')}</div>
+                            <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><Coins size={16} style={{ marginRight: 6 }} /> Total {t('moiInvested')}</div>
                             <div className="stat-value">{fmt(data.grandTotalPaid)}</div>
                         </div>
                         <div className="stat-card stat-received">
-                            <div className="stat-label">📥 Total {t('moiReceived')}</div>
+                            <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><Gift size={16} style={{ marginRight: 6 }} /> Total {t('moiReceived')}</div>
                             <div className="stat-value">{fmt(data.grandTotalReceived)}</div>
                         </div>
                         <div className={`stat-card ${data.closingBalance >= 0 ? 'stat-balance-pos' : 'stat-balance-neg'}`}>
-                            <div className="stat-label">⚖️ {t('closingBalance')}</div>
+                            <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><Scale size={16} style={{ marginRight: 6 }} /> {t('closingBalance')}</div>
                             <div className="stat-value">{fmt(data.closingBalance)}</div>
                         </div>
                     </div>

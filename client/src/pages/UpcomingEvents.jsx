@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { eventsAPI } from '../api/api'
 import { useReactToPrint } from 'react-to-print'
+import { CalendarClock, Share2, Printer, AlertCircle, Clock } from 'lucide-react'
 
 export default function UpcomingEvents() {
     const { t } = useTranslation()
@@ -57,7 +58,7 @@ export default function UpcomingEvents() {
         <div>
             <div className="page-header" style={{ flexWrap: 'wrap', gap: 16 }}>
                 <div>
-                    <h1 className="page-title">📅 {t('upcomingEvents')}</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><CalendarClock size={28} /> {t('upcomingEvents')}</h1>
                     <div className="page-subtitle">People who gave you Moi but haven't received it back yet</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 250 }}>
@@ -70,8 +71,8 @@ export default function UpcomingEvents() {
                     />
                 </div>
                 <div className="flex gap-8 no-print">
-                    <button className="btn btn-secondary btn-sm" onClick={handleShare}>📤</button>
-                    <button className="btn btn-secondary btn-sm" onClick={handlePrint}>🖨️</button>
+                    <button className="btn btn-secondary btn-sm" onClick={handleShare}><Share2 size={16} /></button>
+                    <button className="btn btn-secondary btn-sm" onClick={handlePrint}><Printer size={16} /></button>
                 </div>
             </div>
 
@@ -79,13 +80,13 @@ export default function UpcomingEvents() {
                 <div className="flex-center" style={{ height: 200 }}><span className="spinner" /></div>
             ) : upcoming.length === 0 ? (
                 <div className="card empty-state">
-                    <div className="empty-icon">🎊</div>
+                    <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><CalendarClock size={48} strokeWidth={1} /></div>
                     <div>All caught up! No pending Moi payments.</div>
                 </div>
             ) : (
                 <div ref={printRef}>
                     <div className="card" style={{ marginBottom: 12, padding: '12px 20px' }}>
-                        <span className="badge badge-warning">⚠️ {upcoming.length} pending payment(s)</span>
+                        <span className="badge badge-warning" style={{ display: 'flex', alignItems: 'center', width: 'fit-content' }}><AlertCircle size={14} style={{ marginRight: 4 }} /> {upcoming.length} pending payment(s)</span>
                     </div>
                     <div className="card table-wrap">
                         <table className="table">
@@ -109,7 +110,7 @@ export default function UpcomingEvents() {
                                         <td>{u.location || '—'}</td>
                                         <td>{u.event?.eventName || '—'}</td>
                                         <td style={{ fontWeight: 600 }}>{fmt(u.cashAmount)}</td>
-                                        <td><span className="badge badge-warning">⏳ Pending</span></td>
+                                        <td><span className="badge badge-warning" style={{ display: 'flex', alignItems: 'center', width: 'fit-content' }}><Clock size={12} style={{ marginRight: 4 }} /> Pending</span></td>
                                     </tr>
                                 ))}
                             </tbody>

@@ -35,7 +35,27 @@ const apiLimiter = rateLimit({
 });
 
 // CORS
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+const allowedOrigins = [
+    process.env.CLIENT_URL,
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost',          // Android Capacitor
+    'capacitor://localhost',      // iOS Capacitor
+    // 'https://leelatech.co.in'
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true
+}));
 
 // Body parsers — limit to 20mb to support bulk uploads and photos
 app.use(express.json({ limit: '20mb' }));

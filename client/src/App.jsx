@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { App as CapApp } from '@capacitor/app'
 import Navbar from './components/Navbar'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -17,6 +18,7 @@ import Search from './pages/Search'
 import AdminDashboard from './pages/AdminDashboard'
 import BulkUpload from './pages/BulkUpload'
 import PersonDetail from './pages/PersonDetail'
+import UserManagement from './pages/UserManagement'
 
 function Protected({ children }) {
     const { isAuthenticated } = useAuth()
@@ -25,6 +27,20 @@ function Protected({ children }) {
 
 function AppRoutes() {
     const { isAuthenticated } = useAuth()
+    React.useEffect(() => {
+        const backHandler = CapApp.addListener('backButton', ({ canGoBack }) => {
+            if (canGoBack) {
+                window.history.back();
+            } else {
+                CapApp.exitApp();
+            }
+        });
+
+        return () => {
+            backHandler.then(h => h.remove());
+        };
+    }, []);
+
     return (
         <BrowserRouter>
             <Routes>
@@ -47,6 +63,7 @@ function AppRoutes() {
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/search" element={<Search />} />
                                     <Route path="/admin" element={<AdminDashboard />} />
+                                    <Route path="/users" element={<UserManagement />} />
                                     <Route path="/bulk-upload" element={<BulkUpload />} />
                                     <Route path="/person-detail" element={<PersonDetail />} />
                                 </Routes>

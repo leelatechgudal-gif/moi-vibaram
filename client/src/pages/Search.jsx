@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
 import { useReactToPrint } from 'react-to-print'
+import { Search as SearchIcon, Share2, Printer, MapPin } from 'lucide-react'
 
 export default function Search() {
     const { t } = useTranslation()
@@ -52,13 +53,13 @@ export default function Search() {
         <div>
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">🔍 {t('search')}</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><SearchIcon size={28} /> {t('search')}</h1>
                     <div className="page-subtitle">Find transactions by name, location, or mobile</div>
                 </div>
                 {results.length > 0 && (
                     <div className="flex gap-8 no-print">
-                        <button className="btn btn-secondary btn-sm" onClick={handleShare}>📤</button>
-                        <button className="btn btn-secondary btn-sm" onClick={handlePrint}>🖨️</button>
+                        <button className="btn btn-secondary btn-sm" onClick={handleShare}><Share2 size={16} /></button>
+                        <button className="btn btn-secondary btn-sm" onClick={handlePrint}><Printer size={16} /></button>
                     </div>
                 )}
             </div>
@@ -66,7 +67,7 @@ export default function Search() {
             <div className="card" style={{ marginBottom: 20 }}>
                 <form onSubmit={doSearch} style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                     <div className="search-bar" style={{ flex: 2, margin: 0 }}>
-                        <span>🔍</span>
+                        <span style={{ display: 'flex', alignItems: 'center' }}><SearchIcon size={16} className="text-muted" /></span>
                         <input
                             value={query}
                             onChange={e => setQuery(e.target.value)}
@@ -75,7 +76,7 @@ export default function Search() {
                         />
                     </div>
                     <div className="search-bar" style={{ flex: 1, margin: 0, minWidth: 140 }}>
-                        <span>📍</span>
+                        <span style={{ display: 'flex', alignItems: 'center' }}><MapPin size={16} className="text-muted" /></span>
                         <input
                             value={location}
                             onChange={e => setLocation(e.target.value)}
@@ -83,7 +84,7 @@ export default function Search() {
                         />
                     </div>
                     <button type="submit" className="btn btn-primary" disabled={loading}>
-                        {loading ? <span className="spinner" /> : '🔍 Search'}
+                        {loading ? <span className="spinner" /> : <><SearchIcon size={16} style={{ marginRight: 6 }} /> Search</>}
                     </button>
                 </form>
             </div>
@@ -93,7 +94,7 @@ export default function Search() {
             {!loading && searched && (
                 results.length === 0 ? (
                     <div className="card empty-state">
-                        <div className="empty-icon">🔍</div>
+                        <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><SearchIcon size={48} strokeWidth={1} /></div>
                         <div>No results found for "{query || location}"</div>
                     </div>
                 ) : (
@@ -106,6 +107,7 @@ export default function Search() {
                                 <tr>
                                     <th>#</th>
                                     <th>{t('partyName')}</th>
+                                    <th>Spouse / Nickname</th>
                                     <th>{t('mobile')}</th>
                                     <th>{t('location')}</th>
                                     <th>Event</th>
@@ -119,12 +121,19 @@ export default function Search() {
                                     <tr key={tx._id}>
                                         <td className="text-muted">{i + 1}</td>
                                         <td>
-                                            <strong>{tx.partyName}</strong>
-                                            {tx.nickname && <span className="text-muted" style={{ display: 'block', fontSize: 11 }}>"{tx.nickname}"</span>}
+                                            <strong>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                        </td>
+                                        <td style={{ fontSize: 13 }}>
+                                            {tx.spouseName && <div className="text-primary" style={{ fontWeight: 500 }}>{tx.spouseName} (S)</div>}
+                                            {tx.nickname && <div className="text-muted" style={{ fontStyle: 'italic' }}>"{tx.nickname}"</div>}
+                                            {!tx.spouseName && !tx.nickname && '—'}
                                         </td>
                                         <td>{tx.mobile || '—'}</td>
-                                        <td>{[tx.location, tx.street].filter(Boolean).join(', ') || '—'}</td>
-                                        <td>{tx.eventId?.eventName || '—'}</td>
+                                        <td>
+                                            <div style={{ fontWeight: 500 }}>{tx.location || '—'}</div>
+                                            {tx.street && <div className="text-muted" style={{ fontSize: 11 }}>{tx.street}</div>}
+                                        </td>
+                                        <td>{tx.eventId?.eventName || tx.eventName || '—'}</td>
                                         <td>
                                             <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
                                                 {t(tx.type)}

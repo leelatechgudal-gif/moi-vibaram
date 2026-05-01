@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
 import { Link } from 'react-router-dom'
 import { useReactToPrint } from 'react-to-print'
+import { Scale, Share2, Printer, Edit2 } from 'lucide-react'
 
 export default function BalanceSheet() {
     const { t } = useTranslation()
@@ -25,12 +26,12 @@ export default function BalanceSheet() {
         <div>
             <div className="page-header">
                 <div>
-                    <h1 className="page-title">📊 {t('balanceSheet')}</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Scale size={28} /> {t('balanceSheet')}</h1>
                     <div className="page-subtitle">Person-wise Moi summary</div>
                 </div>
                 <div className="flex gap-8 no-print">
-                    <button className="btn btn-secondary btn-sm" onClick={handleShare}>📤</button>
-                    <button className="btn btn-secondary btn-sm" onClick={handlePrint}>🖨️</button>
+                    <button className="btn btn-secondary btn-sm" onClick={handleShare}><Share2 size={16} /></button>
+                    <button className="btn btn-secondary btn-sm" onClick={handlePrint}><Printer size={16} /></button>
                 </div>
             </div>
 
@@ -38,7 +39,7 @@ export default function BalanceSheet() {
                 <div className="flex-center" style={{ height: 200 }}><span className="spinner" /></div>
             ) : sheet.length === 0 ? (
                 <div className="card empty-state">
-                    <div className="empty-icon">📊</div>
+                    <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><Scale size={48} strokeWidth={1} /></div>
                     <div>{t('noData')}</div>
                 </div>
             ) : (
@@ -47,12 +48,12 @@ export default function BalanceSheet() {
                         <table className="table">
                             <thead>
                                 <tr>
-                                    <th>#</th>
-                                    <th>{t('partyName')}</th>
+                                    <th>ID</th>
+                                    <th>Name & Spouse name</th>
                                     <th>{t('mobile')}</th>
                                     <th>{t('location')}</th>
-                                    <th>Total Received</th>
-                                    <th>Total Paid</th>
+                                    <th>Paid</th>
+                                    <th>Received</th>
                                     <th>{t('balance')}</th>
                                 </tr>
                             </thead>
@@ -77,8 +78,8 @@ export default function BalanceSheet() {
                                             </td>
                                             <td>{p.mobile || '—'}</td>
                                             <td>{p.location || '—'}</td>
-                                            <td className="text-primary">{fmt(p.totalReceived)}</td>
                                             <td className="text-success">{fmt(p.totalPaid)}</td>
+                                            <td className="text-primary">{fmt(p.totalReceived)}</td>
                                             <td style={{ fontWeight: 700 }}>
                                                 <span className={p.balance >= 0 ? 'text-primary' : 'text-danger'}>
                                                     {p.balance >= 0 ? '+' : ''}{fmt(p.balance)}
@@ -115,8 +116,8 @@ export default function BalanceSheet() {
                                                                         <td className="text-primary">{fmt(tx.cashAmount)}</td>
                                                                         <td className="text-muted">{tx.remarks || '—'}</td>
                                                                         <td>
-                                                                            <Link to={`/transactions/edit/${tx._id}`} className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: 11 }}>
-                                                                                ✏️ Edit
+                                                                            <Link to={`/transactions/edit/${tx._id}`} className="btn btn-secondary btn-sm" style={{ padding: '4px 8px', fontSize: 11, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                <Edit2 size={12} /> Edit
                                                                             </Link>
                                                                         </td>
                                                                     </tr>

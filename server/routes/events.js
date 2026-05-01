@@ -60,12 +60,27 @@ router.get('/upcoming', auth, async (req, res) => {
         const limitNum = parseInt(limit) || 20;
 
         // Find all parties that I received Moi from, and check if I have paid them back
-        const received = await Transaction.find({ userId: req.userId, type: 'received' }).populate('eventId');
-        const paid = await Transaction.find({ userId: req.userId, type: 'paid' });
+        const received = await Transaction.find({ userId: req.userId, type: 'received' })
+            .populate('eventId')
+            .populate('partyId');
+        const paid = await Transaction.find({ userId: req.userId, type: 'paid' })
+            .populate('partyId');
 
-        const paidPartyMobiles = new Set(paid.map(t => t.mobile));
+        // Helper to flatten transaction and party data
+        const flatten = (t) => {
+            const obj = t.toObject ? t.toObject() : t;
+            if (obj.partyId && typeof obj.partyId === 'object') {
+                return { ...obj, ...obj.partyId, partyId: obj.partyId._id, partyName: obj.partyId.name };
+            }
+            return obj;
+        };
 
-        const upcoming = received.filter(t => t.mobile && !paidPartyMobiles.has(t.mobile));
+        const flatReceived = received.map(flatten);
+        const flatPaid = paid.map(flatten);
+
+        const paidPartyMobiles = new Set(flatPaid.map(t => t.mobile).filter(Boolean));
+
+        const upcoming = flatReceived.filter(t => t.mobile && !paidPartyMobiles.has(t.mobile));
 
         // Group by party and get their latest event/date
         const partyMap = {};

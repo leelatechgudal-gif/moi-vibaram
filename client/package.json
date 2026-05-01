@@ -9,10 +9,15 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@capacitor/android": "^8.3.1",
+        "@capacitor/app": "^8.1.0",
+        "@capacitor/core": "^8.3.1",
+        "@capacitor/ios": "^8.3.1",
         "@simplewebauthn/browser": "^13.3.0",
         "axios": "^1.6.8",
         "html5-qrcode": "^2.3.8",
         "i18next": "^23.11.2",
+        "lucide-react": "^1.14.0",
         "qrcode.react": "^3.1.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
@@ -22,9 +27,11 @@
         "xlsx": "^0.18.5"
     },
     "devDependencies": {
+        "@capacitor/cli": "^7.6.2",
         "@types/react": "^18.2.66",
         "@types/react-dom": "^18.2.22",
         "@vitejs/plugin-react": "^4.2.1",
-        "vite": "^4.5.3"
+        "vite": "^4.5.3",
+        "vite-plugin-pwa": "^1.2.0"
     }
 }

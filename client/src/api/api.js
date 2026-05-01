@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const api = axios.create({ baseURL: '/api' });
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = '/api';
+
+const api = axios.create({ baseURL: API_BASE_URL });
 
 // Attach token to every request
 api.interceptors.request.use(config => {
@@ -34,6 +37,11 @@ export const usersAPI = {
     getProfile: () => api.get('/users/profile'),
     updateProfile: data => api.put('/users/profile', data),
     uploadPhoto: formData => api.post('/users/profile/photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    // Contact (Persons) CRUD mapped to /api/users
+    getAll: params => api.get('/users', { params }),
+    create: data => api.post('/users', data),
+    update: (id, data) => api.put(`/users/${id}`, data),
+    delete: id => api.delete(`/users/${id}`),
 };
 
 export const eventsAPI = {
