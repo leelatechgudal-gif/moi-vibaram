@@ -27,26 +27,36 @@ import {
 const navItems = [
     { icon: <LayoutDashboard size={18} />, key: 'dashboard', path: '/' },
     { icon: <Tent size={18} />, key: 'myEvents', path: '/events' },
-    { icon: <PlusCircle size={18} />, key: 'createMoi', path: '/transactions/new' },
+    // { icon: <PlusCircle size={18} />, key: 'createMoi', path: '/transactions/new' },
     { icon: <CalendarClock size={18} />, key: 'upcomingEvents', path: '/upcoming' },
     { icon: <Scale size={18} />, key: 'balanceSheet', path: '/balance-sheet' },
     { icon: <BookMarked size={18} />, key: 'masterSheet', path: '/master-sheet' },
     { icon: <UploadCloud size={18} />, key: 'Bulk Upload', path: '/bulk-upload' },
     { icon: <Search size={18} />, key: 'search', path: '/search' },
     { icon: <UserCircle size={18} />, key: 'profile', path: '/profile' },
+    { icon: <Phone size={18} />, key: 'contactUs', path: '/contact-us' },
 ]
 
 export default function Navbar() {
     const { t } = useTranslation()
-    const { user, logout } = useAuth()
+    const { user, logout, updateUser } = useAuth()
     const navigate = useNavigate()
     const [open, setOpen] = useState(false)
     const [lang, setLang] = useState('en')
     const [dark, setDark] = useState(() => localStorage.getItem('mv_theme') === 'dark')
 
     useEffect(() => {
-        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-        localStorage.setItem('mv_theme', dark ? 'dark' : 'light')
+        const newTheme = dark ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme)
+        localStorage.setItem('mv_theme', newTheme)
+        
+        if (user && user.themePreference !== newTheme) {
+            import('../api/api').then(({ usersAPI }) => {
+                usersAPI.updateThemePreference({ themePreference: newTheme }).then(() => {
+                    updateUser({ ...user, themePreference: newTheme });
+                }).catch(err => console.error('Failed to update theme preference', err));
+            });
+        }
     }, [dark])
 
     const toggleLang = () => {
@@ -96,17 +106,6 @@ export default function Navbar() {
                     <button className="theme-toggle" onClick={() => setDark(d => !d)}>
                         {dark ? <><Sun size={14} /> Light</> : <><Moon size={14} /> Dark</>}
                     </button>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 16 }}>
-                    <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Phone size={12} /> <a href="tel:+918006880050" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Contact Us</a>
-                    </div>
-                    <div style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Mail size={12} /> <a href="mailto:anand@leeletech.co.in" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Email Feedback</a>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <MessageCircle size={12} /> <a href="https://wa.me/918754734313" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>WhatsApp Feedback</a>
-                    </div>
                 </div>
                 {user && (
                     <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 12, fontWeight: 500 }}>

@@ -71,11 +71,14 @@ router.get('/admin/all', auth, async (req, res) => {
 // PUT /api/users/profile
 router.put('/profile', auth, async (req, res) => {
     try {
-        const { name, fatherName, motherName, nickname, spouseName, occupation, location, street, mobile } = req.body;
+        const { name, fatherName, motherName, nickname, spouseName, occupation, location, street, mobile, themePreference } = req.body;
         const user = await User.findById(req.userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         Object.assign(user, { name, fatherName, motherName, nickname, spouseName, occupation, location, street, mobile });
+        if (themePreference) {
+            user.themePreference = themePreference;
+        }
 
         // Regenerate QR code with updated info
         const qrData = JSON.stringify({ userId: user._id, name: user.name, mobile: user.mobile, location: user.location, street: user.street });
@@ -85,6 +88,25 @@ router.put('/profile', auth, async (req, res) => {
         res.json({ message: 'Profile updated', user: { ...user.toObject(), passwordHash: undefined, otpCode: undefined, otpExpiry: undefined } });
     } catch (err) {
         console.error('[users]', err);
+        res.status(500).json({ message: 'Request failed. Please try again.' });
+    }
+});
+
+// PUT /api/users/profile/theme
+router.put('/profile/theme', auth, async (req, res) => {
+    try {
+        const { themePreference } = req.body;
+        const user = await User.findById(req.userId);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (themePreference) {
+            user.themePreference = themePreference;
+            await user.save();
+        }
+
+        res.json({ message: 'Theme updated', themePreference: user.themePreference });
+    } catch (err) {
+        console.error('[users theme]', err);
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });

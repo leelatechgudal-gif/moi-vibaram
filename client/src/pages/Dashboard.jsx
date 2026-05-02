@@ -189,7 +189,7 @@ export default function Dashboard() {
                 <div className="flex gap-8 no-print">
                     <button className="btn btn-secondary btn-sm" onClick={handleShare}><Share2 size={16} /> {t('share')}</button>
                     <button className="btn btn-secondary btn-sm" onClick={handlePrint}><Printer size={16} /> {t('print')}</button>
-                    <Link to="/transactions/new" className="btn btn-primary btn-sm"><Plus size={16} /> {t('createMoi')}</Link>
+                    {/* <Link to="/transactions/new" className="btn btn-primary btn-sm"><Plus size={16} /> {t('createMoi')}</Link> */}
                 </div>
             </div>
 

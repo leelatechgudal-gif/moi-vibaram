@@ -64,6 +64,7 @@ const resources = {
             balance: 'Balance',
             noData: 'No records found',
             loading: 'Loading...',
+            contactUs: 'Contact Us',
         },
     },
     ta: {
@@ -128,6 +129,7 @@ const resources = {
             balance: 'இருப்பு',
             noData: 'பதிவு இல்லை',
             loading: 'ஏற்றுகிறது...',
+            contactUs: 'எங்களைத் தொடர்பு கொள்ள',
         },
     },
 };

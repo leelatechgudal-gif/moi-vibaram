@@ -47,6 +47,18 @@ export function AuthProvider({ children }) {
         localStorage.setItem('mv_user', JSON.stringify(userData));
         setToken(authToken);
         setUser(userData);
+        
+        // Load theme from user preference
+        if (userData.themePreference) {
+            let isDark = false;
+            if (userData.themePreference === 'dark') isDark = true;
+            else if (userData.themePreference === 'light') isDark = false;
+            else if (userData.themePreference === 'system') {
+                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            }
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('mv_theme', isDark ? 'dark' : 'light');
+        }
     };
 
     const updateUser = (userData) => {

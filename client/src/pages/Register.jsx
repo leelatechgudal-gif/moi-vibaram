@@ -89,6 +89,9 @@ export default function Register() {
                     Already have an account? <Link to="/login" className="auth-link">{t('login')}</Link>
                 </div>
             </div>
+            <div style={{ position: 'absolute', bottom: 20, textAlign: 'center', width: '100%', fontSize: '13px', color: 'var(--text-muted)' }}>
+                &copy; {new Date().getFullYear()} Leela Tech. Copyright reserved.
+            </div>
         </div>
     )
 }

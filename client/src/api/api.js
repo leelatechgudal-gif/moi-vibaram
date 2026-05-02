@@ -36,6 +36,7 @@ export const authAPI = {
 export const usersAPI = {
     getProfile: () => api.get('/users/profile'),
     updateProfile: data => api.put('/users/profile', data),
+    updateThemePreference: data => api.put('/users/profile/theme', data),
     uploadPhoto: formData => api.post('/users/profile/photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
     // Contact (Persons) CRUD mapped to /api/users
     getAll: params => api.get('/users', { params }),

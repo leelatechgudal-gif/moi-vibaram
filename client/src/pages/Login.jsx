@@ -15,18 +15,25 @@ export default function Login() {
     const [loading, setLoading] = useState(false)
     const [showPassword, setShowPassword] = useState(false)
 
+    const [showForceLogout, setShowForceLogout] = useState(false)
+
     const onChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
 
-    const onSubmit = async e => {
-        e.preventDefault()
+    const onSubmit = async (e, forceLogout = false) => {
+        if (e) e.preventDefault()
         setError('')
         setLoading(true)
+        setShowForceLogout(false)
         try {
-            const res = await authAPI.login(form)
+            const res = await authAPI.login({ ...form, forceLogout })
             login(res.data.user, res.data.token)
             navigate('/')
         } catch (err) {
-            setError(err.response?.data?.message || 'Login failed')
+            if (err.response?.data?.code === 'SESSION_LIMIT_REACHED') {
+                setShowForceLogout(true)
+            } else {
+                setError(err.response?.data?.message || 'Login failed')
+            }
         } finally {
             setLoading(false)
         }
@@ -78,18 +85,50 @@ export default function Login() {
                         </span>
                     </div>
                     {error && <div className="error-msg">{error}</div>}
-                    <button type="submit" className="btn btn-primary w-full mt-8" disabled={loading} style={{ justifyContent: 'center' }}>
-                        {loading ? <span className="spinner" /> : t('login')}
-                    </button>
-                    <button type="button" className="btn btn-secondary w-full" onClick={onFingerprintLogin} disabled={loading} style={{ justifyContent: 'center', marginTop: 12 }}>
-                        👆 Login with Fingerprint
-                    </button>
+                    
+                    {showForceLogout && (
+                        <div className="warning-box" style={{ 
+                            background: 'rgba(255, 193, 7, 0.1)', 
+                            border: '1px solid #ffc107', 
+                            padding: '12px', 
+                            borderRadius: '8px', 
+                            marginTop: '16px',
+                            fontSize: '13px',
+                            color: 'var(--text)'
+                        }}>
+                            <p style={{ margin: 0, marginBottom: '8px', fontWeight: 600 }}>⚠️ Maximum active sessions reached.</p>
+                            <p style={{ margin: 0, marginBottom: '12px', opacity: 0.8 }}>You are already logged in on 3 other devices. Do you want to logout from all other devices and login here?</p>
+                            <button 
+                                type="button" 
+                                className="btn btn-primary" 
+                                style={{ width: '100%', background: '#ffc107', color: '#000', border: 'none', justifyContent: 'center' }}
+                                onClick={() => onSubmit(null, true)}
+                                disabled={loading}
+                            >
+                                {loading ? <span className="spinner" style={{ borderColor: '#000', borderTopColor: 'transparent' }} /> : 'Yes, Force Logout & Login'}
+                            </button>
+                        </div>
+                    )}
+
+                    {!showForceLogout && (
+                        <>
+                            <button type="submit" className="btn btn-primary w-full mt-8" disabled={loading} style={{ justifyContent: 'center' }}>
+                                {loading ? <span className="spinner" /> : t('login')}
+                            </button>
+                            <button type="button" className="btn btn-secondary w-full" onClick={onFingerprintLogin} disabled={loading} style={{ justifyContent: 'center', marginTop: 12 }}>
+                                👆 Login with Fingerprint
+                            </button>
+                        </>
+                    )}
                 </form>
                 <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-muted)' }}>
                     <Link to="/forgot-password" className="auth-link">{t('forgotPassword')}</Link>
                     <span style={{ margin: '0 10px' }}>·</span>
                     <Link to="/register" className="auth-link">{t('register')}</Link>
                 </div>
+            </div>
+            <div style={{ position: 'absolute', bottom: 20, textAlign: 'center', width: '100%', fontSize: '13px', color: 'var(--text-muted)' }}>
+                &copy; {new Date().getFullYear()} Leela Tech. Copyright reserved.
             </div>
         </div>
     )

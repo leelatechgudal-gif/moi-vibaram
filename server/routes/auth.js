@@ -46,16 +46,17 @@ router.post('/register', async (req, res) => {
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, forceLogout } = req.body;
         const user = await User.findOne({ email });
         if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
 
-        if (user.activeSessions && user.activeSessions.length >= 3) {
+        let validSessions = [];
+        if (user.activeSessions && user.activeSessions.length > 0) {
             // Clean up expired tokens first
-            const validSessions = user.activeSessions.filter(t => {
+            validSessions = user.activeSessions.filter(t => {
                 try {
                     jwt.verify(t, process.env.JWT_SECRET);
                     return true;
@@ -63,10 +64,18 @@ router.post('/login', async (req, res) => {
                     return false;
                 }
             });
-            // if (validSessions.length >= 5) {
-            //     return res.status(403).json({ message: 'Maximum 3 logins permitted. Please logout from another device.' });
-            // }
             user.activeSessions = validSessions;
+        }
+
+        if (validSessions.length >= 3) {
+            if (forceLogout) {
+                user.activeSessions = []; // Clear all other sessions
+            } else {
+                return res.status(403).json({ 
+                    message: 'Maximum 3 logins permitted.', 
+                    code: 'SESSION_LIMIT_REACHED' 
+                });
+            }
         }
 
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
