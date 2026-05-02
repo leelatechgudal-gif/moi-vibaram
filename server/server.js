@@ -41,7 +41,7 @@ const allowedOrigins = [
     'http://localhost:5174',
     'http://localhost',          // Android Capacitor
     'capacitor://localhost',      // iOS Capacitor
-    // 'https://leelatech.co.in'
+    'https://leelatech.co.in'
 ];
 
 app.use(cors({
