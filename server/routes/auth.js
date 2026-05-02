@@ -17,7 +17,7 @@ router.post('/register', async (req, res) => {
         if (password.length < 8) {
             return res.status(400).json({ message: 'Password must be at least 8 characters.' });
         }
-        const existing = await User.findOne({ email });
+        const existing = await User.findOne({ email, isDeleted: { $ne: true } });
         if (existing) return res.status(409).json({ message: 'Email already registered' });
 
         // bcrypt cost factor 12 — stronger than minimum
@@ -47,7 +47,7 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password, forceLogout } = req.body;
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email, isDeleted: { $ne: true } });
         if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
         const valid = await bcrypt.compare(password, user.passwordHash);

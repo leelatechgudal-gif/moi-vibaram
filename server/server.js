@@ -10,6 +10,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const eventRoutes = require('./routes/events');
 const transactionRoutes = require('./routes/transactions');
+const partiesRoutes = require('./routes/parties');
 const webauthnRoutes = require('./routes/webauthn');
 
 const app = express();
@@ -68,6 +69,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', apiLimiter, userRoutes);
 app.use('/api/events', apiLimiter, eventRoutes);
+app.use('/api/parties', apiLimiter, partiesRoutes);
 app.use('/api/transactions', apiLimiter, transactionRoutes);
 app.use('/api/webauthn', authLimiter, webauthnRoutes);
 

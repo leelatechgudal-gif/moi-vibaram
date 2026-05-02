@@ -2,30 +2,23 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    initial: String,
     name: { type: String, required: true },
-    fatherName: String,
-    motherName: String,
-    nickname: String,
-    spouseName: String,
-    occupation: String,
+    mobile: String,
+    email: { type: String, required: true, unique: true },
+    passwordHash: { type: String, required: true },
     location: String,
     street: String,
-    mobile: String,
-    email: { type: String, sparse: true, unique: true },
-    passwordHash: { type: String },
-    remarks: String,
-    role: { type: String, enum: ["party", "admin", "user"], default: "user" },
+    role: { type: String, enum: ["admin", "user"], default: "user" },
     subscriptionExpiry: { type: Date },
-    activeSessions: [{ type: String }], // To track up to 3 active tokens/sessions
+    activeSessions: [{ type: String }],
     profilePhoto: String,
     qrCode: String,
     otpCode: String,
     otpExpiry: Date,
     themePreference: { type: String, enum: ["light", "dark", "system"], default: "dark" },
+    isDeleted: { type: Boolean, default: false },
     webAuthnCredentials: [
       {
-        // For fingerprint/biometric login
         credentialID: Buffer,
         credentialPublicKey: Buffer,
         counter: Number,
@@ -35,7 +28,5 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true },
 );
-
-userSchema.index({ name: 1, mobile: 1 }, { unique: true });
 
 module.exports = mongoose.model("User", userSchema);

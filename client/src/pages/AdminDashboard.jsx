@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import api from '../api/api';
-import { Users, Plus, Edit2, Trash2, Save } from 'lucide-react';
+import { usersAPI } from '../api/api';
+import { Users, Plus, Edit2, Trash2, Save, ShieldCheck } from 'lucide-react';
 
 export default function AdminDashboard() {
     const { user } = useAuth();
@@ -20,6 +20,7 @@ export default function AdminDashboard() {
     });
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
+    const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: '' });
 
     useEffect(() => {
         if (user?.role !== 'admin') {
@@ -33,7 +34,7 @@ export default function AdminDashboard() {
         if (pageNum === 1) setLoading(true);
         else setLoadingMore(true);
 
-        api.get(`/users/admin/all?page=${pageNum}&limit=10`)
+        usersAPI.getAdminAll({ page: pageNum, limit: 10 })
             .then(res => {
                 const { data, hasMore: more } = res.data;
                 if (pageNum === 1) {
@@ -80,13 +81,20 @@ export default function AdminDashboard() {
         setShowModal(true);
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this user?")) return;
+    const handleDelete = (u) => {
+        setDeleteModal({ show: true, id: u._id, name: u.name });
+    };
+
+    const confirmDelete = async () => {
+        setActionLoading(true);
         try {
-            await api.delete(`/users/admin/${id}`);
-            setUsers(users.filter(u => u._id !== id));
+            await usersAPI.adminDelete(deleteModal.id);
+            setUsers(users.filter(u => u._id !== deleteModal.id));
+            setDeleteModal({ show: false, id: null, name: '' });
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to delete user');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -96,10 +104,10 @@ export default function AdminDashboard() {
         setError('');
         try {
             if (modalMode === 'create') {
-                const res = await api.post('/users/admin', formData);
+                const res = await usersAPI.adminCreate(formData);
                 setUsers([res.data.user, ...users]);
             } else {
-                const res = await api.put(`/users/admin/${formData._id}`, formData);
+                const res = await usersAPI.adminUpdate(formData._id, formData);
                 setUsers(users.map(u => u._id === formData._id ? res.data.user : u));
                 fetchUsers(1); // Refetch to ensure data is updated completely
             }
@@ -123,7 +131,7 @@ export default function AdminDashboard() {
         <div>
             <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Users size={28} /> User Management</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><ShieldCheck size={28} /> System User Management</h1>
                     <div className="page-subtitle">Manage system users and subscriptions</div>
                 </div>
                 <button className="btn btn-primary" onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={16} /> Add User</button>
@@ -153,7 +161,7 @@ export default function AdminDashboard() {
                                 <td>{new Date(u.createdAt).toLocaleDateString()}</td>
                                 <td>
                                     <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(u)} style={{ marginRight: 8 }}><Edit2 size={14} /></button>
-                                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u._id)} disabled={u._id === user._id}><Trash2 size={14} /></button>
+                                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u)} disabled={u._id === user._id}><Trash2 size={14} /></button>
                                 </td>
                             </tr>
                         ))}
@@ -216,6 +224,28 @@ export default function AdminDashboard() {
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {deleteModal.show && (
+                <div className="modal-overlay" onClick={() => setDeleteModal({ show: false, id: null, name: '' })}>
+                    <div className="modal" style={{ maxWidth: 400, width: '90%' }}>
+                        <div className="modal-title" style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Trash2 size={24} /> Confirm Deletion
+                        </div>
+                        <div style={{ marginBottom: 24, lineHeight: 1.5 }}>
+                            <p>Are you sure you want to delete system user <strong>{deleteModal.name}</strong>?</p>
+                            <p style={{ marginTop: 12, padding: 12, background: 'rgba(59, 130, 246, 0.1)', borderLeft: '4px solid var(--primary)', fontSize: 14 }}>
+                                This will deactivate the user's login access.
+                            </p>
+                        </div>
+                        <div className="flex gap-8">
+                            <button className="btn btn-danger" onClick={confirmDelete} disabled={actionLoading} style={{ flex: 1 }}>
+                                {actionLoading ? <span className="spinner" /> : 'Confirm Deactivation'}
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => setDeleteModal({ show: false, id: null, name: '' })} style={{ flex: 1 }}>Cancel</button>
+                        </div>
                     </div>
                 </div>
             )}

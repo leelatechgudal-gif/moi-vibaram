@@ -21,7 +21,9 @@ import {
     Globe,
     Sun,
     Moon,
-    Menu
+    Menu,
+    Download,
+    ShieldCheck
 } from 'lucide-react'
 
 const navItems = [
@@ -48,6 +50,7 @@ export default function Navbar() {
         if (saved) return saved === 'dark'
         return true // Default to dark always
     })
+    const [deferredPrompt, setDeferredPrompt] = useState(null)
 
     useEffect(() => {
         const newTheme = dark ? 'dark' : 'light';
@@ -62,6 +65,24 @@ export default function Navbar() {
             });
         }
     }, [dark])
+
+    useEffect(() => {
+        const handler = (e) => {
+            e.preventDefault()
+            setDeferredPrompt(e)
+        }
+        window.addEventListener('beforeinstallprompt', handler)
+        return () => window.removeEventListener('beforeinstallprompt', handler)
+    }, [])
+
+    const handleInstall = async () => {
+        if (!deferredPrompt) return
+        deferredPrompt.prompt()
+        const { outcome } = await deferredPrompt.userChoice
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null)
+        }
+    }
 
     const toggleLang = () => {
         const next = lang === 'en' ? 'ta' : 'en'
@@ -93,12 +114,12 @@ export default function Navbar() {
                         {t(item.key)}
                     </NavLink>
                 ))}
-                <NavLink to="/users" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> User Management
+                <NavLink to="/parties" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
+                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> Party Management
                 </NavLink>
                 {user?.role === 'admin' && (
                     <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                        <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> App Users (Admin)
+                        <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={18} /></span> App Users (Admin)
                     </NavLink>
                 )}
             </nav>
@@ -110,6 +131,11 @@ export default function Navbar() {
                     <button className="theme-toggle" onClick={() => setDark(d => !d)}>
                         {dark ? <><Sun size={14} /> Light</> : <><Moon size={14} /> Dark</>}
                     </button>
+                    {deferredPrompt && (
+                        <button className="theme-toggle" onClick={handleInstall} style={{ background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)' }}>
+                            <Download size={14} /> Install App
+                        </button>
+                    )}
                 </div>
                 {user && (
                     <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 12, fontWeight: 500 }}>
@@ -134,6 +160,11 @@ export default function Navbar() {
                     {t('appName')}
                 </span>
                 <div style={{ display: 'flex', gap: 8 }}>
+                    {deferredPrompt && (
+                        <button className="theme-toggle" onClick={handleInstall} style={{ padding: '6px', background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)' }}>
+                            <Download size={16} />
+                        </button>
+                    )}
                     <button className="theme-toggle" onClick={() => setDark(d => !d)} style={{ padding: '6px' }}>
                         {dark ? <Sun size={16} /> : <Moon size={16} />}
                     </button>

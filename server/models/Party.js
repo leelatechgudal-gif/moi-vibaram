@@ -1,0 +1,24 @@
+const mongoose = require("mongoose");
+
+const partySchema = new mongoose.Schema(
+  {
+    initial: String,
+    name: { type: String, required: true },
+    fatherName: String,
+    motherName: String,
+    nickname: String,
+    spouseName: String,
+    occupation: String,
+    location: String,
+    street: String,
+    mobile: String,
+    remarks: String,
+    qrCode: String,
+    isDeleted: { type: Boolean, default: false },
+  },
+  { timestamps: true },
+);
+
+partySchema.index({ name: 1, mobile: 1 }, { unique: true });
+
+module.exports = mongoose.model("Party", partySchema);

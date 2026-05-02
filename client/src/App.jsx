@@ -18,7 +18,7 @@ import Search from './pages/Search'
 import AdminDashboard from './pages/AdminDashboard'
 import BulkUpload from './pages/BulkUpload'
 import PersonDetail from './pages/PersonDetail'
-import UserManagement from './pages/UserManagement'
+import PartiesManagement from './pages/PartiesManagement'
 import ContactUs from './pages/ContactUs'
 
 function Protected({ children }) {
@@ -64,7 +64,7 @@ function AppRoutes() {
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/search" element={<Search />} />
                                     <Route path="/admin" element={<AdminDashboard />} />
-                                    <Route path="/users" element={<UserManagement />} />
+                                    <Route path="/parties" element={<PartiesManagement />} />
                                     <Route path="/bulk-upload" element={<BulkUpload />} />
                                     <Route path="/person-detail" element={<PersonDetail />} />
                                     <Route path="/contact-us" element={<ContactUs />} />

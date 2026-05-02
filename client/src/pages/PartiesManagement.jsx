@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { usersAPI } from '../api/api';
-import { Users, Plus, Edit2, Trash2, Save, Search } from 'lucide-react';
+import { partiesAPI } from '../api/api';
+import { Users, Plus, Edit2, Trash2, Save, Search, UserCheck } from 'lucide-react';
 
-export default function UserManagement() {
+export default function PartiesManagement() {
     const { t } = useTranslation();
     const [persons, setPersons] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -19,6 +19,7 @@ export default function UserManagement() {
     });
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
+    const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: '' });
 
     useEffect(() => {
         fetchPersons(1, true);
@@ -35,7 +36,7 @@ export default function UserManagement() {
         if (reset) setLoading(true);
         else setLoadingMore(true);
 
-        usersAPI.getAll({ page: pageNum, limit: 15, search: searchQuery })
+        partiesAPI.getAll({ page: pageNum, limit: 15, search: searchQuery })
             .then(res => {
                 const { data, hasMore: more } = res.data;
                 if (reset) {
@@ -73,13 +74,20 @@ export default function UserManagement() {
         setShowModal(true);
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this user?")) return;
+    const handleDelete = (p) => {
+        setDeleteModal({ show: true, id: p._id, name: p.name });
+    };
+
+    const confirmDelete = async () => {
+        setActionLoading(true);
         try {
-            await usersAPI.delete(id);
-            setPersons(persons.filter(p => p._id !== id));
+            await partiesAPI.delete(deleteModal.id);
+            setPersons(persons.filter(p => p._id !== deleteModal.id));
+            setDeleteModal({ show: false, id: null, name: '' });
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to delete user');
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -89,10 +97,10 @@ export default function UserManagement() {
         setError('');
         try {
             if (modalMode === 'create') {
-                const res = await usersAPI.create(formData);
+                const res = await partiesAPI.create(formData);
                 setPersons([res.data, ...persons]);
             } else {
-                const res = await usersAPI.update(formData._id, formData);
+                const res = await partiesAPI.update(formData._id, formData);
                 setPersons(persons.map(p => p._id === formData._id ? res.data : p));
             }
             setShowModal(false);
@@ -111,7 +119,7 @@ export default function UserManagement() {
         <div>
             <div className="page-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
                 <div>
-                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Users size={28} /> User Management</h1>
+                    <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><UserCheck size={28} /> Party Management</h1>
                     <div className="page-subtitle">Manage your contacts and parties</div>
                 </div>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -120,13 +128,13 @@ export default function UserManagement() {
                         <input
                             type="text"
                             className="form-control"
-                            placeholder="Search users..."
+                            placeholder="Search parties..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             style={{ paddingLeft: 36, width: 250 }}
                         />
                     </div>
-                    <button className="btn btn-primary" onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={16} /> Add User</button>
+                    <button className="btn btn-primary" onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={16} /> Add Party</button>
                 </div>
             </div>
 
@@ -134,8 +142,8 @@ export default function UserManagement() {
                 <div className="flex-center" style={{ height: 200 }}><span className="spinner" /></div>
             ) : persons.length === 0 ? (
                 <div className="card empty-state">
-                    <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><Users size={48} strokeWidth={1} /></div>
-                    <div>No users found.</div>
+                    <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><UserCheck size={48} strokeWidth={1} /></div>
+                    <div>No parties found.</div>
                 </div>
             ) : (
                 <div className="card table-wrap">
@@ -158,7 +166,7 @@ export default function UserManagement() {
                                     <td>{p.location || '—'}</td>
                                     <td>
                                         <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(p)} style={{ marginRight: 8 }}><Edit2 size={14} /></button>
-                                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p._id)}><Trash2 size={14} /></button>
+                                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}><Trash2 size={14} /></button>
                                     </td>
                                 </tr>
                             ))}
@@ -178,7 +186,7 @@ export default function UserManagement() {
                 <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
                     <div className="modal" style={{ maxWidth: 500, width: '100%' }}>
                         <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            {modalMode === 'create' ? <><Plus size={20} /> Add User</> : <><Edit2 size={20} /> Edit User</>}
+                            {modalMode === 'create' ? <><Plus size={20} /> Add Party</> : <><Edit2 size={20} /> Edit Party</>}
                         </div>
                         <form onSubmit={handleSubmit} className="form-grid">
                             <div className="form-group" style={{ display: 'flex', gap: 8, gridColumn: '1 / -1' }}>
@@ -212,11 +220,33 @@ export default function UserManagement() {
 
                             <div className="flex gap-8" style={{ gridColumn: '1 / -1', marginTop: 16 }}>
                                 <button type="submit" className="btn btn-primary" disabled={actionLoading}>
-                                    {actionLoading ? <span className="spinner" /> : <><Save size={16} style={{ marginRight: 6 }} /> Save User</>}
+                                    {actionLoading ? <span className="spinner" /> : <><Save size={16} style={{ marginRight: 6 }} /> Save Party</>}
                                 </button>
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {deleteModal.show && (
+                <div className="modal-overlay" onClick={() => setDeleteModal({ show: false, id: null, name: '' })}>
+                    <div className="modal" style={{ maxWidth: 400, width: '90%' }}>
+                        <div className="modal-title" style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Trash2 size={24} /> Confirm Deletion
+                        </div>
+                        <div style={{ marginBottom: 24, lineHeight: 1.5 }}>
+                            <p>Are you sure you want to delete <strong>{deleteModal.name}</strong>?</p>
+                            <p style={{ marginTop: 12, padding: 12, background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid var(--danger)', fontSize: 14 }}>
+                                <strong>Warning:</strong> Deleting the party record will also delete all associated transaction records.
+                            </p>
+                        </div>
+                        <div className="flex gap-8">
+                            <button className="btn btn-danger" onClick={confirmDelete} disabled={actionLoading} style={{ flex: 1 }}>
+                                {actionLoading ? <span className="spinner" /> : 'Delete Everything'}
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => setDeleteModal({ show: false, id: null, name: '' })} style={{ flex: 1 }}>Cancel</button>
+                        </div>
                     </div>
                 </div>
             )}

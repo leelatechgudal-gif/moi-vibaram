@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const Party = require('../models/Party');
 const Event = require('../models/Event');
 const auth = require('../middleware/auth');
 
@@ -9,7 +10,7 @@ const auth = require('../middleware/auth');
 router.get('/', auth, async (req, res) => {
     try {
         const { eventId, type, page, limit } = req.query;
-        const filter = { userId: req.userId };
+        const filter = { userId: req.userId, isDeleted: { $ne: true } };
         if (eventId) filter.eventId = eventId;
         if (type) filter.type = type;
 
@@ -55,21 +56,22 @@ router.get('/person-detail', auth, async (req, res) => {
 
         if (!targetPartyId) {
             // If no partyId, try to find by name and mobile
-            const user = await User.findOne({ 
+            const party = await Party.findOne({ 
                 name: partyName, 
-                mobile: mobile || '' 
+                mobile: mobile || '',
+                isDeleted: { $ne: true }
             });
-            if (!user) return res.json({ transactions: [], totalReceived: 0, totalPaid: 0, balance: 0 });
-            targetPartyId = user._id;
+            if (!party) return res.json({ transactions: [], totalReceived: 0, totalPaid: 0, balance: 0 });
+            targetPartyId = party._id;
         }
 
-        const filter = { partyId: targetPartyId };
+        const filter = { partyId: targetPartyId, isDeleted: { $ne: true } };
         const transactions = await Transaction.find(filter).populate('eventId').populate('partyId').sort({ date: -1 });
 
         const totalReceived = transactions.filter(t => t.type === 'received').reduce((s, t) => s + (t.cashAmount || 0), 0);
         const totalPaid = transactions.filter(t => t.type === 'paid').reduce((s, t) => s + (t.cashAmount || 0), 0);
 
-        const party = await User.findById(targetPartyId);
+        const party = await Party.findById(targetPartyId);
 
         res.json({
             person: party,
@@ -113,10 +115,11 @@ async function findOrCreateParty(data) {
     const { partyName, name, mobile, initial, fatherName, motherName, spouseName, nickname, occupation, location, street, remarks } = data;
     const finalName = name || partyName;
     const finalMobile = mobile || '';
+    const filter = { name: finalName, mobile: finalMobile, isDeleted: { $ne: true } };
 
-    let user = await User.findOne({ name: finalName, mobile: finalMobile });
-    if (!user) {
-        user = new User({
+    let party = await Party.findOne(filter);
+    if (!party) {
+        party = new Party({
             initial,
             name: finalName,
             mobile: finalMobile,
@@ -127,12 +130,11 @@ async function findOrCreateParty(data) {
             occupation,
             location: location || 'Unknown',
             street,
-            remarks,
-            role: 'party'
+            remarks
         });
-        await user.save();
+        await party.save();
     }
-    return user;
+    return party;
 }
 
 // POST /api/transactions - Create Moi entry
@@ -217,7 +219,7 @@ router.post('/bulk', auth, async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
     try {
-        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.userId });
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.userId, isDeleted: { $ne: true } });
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
         const fields = ['eventId', 'eventName', 'type', 'cashAmount', 'date', 'seerVarisai', 'remarks', 'thaiMama', 'labels'];
@@ -243,7 +245,11 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE /api/transactions/:id
 router.delete('/:id', auth, async (req, res) => {
     try {
-        const transaction = await Transaction.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+        const transaction = await Transaction.findOneAndUpdate(
+            { _id: req.params.id, userId: req.userId },
+            { isDeleted: true },
+            { new: true }
+        );
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
         res.json({ message: 'Transaction deleted' });
     } catch (err) {
@@ -255,7 +261,7 @@ router.delete('/:id', auth, async (req, res) => {
 // GET /api/transactions/balance-sheet - Person-wise aggregation
 router.get('/balance-sheet', auth, async (req, res) => {
     try {
-        const transactions = await Transaction.find({ userId: req.userId }).populate('eventId').populate('partyId');
+        const transactions = await Transaction.find({ userId: req.userId, isDeleted: { $ne: true } }).populate('eventId').populate('partyId');
 
         const partyMap = {};
         transactions.forEach(t => {
@@ -291,7 +297,7 @@ router.get('/balance-sheet', auth, async (req, res) => {
 router.get('/master-sheet', auth, async (req, res) => {
     try {
         const events = await Event.find({ userId: req.userId }).sort({ date: -1 });
-        const transactions = await Transaction.find({ userId: req.userId });
+        const transactions = await Transaction.find({ userId: req.userId, isDeleted: { $ne: true } });
 
         let grandTotalPaid = 0;
         let grandTotalReceived = 0;
@@ -335,22 +341,22 @@ const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 router.get('/search', auth, async (req, res) => {
     try {
         const { q, location, eventId, page, limit } = req.query;
-        const filter = { userId: req.userId };
+        const filter = { userId: req.userId, isDeleted: { $ne: true } };
         if (eventId) filter.eventId = eventId;
         
-        // If searching by location or query, we first need to find matching users
+        // If searching by location or query, we first need to find matching parties
         let partyIds = [];
-        const userFilter = { role: { $in: ['party', 'user'] } };
-        let userSearchActive = false;
+        const partyFilter = { isDeleted: { $ne: true } };
+        let partySearchActive = false;
 
         if (location) {
-            userFilter.location = new RegExp(escapeRegex(location), 'i');
-            userSearchActive = true;
+            partyFilter.location = new RegExp(escapeRegex(location), 'i');
+            partySearchActive = true;
         }
 
         if (q) {
             const safeQ = escapeRegex(q);
-            userFilter.$or = [
+            partyFilter.$or = [
                 { name: new RegExp(safeQ, 'i') },
                 { nickname: new RegExp(safeQ, 'i') },
                 { mobile: new RegExp(safeQ, 'i') },
@@ -359,12 +365,12 @@ router.get('/search', auth, async (req, res) => {
                 { motherName: new RegExp(safeQ, 'i') },
                 { labels: new RegExp(safeQ, 'i') },
             ];
-            userSearchActive = true;
+            partySearchActive = true;
         }
 
-        if (userSearchActive) {
-            const users = await User.find(userFilter).select('_id');
-            partyIds = users.map(u => u._id);
+        if (partySearchActive) {
+            const parties = await Party.find(partyFilter).select('_id');
+            partyIds = parties.map(p => p._id);
             filter.partyId = { $in: partyIds };
         }
 
@@ -395,7 +401,7 @@ router.get('/search', auth, async (req, res) => {
 // GET /api/transactions/:id
 router.get('/:id', auth, async (req, res) => {
     try {
-        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.userId }).populate('eventId').populate('partyId');
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.userId, isDeleted: { $ne: true } }).populate('eventId').populate('partyId');
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
         res.json(flattenTransaction(transaction));
     } catch (err) {

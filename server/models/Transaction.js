@@ -15,7 +15,7 @@ const transactionSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' }, // Optional for 'paid' transactions
     eventName: String, // Used when eventId is not available (typically for 'paid' transactions)
-    partyId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    partyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Party', required: true },
     type: { type: String, enum: ['received', 'paid'], required: true },
     cashAmount: { type: Number, default: 0 },
     date: { type: Date, default: Date.now },
@@ -23,6 +23,7 @@ const transactionSchema = new mongoose.Schema({
     labels: [{ type: String }], // For user-defined labels/groups
     seerVarisai: seerVarisaiSchema,
     remarks: String,
+    isDeleted: { type: Boolean, default: false },
     editHistory: [{ // Audit log for modifications
         editedAt: { type: Date, default: Date.now },
         editedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

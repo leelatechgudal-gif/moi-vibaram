@@ -38,11 +38,18 @@ export const usersAPI = {
     updateProfile: data => api.put('/users/profile', data),
     updateThemePreference: data => api.put('/users/profile/theme', data),
     uploadPhoto: formData => api.post('/users/profile/photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-    // Contact (Persons) CRUD mapped to /api/users
-    getAll: params => api.get('/users', { params }),
-    create: data => api.post('/users', data),
-    update: (id, data) => api.put(`/users/${id}`, data),
-    delete: id => api.delete(`/users/${id}`),
+    // Admin management of app users
+    getAdminAll: params => api.get('/users/admin/all', { params }),
+    adminCreate: data => api.post('/users/admin', data),
+    adminUpdate: (id, data) => api.put(`/users/admin/${id}`, data),
+    adminDelete: id => api.delete(`/users/admin/${id}`),
+};
+
+export const partiesAPI = {
+    getAll: params => api.get('/parties', { params }),
+    create: data => api.post('/parties', data),
+    update: (id, data) => api.put(`/parties/${id}`, data),
+    delete: id => api.delete(`/parties/${id}`),
 };
 
 export const eventsAPI = {
