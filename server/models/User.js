@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema(
     qrCode: String,
     otpCode: String,
     otpExpiry: Date,
-    themePreference: { type: String, enum: ["light", "dark", "system"], default: "system" },
+    themePreference: { type: String, enum: ["light", "dark", "system"], default: "dark" },
     webAuthnCredentials: [
       {
         // For fingerprint/biometric login

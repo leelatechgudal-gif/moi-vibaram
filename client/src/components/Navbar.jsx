@@ -43,7 +43,11 @@ export default function Navbar() {
     const navigate = useNavigate()
     const [open, setOpen] = useState(false)
     const [lang, setLang] = useState('en')
-    const [dark, setDark] = useState(() => localStorage.getItem('mv_theme') === 'dark')
+    const [dark, setDark] = useState(() => {
+        const saved = localStorage.getItem('mv_theme')
+        if (saved) return saved === 'dark'
+        return true // Default to dark always
+    })
 
     useEffect(() => {
         const newTheme = dark ? 'dark' : 'light';
