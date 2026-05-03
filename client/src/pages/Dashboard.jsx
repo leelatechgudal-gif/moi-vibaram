@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { transactionsAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useReactToPrint } from 'react-to-print'
-import { ArrowLeft, Plus, Edit2, Share2, Printer, Coins, Gift, Scale, Inbox, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Plus, Edit2, Share2, Printer, Coins, Gift, Scale, Inbox, ChevronDown, ChevronRight, Bell, BellOff, X } from 'lucide-react'
+import { remindersAPI } from '../api/api'
 
 function StatDrillDown({ type, onClose }) {
     const { t } = useTranslation()
@@ -15,11 +16,16 @@ function StatDrillDown({ type, onClose }) {
     const [loadingMore, setLoadingMore] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
 
-    const fetchTx = async (pageNum = 1) => {
+    const fetchTx = async (pageNum = 1, query = searchQuery) => {
         if (pageNum === 1) setLoading(true)
         else setLoadingMore(true)
         try {
-            const res = await transactionsAPI.getAll({ type, page: pageNum, limit: 10 })
+            let res;
+            if (query) {
+                res = await transactionsAPI.search({ q: query, page: pageNum, limit: 15 })
+            } else {
+                res = await transactionsAPI.getAll({ type, page: pageNum, limit: 15 })
+            }
             const { data, hasMore: more } = res.data
             setTxList(prev => pageNum === 1 ? data : [...prev, ...data])
             setPage(pageNum)
@@ -32,13 +38,14 @@ function StatDrillDown({ type, onClose }) {
         }
     }
 
-    useEffect(() => { fetchTx(1) }, [type])
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            fetchTx(1, searchQuery)
+        }, 300)
+        return () => clearTimeout(delayDebounceFn)
+    }, [searchQuery, type])
 
-    const filteredTx = txList.filter(t =>
-        t.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.mobile?.includes(searchQuery) ||
-        t.location?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredTx = txList; // Now using server-side search
 
     const fmt = n => `₹${(n || 0).toLocaleString('en-IN')}`
 
@@ -81,6 +88,7 @@ function StatDrillDown({ type, onClose }) {
                             <tr>
                                 <th>{t('name')}</th>
                                 <th>{t('event')}</th>
+                                {searchQuery && <th>{t('type')}</th>}
                                 <th>{t('amount')}</th>
                                 <th>{t('date')}</th>
                                 <th>Actions</th>
@@ -102,6 +110,13 @@ function StatDrillDown({ type, onClose }) {
                                         <span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span>
                                     </td>
                                     <td>{tx.eventId?.eventName || tx.eventName || '—'}</td>
+                                    {searchQuery && (
+                                        <td>
+                                            <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
+                                                {t(tx.type)}
+                                            </span>
+                                        </td>
+                                    )}
                                     <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
                                     <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
                                     <td>
@@ -113,7 +128,7 @@ function StatDrillDown({ type, onClose }) {
                             ))}
                         </tbody>
                     </table>
-                    {hasMore && !searchQuery && (
+                    {hasMore && (
                         <div style={{ textAlign: 'center', marginTop: 16 }}>
                             <button
                                 className="btn btn-secondary"
@@ -138,6 +153,9 @@ export default function Dashboard() {
     const [searchQuery, setSearchQuery] = useState('')
     const [loading, setLoading] = useState(true)
     const [selectedStat, setSelectedStat] = useState(null)
+    const [recentTx, setRecentTx] = useState([])
+    const [recentLoading, setRecentLoading] = useState(false)
+    const [upcomingReminders, setUpcomingReminders] = useState([])
 
     // Pagination state for event transactions
     const [eventTxMap, setEventTxMap] = useState({})
@@ -147,9 +165,19 @@ export default function Dashboard() {
     const printRef = useRef()
 
     useEffect(() => {
+        setLoading(true)
         transactionsAPI.getMasterSheet()
             .then(res => setData(res.data))
             .finally(() => setLoading(false))
+
+        setRecentLoading(true)
+        transactionsAPI.getAll({ page: 1, limit: 10 })
+            .then(res => setRecentTx(res.data.data))
+            .finally(() => setRecentLoading(false))
+
+        remindersAPI.getUpcoming()
+            .then(res => setUpcomingReminders(res.data))
+            .catch(err => console.error(err))
     }, [])
 
     const loadEventTransactions = async (eventId, pageNum = 1) => {
@@ -179,6 +207,19 @@ export default function Dashboard() {
 
     const fmt = n => `₹${(n || 0).toLocaleString('en-IN')}`
 
+    const handleDismissReminder = (id) => {
+        setUpcomingReminders(prev => prev.filter(r => r._id !== id))
+    }
+
+    const handleDisableReminderAlert = async (id) => {
+        try {
+            await remindersAPI.update(id, { notifyOnLogin: false })
+            handleDismissReminder(id)
+        } catch (err) {
+            console.error(err)
+        }
+    }
+
     return (
         <div ref={printRef}>
             <div className="page-header">
@@ -192,6 +233,33 @@ export default function Dashboard() {
                     {/* <Link to="/transactions/new" className="btn btn-primary btn-sm"><Plus size={16} /> {t('createMoi')}</Link> */}
                 </div>
             </div>
+
+            {upcomingReminders.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                    {upcomingReminders.map(reminder => (
+                        <div key={reminder._id} className="card" style={{ padding: '12px 20px', borderLeft: '4px solid var(--warning)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Bell size={16} color="var(--warning)" />
+                                    <strong style={{ fontSize: 15 }}>Upcoming Reminder: {reminder.eventName}</strong>
+                                </div>
+                                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                                    {reminder.name} {reminder.location && `• ${reminder.location}`} • {new Date(reminder.date).toLocaleDateString()}
+                                </div>
+                                {reminder.notes && <div style={{ fontSize: 13, marginTop: 4 }}>{reminder.notes}</div>}
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleDisableReminderAlert(reminder._id)} title="Disable Alert">
+                                    <BellOff size={16} /> Disable
+                                </button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleDismissReminder(reminder._id)} title="Dismiss">
+                                    <X size={16} /> Dismiss
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {loading ? (
                 <div className="flex-center" style={{ height: 200 }}><span className="spinner" /></div>
@@ -218,7 +286,56 @@ export default function Dashboard() {
                     {selectedStat ? (
                         <StatDrillDown type={selectedStat} onClose={() => setSelectedStat(null)} />
                     ) : (
-                        <div className="card">
+                        <>
+                            <div className="card mb-20">
+                                <div className="flex-between mb-16">
+                                    <h3 style={{ fontWeight: 700 }}>Recent Transactions</h3>
+                                    <Link to="/search" className="btn btn-secondary btn-sm">View All</Link>
+                                </div>
+                                {recentLoading ? (
+                                    <div className="flex-center"><span className="spinner" /></div>
+                                ) : recentTx.length === 0 ? (
+                                    <div className="text-muted text-center py-20">No recent transactions.</div>
+                                ) : (
+                                    <div className="table-wrap">
+                                        <table className="table">
+                                            <thead>
+                                                <tr>
+                                                    <th>{t('partyName')}</th>
+                                                    <th>{t('type')}</th>
+                                                    <th>{t('amount')}</th>
+                                                    <th>{t('date')}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {recentTx.map(tx => (
+                                                    <tr key={tx._id}>
+                                                        <td>
+                                                            <Link
+                                                                to={`/person-detail?partyName=${encodeURIComponent(tx.partyName)}&mobile=${tx.mobile || ''}&spouseName=${encodeURIComponent(tx.spouseName || '')}&location=${encodeURIComponent(tx.location || '')}&type=${tx.type}`}
+                                                                style={{ textDecoration: 'none', color: 'inherit' }}
+                                                                className="hover-underline"
+                                                            >
+                                                                <strong style={{ color: 'var(--primary)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                                            </Link>
+                                                            <div className="text-muted" style={{ fontSize: 11 }}>{tx.location || '—'}</div>
+                                                        </td>
+                                                        <td>
+                                                            <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
+                                                                {t(tx.type)}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
+                                                        <td className="text-muted" style={{ fontSize: 12 }}>{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="card">
                             <div className="flex-between mb-16">
                                 <h3 style={{ fontWeight: 700 }}>Events Summary</h3>
                             </div>
@@ -234,7 +351,6 @@ export default function Dashboard() {
                                         const eventTx = eventTxMap[event._id] || [];
 
                                         const filteredTx = eventTx.filter(t =>
-                                            t.type === 'received' &&
                                             (t.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                                                 t.mobile?.includes(searchQuery) ||
                                                 t.location?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -288,6 +404,7 @@ export default function Dashboard() {
                                                                     <thead>
                                                                         <tr>
                                                                             <th>{t('partyName')}</th>
+                                                                            <th>{t('type')}</th>
                                                                             <th>{t('amount')}</th>
                                                                             <th>{t('date')}</th>
                                                                         </tr>
@@ -299,6 +416,11 @@ export default function Dashboard() {
                                                                                     <strong style={{ color: 'var(--text)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
                                                                                     <br />
                                                                                     <span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
+                                                                                        {t(tx.type)}
+                                                                                    </span>
                                                                                 </td>
                                                                                 <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
                                                                                 <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
@@ -327,6 +449,7 @@ export default function Dashboard() {
                                 </div>
                             )}
                         </div>
+                        </>
                     )}
                 </>
             )}

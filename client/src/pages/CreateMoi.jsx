@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { eventsAPI, transactionsAPI } from "../api/api";
 import QrScanner from "./QrScanner";
 import { numberToWords } from "../utils/numberToWords";
-import { Plus, QrCode, ClipboardList, Gift, Coins, Banknote, Save, User, RefreshCw, Search, ArrowLeft } from "lucide-react";
+import { Plus, QrCode, ClipboardList, Gift, Coins, Banknote, Save, User, RefreshCw, Search, ArrowLeft, CalendarPlus } from "lucide-react";
 
 const SEER_FIELDS = [
   { key: "dress", icon: "👗" },
@@ -35,6 +35,13 @@ export default function CreateMoi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [eventFormData, setEventFormData] = useState({
+    eventName: "",
+    date: new Date().toISOString().slice(0, 10),
+    location: "",
+  });
+  const [eventLoading, setEventLoading] = useState(false);
 
   const [form, setForm] = useState({
     eventId: "",
@@ -202,6 +209,28 @@ export default function CreateMoi() {
     }
   };
 
+  const handleEventSubmit = async (e) => {
+    e.preventDefault();
+    setEventLoading(true);
+    try {
+      const fd = new FormData();
+      Object.entries(eventFormData).forEach(([k, v]) => v && fd.append(k, v));
+      const res = await eventsAPI.create(fd);
+      setEvents([res.data, ...events]);
+      setForm({ ...form, eventId: res.data._id });
+      setShowEventModal(false);
+      setEventFormData({
+        eventName: "",
+        date: new Date().toISOString().slice(0, 10),
+        location: "",
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to create event");
+    } finally {
+      setEventLoading(false);
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -241,6 +270,62 @@ export default function CreateMoi() {
         </div>
       )}
 
+      {showEventModal && (
+        <div
+          className="modal-overlay"
+          onClick={(e) => e.target === e.currentTarget && setShowEventModal(false)}
+        >
+          <div className="modal" style={{ maxWidth: 450 }}>
+            <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CalendarPlus size={20} /> Create New Event
+            </div>
+            <form onSubmit={handleEventSubmit} className="form-grid">
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label className="form-label">Event Name *</label>
+                <input
+                  className="form-control"
+                  value={eventFormData.eventName}
+                  onChange={(e) => setEventFormData({ ...eventFormData, eventName: e.target.value })}
+                  placeholder="e.g. My Son's Wedding"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Event Date *</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={eventFormData.date}
+                  onChange={(e) => setEventFormData({ ...eventFormData, date: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Location</label>
+                <input
+                  className="form-control"
+                  value={eventFormData.location}
+                  onChange={(e) => setEventFormData({ ...eventFormData, location: e.target.value })}
+                  placeholder="Venue or City"
+                />
+              </div>
+              <div className="flex gap-8" style={{ gridColumn: '1 / -1', marginTop: 16 }}>
+                <button type="submit" className="btn btn-primary" disabled={eventLoading}>
+                  {eventLoading ? <span className="spinner" /> : "Create Event"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowEventModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <form onSubmit={onSubmit}>
         {/* Transaction & Event Details */}
         <div className="card" style={{ marginBottom: 16 }}>
@@ -250,32 +335,46 @@ export default function CreateMoi() {
           <div className="form-grid">
             <div className="form-group">
               <label className="form-label">{t("eventName")} *</label>
-              {form.type === "received" ? (
-                <select
-                  className="form-control"
-                  name="eventId"
-                  value={form.eventId}
-                  onChange={onChange}
-                  required
-                >
-                  <option value="">Select event...</option>
-                  {events.map((e) => (
-                    <option key={e._id} value={e._id}>
-                      {e.eventName} —{" "}
-                      {new Date(e.date).toLocaleDateString("en-IN")}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  className="form-control"
-                  name="eventName"
-                  value={form.eventName}
-                  onChange={onChange}
-                  required
-                  placeholder="Enter event name (e.g. Raj's Wedding)"
-                />
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {form.type === "received" ? (
+                  <>
+                    <select
+                      className="form-control"
+                      name="eventId"
+                      value={form.eventId}
+                      onChange={onChange}
+                      required
+                      style={{ flex: 1 }}
+                    >
+                      <option value="">Select event...</option>
+                      {events.map((e) => (
+                        <option key={e._id} value={e._id}>
+                          {e.eventName} —{" "}
+                          {new Date(e.date).toLocaleDateString("en-IN")}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setShowEventModal(true)}
+                      title="Add New Event"
+                      style={{ padding: '8px 12px' }}
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </>
+                ) : (
+                  <input
+                    className="form-control"
+                    name="eventName"
+                    value={form.eventName}
+                    onChange={onChange}
+                    required
+                    placeholder="Enter event name (e.g. Raj's Wedding)"
+                  />
+                )}
+              </div>
             </div>
             <div className="form-group">
               <label className="form-label">{t("type")} *</label>

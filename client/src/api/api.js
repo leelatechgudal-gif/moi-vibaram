@@ -60,6 +60,14 @@ export const eventsAPI = {
     delete: id => api.delete(`/events/${id}`),
 };
 
+export const remindersAPI = {
+    getAll: config => api.get('/reminders', config),
+    getUpcoming: config => api.get('/reminders/upcoming', config),
+    create: data => api.post('/reminders', data),
+    update: (id, data) => api.put(`/reminders/${id}`, data),
+    delete: id => api.delete(`/reminders/${id}`),
+};
+
 export const transactionsAPI = {
     getById: id => api.get(`/transactions/${id}`),
     getAll: params => api.get('/transactions', { params }),
