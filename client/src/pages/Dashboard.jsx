@@ -287,7 +287,7 @@ export default function Dashboard() {
                         <StatDrillDown type={selectedStat} onClose={() => setSelectedStat(null)} />
                     ) : (
                         <>
-                            <div className="card mb-20">
+                            {/* <div className="card mb-20">
                                 <div className="flex-between mb-16">
                                     <h3 style={{ fontWeight: 700 }}>Recent Transactions</h3>
                                     <Link to="/search" className="btn btn-secondary btn-sm">View All</Link>
@@ -333,7 +333,7 @@ export default function Dashboard() {
                                         </table>
                                     </div>
                                 )}
-                            </div>
+                            </div> */}
 
                             <div className="card">
                             <div className="flex-between mb-16">

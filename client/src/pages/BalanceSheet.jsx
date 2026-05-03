@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
 import { Link } from 'react-router-dom'
 import { useReactToPrint } from 'react-to-print'
-import { Scale, Share2, Printer, Edit2 } from 'lucide-react'
+import { Scale, Share2, Printer, Edit2, ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function BalanceSheet() {
     const { t } = useTranslation()
     const [sheet, setSheet] = useState([])
     const [selected, setSelected] = useState(null)
     const [loading, setLoading] = useState(true)
+    const [searchQuery, setSearchQuery] = useState('')
     const printRef = useRef()
 
     useEffect(() => {
@@ -35,6 +36,16 @@ export default function BalanceSheet() {
                 </div>
             </div>
 
+            <div className="mb-16 no-print">
+                <input
+                    type="search"
+                    className="form-control"
+                    placeholder="Search by name, mobile, or location..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                />
+            </div>
+
             {loading ? (
                 <div className="flex-center" style={{ height: 200 }}><span className="spinner" /></div>
             ) : sheet.length === 0 ? (
@@ -42,7 +53,20 @@ export default function BalanceSheet() {
                     <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><Scale size={48} strokeWidth={1} /></div>
                     <div>{t('noData')}</div>
                 </div>
-            ) : (
+            ) : (() => {
+                const filteredSheet = sheet.filter(p =>
+                    p.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.mobile?.includes(searchQuery) ||
+                    p.location?.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+                
+                if (filteredSheet.length === 0) {
+                    return (
+                        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No records found matching your search.</div>
+                    );
+                }
+
+                return (
                 <div ref={printRef}>
                     <div className="card table-wrap">
                         <table className="table">
@@ -55,15 +79,13 @@ export default function BalanceSheet() {
                                     <th>Paid</th>
                                     <th>Received</th>
                                     <th>{t('balance')}</th>
+                                    <th className="no-print"></th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {sheet.map((p, i) => (
-                                    <React.Fragment key={i}>
-                                        <tr
-                                            style={{ cursor: 'pointer' }}
-                                            onClick={() => setSelected(selected === i ? null : i)}
-                                        >
+                                {filteredSheet.map((p, i) => (
+                                    <React.Fragment key={p._id || i}>
+                                        <tr>
                                             <td className="text-muted">{i + 1}</td>
                                             <td>
                                                 <Link 
@@ -85,11 +107,16 @@ export default function BalanceSheet() {
                                                     {p.balance >= 0 ? '+' : ''}{fmt(p.balance)}
                                                 </span>
                                             </td>
+                                            <td className="no-print">
+                                                <button className="btn btn-secondary btn-sm" onClick={() => setSelected(selected === p._id ? null : p._id)}>
+                                                    {selected === p._id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                </button>
+                                            </td>
                                         </tr>
                                         {/* Drill-down row */}
-                                        {selected === i && (
+                                        {selected === p._id && (
                                             <tr>
-                                                <td colSpan={7} style={{ padding: 0 }}>
+                                                <td colSpan={8} style={{ padding: 0 }}>
                                                     <div style={{ background: 'var(--glass)', padding: 16, borderBottom: '1px solid var(--border)' }}>
                                                         <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>Transaction History with {p.partyName}</div>
                                                         <table className="table" style={{ fontSize: 12 }}>
@@ -134,7 +161,8 @@ export default function BalanceSheet() {
                         </table>
                     </div>
                 </div>
-            )}
+                );
+            })()}
         </div>
     )
 }
