@@ -179,7 +179,7 @@ export default function UpcomingEvents() {
 
             {showModal && (
                 <div className="modal-overlay" onClick={handleCloseModal}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
                         <div className="modal-header">
                             <h2 className="modal-title">{isEditing ? 'Edit Reminder' : 'New Reminder'}</h2>
                             <button className="modal-close" onClick={handleCloseModal}>&times;</button>
@@ -220,8 +220,14 @@ export default function UpcomingEvents() {
                                     type="date" 
                                     className="form-control" 
                                     required 
-                                    value={formData.date} 
+                                    value={formData.date || ''} 
                                     onChange={e => setFormData({ ...formData, date: e.target.value })} 
+                                    onClick={e => {
+                                        e.stopPropagation();
+                                        if (typeof e.target.showPicker === 'function') {
+                                            try { e.target.showPicker(); } catch (err) {}
+                                        }
+                                    }}
                                 />
                             </div>
                             <div className="form-group">

@@ -121,6 +121,12 @@ export default function CreateMoi() {
     setSearchResults([]);
   };
 
+  useEffect(() => {
+    if (location.state?.party) {
+        handleSelectPerson(location.state.party);
+    }
+  }, [location.state?.party]);
+
   const handleCreateNewPerson = () => {
     setSelectedPerson(null);
     setIsNewPerson(true);

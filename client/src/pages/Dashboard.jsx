@@ -9,43 +9,33 @@ import { remindersAPI } from '../api/api'
 
 function StatDrillDown({ type, onClose }) {
     const { t } = useTranslation()
-    const [txList, setTxList] = useState([])
-    const [page, setPage] = useState(1)
-    const [hasMore, setHasMore] = useState(false)
+    const [sheet, setSheet] = useState([])
     const [loading, setLoading] = useState(true)
-    const [loadingMore, setLoadingMore] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
 
-    const fetchTx = async (pageNum = 1, query = searchQuery) => {
-        if (pageNum === 1) setLoading(true)
-        else setLoadingMore(true)
-        try {
-            let res;
-            if (query) {
-                res = await transactionsAPI.search({ q: query, page: pageNum, limit: 15 })
-            } else {
-                res = await transactionsAPI.getAll({ type, page: pageNum, limit: 15 })
-            }
-            const { data, hasMore: more } = res.data
-            setTxList(prev => pageNum === 1 ? data : [...prev, ...data])
-            setPage(pageNum)
-            setHasMore(more)
-        } catch (err) {
-            console.error(err)
-        } finally {
-            setLoading(false)
-            setLoadingMore(false)
-        }
-    }
-
     useEffect(() => {
-        const delayDebounceFn = setTimeout(() => {
-            fetchTx(1, searchQuery)
-        }, 300)
-        return () => clearTimeout(delayDebounceFn)
-    }, [searchQuery, type])
+        setLoading(true)
+        transactionsAPI.getBalanceSheet()
+            .then(res => setSheet(res.data))
+            .catch(err => console.error(err))
+            .finally(() => setLoading(false))
+    }, [])
 
-    const filteredTx = txList; // Now using server-side search
+    const filteredUsers = sheet.filter(p => {
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase()
+            return (
+                p.partyName?.toLowerCase().includes(query) ||
+                p.mobile?.includes(query) ||
+                p.location?.toLowerCase().includes(query)
+            )
+        }
+
+        if (type === 'paid' && p.totalPaid <= 0) return false;
+        if (type === 'received' && p.totalReceived <= 0) return false;
+        
+        return true;
+    })
 
     const fmt = n => `₹${(n || 0).toLocaleString('en-IN')}`
 
@@ -71,74 +61,67 @@ function StatDrillDown({ type, onClose }) {
                 <input
                     type="search"
                     className="form-control"
-                    placeholder="Search loaded transactions..."
+                    placeholder="Search users..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                 />
             </div>
 
-            {loading && txList.length === 0 ? (
+            {loading ? (
                 <div className="flex-center"><span className="spinner" /></div>
-            ) : filteredTx.length === 0 ? (
-                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No transactions found.</div>
+            ) : filteredUsers.length === 0 ? (
+                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No users found.</div>
             ) : (
                 <div className="table-wrap">
                     <table className="table">
                         <thead>
                             <tr>
                                 <th>{t('name')}</th>
-                                <th>{t('event')}</th>
-                                {searchQuery && <th>{t('type')}</th>}
-                                <th>{t('amount')}</th>
-                                <th>{t('date')}</th>
+                                <th>{t('mobile')}</th>
+                                <th>{t('location')}</th>
+                                <th>{type === 'paid' ? 'Total Paid' : 'Total Received'}</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredTx.map(tx => (
-                                <tr key={tx._id}>
+                            {filteredUsers.map(p => (
+                                <tr key={p.partyId || p._id}>
                                     <td>
                                         <Link
-                                            to={`/person-detail?partyName=${encodeURIComponent(tx.partyName)}&mobile=${tx.mobile || ''}&spouseName=${encodeURIComponent(tx.spouseName || '')}&location=${encodeURIComponent(tx.location || '')}&type=${type}`}
+                                            to="/transactions/new"
+                                            state={{ 
+                                                type, 
+                                                fixedType: true,
+                                                party: p
+                                            }}
                                             onClick={(e) => e.stopPropagation()}
                                             style={{ textDecoration: 'none', color: 'inherit' }}
                                             className="hover-underline"
                                         >
-                                            <strong style={{ color: 'var(--primary)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                            <strong style={{ color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
                                         </Link>
-                                        <br />
-                                        <span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span>
+                                        {p.spouseName && <div className="text-muted" style={{ fontSize: 11 }}>& {p.spouseName}</div>}
                                     </td>
-                                    <td>{tx.eventId?.eventName || tx.eventName || '—'}</td>
-                                    {searchQuery && (
-                                        <td>
-                                            <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
-                                                {t(tx.type)}
-                                            </span>
-                                        </td>
-                                    )}
-                                    <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
-                                    <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                    <td>{p.mobile || '—'}</td>
+                                    <td>{p.location || '—'}</td>
+                                    <td style={{ fontWeight: 600 }}>{fmt(type === 'paid' ? p.totalPaid : p.totalReceived)}</td>
                                     <td>
-                                        <Link to={`/transactions/edit/${tx._id}`} className="btn btn-secondary btn-sm" style={{ padding: '4px 8px', fontSize: 11, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Edit2 size={12} /> Edit
+                                        <Link 
+                                            to="/transactions/new" 
+                                            state={{ 
+                                                type, 
+                                                fixedType: true,
+                                                party: p
+                                            }}
+                                            className="btn btn-secondary btn-sm"
+                                        >
+                                            <Plus size={12} style={{ marginRight: 4 }} /> Create Moi
                                         </Link>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    {hasMore && (
-                        <div style={{ textAlign: 'center', marginTop: 16 }}>
-                            <button
-                                className="btn btn-secondary"
-                                onClick={() => fetchTx(page + 1)}
-                                disabled={loadingMore}
-                            >
-                                {loadingMore ? <span className="spinner" /> : 'Load More'}
-                            </button>
-                        </div>
-                    )}
                 </div>
             )}
         </div>
