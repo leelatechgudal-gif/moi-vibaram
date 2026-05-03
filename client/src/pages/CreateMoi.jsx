@@ -301,8 +301,14 @@ export default function CreateMoi() {
                 <input
                   type="date"
                   className="form-control"
-                  value={eventFormData.date}
+                  value={eventFormData.date || ''}
                   onChange={(e) => setEventFormData({ ...eventFormData, date: e.target.value })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (typeof e.target.showPicker === 'function') {
+                      try { e.target.showPicker(); } catch (err) {}
+                    }
+                  }}
                   required
                 />
               </div>
@@ -403,8 +409,14 @@ export default function CreateMoi() {
                 className="form-control"
                 name="date"
                 type="date"
-                value={form.date}
+                value={form.date || ''}
                 onChange={onChange}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (typeof e.target.showPicker === 'function') {
+                    try { e.target.showPicker(); } catch (err) {}
+                  }
+                }}
               />
             </div>
             <div className="form-group">
