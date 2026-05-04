@@ -26,7 +26,7 @@ export default function Login() {
         setShowForceLogout(false)
         try {
             const res = await authAPI.login({ ...form, forceLogout })
-            login(res.data.user, res.data.token)
+            login(res.data.user, res.data.token, res.data.refreshToken)
             navigate('/')
         } catch (err) {
             if (err.response?.data?.code === 'SESSION_LIMIT_REACHED') {
@@ -51,7 +51,7 @@ export default function Login() {
             const authResp = await startAuthentication(optsRes.data);
             const verifyRes = await api.post('/webauthn/auth-verify', { email: form.email, response: authResp });
             if (verifyRes.data.verified) {
-                login(verifyRes.data.user, verifyRes.data.token);
+                login(verifyRes.data.user, verifyRes.data.token, verifyRes.data.refreshToken);
                 navigate('/');
             }
         } catch (err) {

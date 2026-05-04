@@ -14,8 +14,9 @@ services:
       - PORT=5001
       - MONGO_URI=mongodb+srv://leelatechgudal_db_user:GjwJVNLkMNx0P1P0@leelatechcluster.pqkloc9.mongodb.net/?appName=LeelaTechCluster
       - JWT_SECRET=REPLACE_ME_WITH_64_BYTE_RANDOM_HEX
-      - JWT_EXPIRES_IN=15m
-      - CLIENT_URL=http://host.docker.internal:80 # use localhost if not using docker 
+      - JWT_EXPIRES_IN=2h
+      - JWT_REFRESH_EXPIRES_IN=30d
+      - CLIENT_URL=https://leelatech.co.in
       - EMAIL_USER=anand@leelatech.co.in
       - EMAIL_PASS=your_app_password
     volumes:

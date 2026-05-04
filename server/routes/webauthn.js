@@ -135,14 +135,17 @@ router.post('/auth-verify', async (req, res) => {
             credential.counter = verification.authenticationInfo.newCounter;
             await user.save();
             
-            const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+            const accessToken = jwt.sign({ userId: user._id, type: 'access' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '15m' });
+            const refreshToken = jwt.sign({ userId: user._id, type: 'refresh' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' });
+
             if (!user.activeSessions) user.activeSessions = [];
-            user.activeSessions.push(token);
+            user.activeSessions.push(refreshToken);
             await user.save();
 
             return res.json({
                 verified: true,
-                token,
+                token: accessToken,
+                refreshToken,
                 user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role }
             });
         }

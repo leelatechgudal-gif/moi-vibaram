@@ -17,33 +17,23 @@ export function AuthProvider({ children }) {
             });
         }
         localStorage.removeItem('mv_token');
+        localStorage.removeItem('mv_refresh_token');
         localStorage.removeItem('mv_user');
         setUser(null);
         setToken(null);
     }, [token]);
 
-    // Auto-logout after 15 min inactivity
+    // Auto-logout feature has been disabled to prevent session timeouts
+    // during active application usage.
     useEffect(() => {
-        if (!token) return;
-        let timer = setTimeout(logout, AUTO_LOGOUT_MS);
+        // No-op
+    }, []);
 
-        const resetTimer = () => {
-            clearTimeout(timer);
-            timer = setTimeout(logout, AUTO_LOGOUT_MS);
-        };
-        ['click', 'keydown', 'mousemove', 'touchstart'].forEach(e =>
-            window.addEventListener(e, resetTimer)
-        );
-        return () => {
-            clearTimeout(timer);
-            ['click', 'keydown', 'mousemove', 'touchstart'].forEach(e =>
-                window.removeEventListener(e, resetTimer)
-            );
-        };
-    }, [token, logout]);
-
-    const login = (userData, authToken) => {
+    const login = (userData, authToken, refreshToken = null) => {
         localStorage.setItem('mv_token', authToken);
+        if (refreshToken) {
+            localStorage.setItem('mv_refresh_token', refreshToken);
+        }
         localStorage.setItem('mv_user', JSON.stringify(userData));
         setToken(authToken);
         setUser(userData);

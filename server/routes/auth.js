@@ -31,12 +31,13 @@ router.post('/register', async (req, res) => {
         user.qrCode = qrCode;
         await user.save();
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+        const accessToken = jwt.sign({ userId: user._id, type: 'access' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '2h' });
+        const refreshToken = jwt.sign({ userId: user._id, type: 'refresh' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' });
 
-        user.activeSessions = [token];
+        user.activeSessions = [refreshToken];
         await user.save();
 
-        res.status(201).json({ token, user: { _id: user._id, name, email, mobile, location, street, qrCode, role: user.role } });
+        res.status(201).json({ token: accessToken, refreshToken, user: { _id: user._id, name, email, mobile, location, street, qrCode, role: user.role } });
     } catch (err) {
         console.error('[register]', err);
         res.status(500).json({ message: 'Registration failed. Please try again.' });
@@ -78,14 +79,16 @@ router.post('/login', async (req, res) => {
             }
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+        const accessToken = jwt.sign({ userId: user._id, type: 'access' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '2h' });
+        const refreshToken = jwt.sign({ userId: user._id, type: 'refresh' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' });
 
         if (!user.activeSessions) user.activeSessions = [];
-        user.activeSessions.push(token);
+        user.activeSessions.push(refreshToken);
         await user.save();
 
         res.json({
-            token,
+            token: accessToken,
+            refreshToken,
             user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role }
         });
     } catch (err) {
@@ -154,17 +157,15 @@ router.post('/logout', async (req, res) => {
     try {
         const token = req.headers.authorization?.split(' ')[1];
         if (token) {
-            // We verify but ignore expiration so even expired tokens can be logged out.
             let decoded;
             try {
                 decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
-            } catch (e) {
-                // If it fails verification completely, do nothing
-            }
+            } catch (e) {}
             if (decoded) {
                 const user = await User.findById(decoded.userId);
-                if (user && user.activeSessions) {
-                    user.activeSessions = user.activeSessions.filter(t => t !== token);
+                if (user) {
+                    // "whenever logs our reset the activeSeasion in User modal"
+                    user.activeSessions = [];
                     await user.save();
                 }
             }
@@ -173,6 +174,43 @@ router.post('/logout', async (req, res) => {
     } catch (err) {
         console.error('[logout]', err);
         res.status(500).json({ message: 'Logout failed.' });
+    }
+});
+
+// POST /api/auth/refresh
+router.post('/refresh', async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) return res.status(401).json({ message: 'No refresh token provided' });
+
+        let decoded;
+        try {
+            decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({ message: 'Invalid or expired refresh token' });
+        }
+
+        if (decoded.type !== 'refresh') {
+            return res.status(401).json({ message: 'Invalid token type' });
+        }
+
+        const user = await User.findById(decoded.userId);
+        if (!user || !user.activeSessions || !user.activeSessions.includes(refreshToken)) {
+            return res.status(401).json({ message: 'Session invalidated. Please login again.' });
+        }
+
+        const newAccessToken = jwt.sign({ userId: user._id, type: 'access' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '2h' });
+        const newRefreshToken = jwt.sign({ userId: user._id, type: 'refresh' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' });
+
+        // Rotate the refresh token
+        user.activeSessions = user.activeSessions.filter(t => t !== refreshToken);
+        user.activeSessions.push(newRefreshToken);
+        await user.save();
+
+        res.json({ token: newAccessToken, refreshToken: newRefreshToken });
+    } catch (err) {
+        console.error('[refresh]', err);
+        res.status(500).json({ message: 'Token refresh failed.' });
     }
 });
 

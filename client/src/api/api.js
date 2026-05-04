@@ -12,15 +12,78 @@ api.interceptors.request.use(config => {
     return config;
 });
 
-// Auto-logout on 401
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+    failedQueue.forEach(prom => {
+        if (error) prom.reject(error);
+        else prom.resolve(token);
+    });
+    failedQueue = [];
+};
+
+// Handle 401 and refresh tokens
 api.interceptors.response.use(
     res => res,
-    err => {
-        if (err.response?.status === 401) {
-            localStorage.removeItem('mv_token');
-            localStorage.removeItem('mv_user');
-            window.location.href = '/login';
+    async err => {
+        const originalRequest = err.config;
+
+        // Don't retry auth endpoints or already-retried requests
+        if (
+            err.response?.status === 401 &&
+            !originalRequest._retry &&
+            !originalRequest.url?.includes('/auth/login') &&
+            !originalRequest.url?.includes('/auth/refresh')
+        ) {
+            if (isRefreshing) {
+                return new Promise(function(resolve, reject) {
+                    failedQueue.push({ resolve, reject });
+                }).then(token => {
+                    originalRequest.headers.Authorization = 'Bearer ' + token;
+                    return api(originalRequest);
+                }).catch(err => Promise.reject(err));
+            }
+
+            originalRequest._retry = true;
+            isRefreshing = true;
+
+            try {
+                const refreshToken = localStorage.getItem('mv_refresh_token');
+                if (!refreshToken) throw new Error('No refresh token');
+
+                // Use a fresh axios instance to avoid interceptor loops
+                const res = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+                const { token, refreshToken: newRefreshToken } = res.data;
+
+                localStorage.setItem('mv_token', token);
+                localStorage.setItem('mv_refresh_token', newRefreshToken);
+
+                api.defaults.headers.common.Authorization = `Bearer ${token}`;
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+
+                processQueue(null, token);
+                return api(originalRequest);
+            } catch (refreshErr) {
+                processQueue(refreshErr, null);
+                localStorage.removeItem('mv_token');
+                localStorage.removeItem('mv_refresh_token');
+                localStorage.removeItem('mv_user');
+                // Only redirect if we're not already on the login page
+                if (!window.location.pathname.includes('/login')) {
+                    window.location.href = '/login';
+                }
+                return Promise.reject(refreshErr);
+            } finally {
+                isRefreshing = false;
+            }
         }
+
+        // Handle network errors (CORS, offline, etc.) without forcing logout
+        if (!err.response && err.message === 'Network Error') {
+            console.warn('[API] Network error — possible CORS or connectivity issue');
+        }
+
         return Promise.reject(err);
     }
 );
@@ -31,6 +94,7 @@ export const authAPI = {
     forgotPassword: data => api.post('/auth/forgot-password', data),
     verifyOTP: data => api.post('/auth/verify-otp', data),
     logout: () => api.post('/auth/logout'),
+    refresh: data => api.post('/auth/refresh', data),
 };
 
 export const usersAPI = {
