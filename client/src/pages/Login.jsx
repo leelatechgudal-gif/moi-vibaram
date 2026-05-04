@@ -21,6 +21,9 @@ export default function Login() {
     // PWA Install Prompt
     const [deferredPrompt, setDeferredPrompt] = useState(null)
     const [isInstalled, setIsInstalled] = useState(false)
+    const [showIOSGuide, setShowIOSGuide] = useState(false)
+
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
     useEffect(() => {
         // Check if already installed as PWA
@@ -47,11 +50,14 @@ export default function Login() {
     }, [])
 
     const handleInstallClick = async () => {
-        if (!deferredPrompt) return
-        deferredPrompt.prompt()
-        const { outcome } = await deferredPrompt.userChoice
-        if (outcome === 'accepted') {
-            setDeferredPrompt(null)
+        if (deferredPrompt) {
+            deferredPrompt.prompt()
+            const { outcome } = await deferredPrompt.userChoice
+            if (outcome === 'accepted') {
+                setDeferredPrompt(null)
+            }
+        } else if (isIOS) {
+            setShowIOSGuide(prev => !prev)
         }
     }
 
@@ -165,8 +171,8 @@ export default function Login() {
                     <Link to="/register" className="auth-link">{t('register')}</Link>
                 </div>
 
-                {/* PWA Install Button */}
-                {deferredPrompt && !isInstalled && (
+                {/* PWA Install Button — always visible unless already installed */}
+                {!isInstalled && (
                     <div style={{ textAlign: 'center', marginTop: 20 }}>
                         <button
                             type="button"
@@ -191,6 +197,27 @@ export default function Login() {
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
                             Install for quick access &amp; offline support
                         </div>
+
+                        {/* iOS Safari guide */}
+                        {showIOSGuide && isIOS && (
+                            <div style={{
+                                marginTop: 12,
+                                padding: '14px 16px',
+                                background: 'var(--glass)',
+                                border: '1px solid var(--glass-border)',
+                                borderRadius: 12,
+                                fontSize: 13,
+                                lineHeight: 1.6,
+                                textAlign: 'left',
+                            }}>
+                                <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--primary)' }}>📱 Install on iPhone / iPad</div>
+                                <ol style={{ margin: 0, paddingLeft: 20 }}>
+                                    <li>Tap the <strong>Share</strong> button <span style={{ fontSize: 16 }}>⬆️</span> at the bottom of Safari</li>
+                                    <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+                                    <li>Tap <strong>"Add"</strong> to confirm</li>
+                                </ol>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

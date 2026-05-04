@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const QRCode = require('qrcode');
 const User = require('../models/User');
 const { generateOTP, sendOTPEmail } = require('../utils/email');
+const logger = require('../utils/logger');
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
@@ -18,7 +19,10 @@ router.post('/register', async (req, res) => {
             return res.status(400).json({ message: 'Password must be at least 8 characters.' });
         }
         const existing = await User.findOne({ email, isDeleted: { $ne: true } });
-        if (existing) return res.status(409).json({ message: 'Email already registered' });
+        if (existing) {
+            logger.warn('[register] Email already registered', { email });
+            return res.status(409).json({ message: 'Email already registered' });
+        }
 
         // bcrypt cost factor 12 — stronger than minimum
         const passwordHash = await bcrypt.hash(password, 12);
@@ -37,9 +41,10 @@ router.post('/register', async (req, res) => {
         user.activeSessions = [refreshToken];
         await user.save();
 
+        logger.info('[register] New user registered', { userId: user._id, email, tenantId: user.tenantId });
         res.status(201).json({ token: accessToken, refreshToken, user: { _id: user._id, name, email, mobile, location, street, qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole } });
     } catch (err) {
-        console.error('[register]', err);
+        logger.error('[register] Registration failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Registration failed. Please try again.' });
     }
 });
@@ -49,10 +54,16 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password, forceLogout } = req.body;
         const user = await User.findOne({ email, isDeleted: { $ne: true } });
-        if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+        if (!user) {
+            logger.warn('[login] Invalid credentials — user not found', { email, ip: req.ip });
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
 
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
+        if (!valid) {
+            logger.warn('[login] Invalid credentials — wrong password', { email, ip: req.ip });
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
 
         let validSessions = [];
         if (user.activeSessions && user.activeSessions.length > 0) {
@@ -70,8 +81,10 @@ router.post('/login', async (req, res) => {
 
         if (validSessions.length >= 3) {
             if (forceLogout) {
+                logger.info('[login] Force logout — clearing all sessions', { userId: user._id, email });
                 user.activeSessions = []; // Clear all other sessions
             } else {
+                logger.warn('[login] Session limit reached', { userId: user._id, email, sessionCount: validSessions.length });
                 return res.status(403).json({ 
                     message: 'Maximum 3 logins permitted.', 
                     code: 'SESSION_LIMIT_REACHED' 
@@ -86,13 +99,14 @@ router.post('/login', async (req, res) => {
         user.activeSessions.push(refreshToken);
         await user.save();
 
+        logger.info('[login] User logged in successfully', { userId: user._id, email, tenantId: user.tenantId, ip: req.ip });
         res.json({
             token: accessToken,
             refreshToken,
             user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole }
         });
     } catch (err) {
-        console.error('[login]', err);
+        logger.error('[login] Login failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Login failed. Please try again.' });
     }
 });
@@ -109,12 +123,15 @@ router.post('/forgot-password', async (req, res) => {
             user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
             await user.save();
             await sendOTPEmail(email, otp);
+            logger.info('[forgot-password] OTP sent', { email });
+        } else {
+            logger.debug('[forgot-password] Email not found (silent)', { email });
         }
 
         // Always return the same message to prevent user enumeration
         res.json({ message: 'If an account with that email exists, an OTP has been sent.' });
     } catch (err) {
-        console.error('[forgot-password]', err);
+        logger.error('[forgot-password] Failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -130,24 +147,34 @@ router.post('/verify-otp', async (req, res) => {
 
         const user = await User.findOne({ email });
         // Use a generic error to prevent user enumeration
-        if (!user || !user.otpCode) return res.status(400).json({ message: 'Invalid or expired OTP.' });
+        if (!user || !user.otpCode) {
+            logger.warn('[verify-otp] OTP not found or user missing', { email });
+            return res.status(400).json({ message: 'Invalid or expired OTP.' });
+        }
 
         // Constant-time comparison to prevent timing attacks
         const otpMatch = crypto.timingSafeEqual(
             Buffer.from(String(user.otpCode)),
             Buffer.from(String(otp))
         );
-        if (!otpMatch) return res.status(400).json({ message: 'Invalid or expired OTP.' });
-        if (new Date() > user.otpExpiry) return res.status(400).json({ message: 'Invalid or expired OTP.' });
+        if (!otpMatch) {
+            logger.warn('[verify-otp] OTP mismatch', { email });
+            return res.status(400).json({ message: 'Invalid or expired OTP.' });
+        }
+        if (new Date() > user.otpExpiry) {
+            logger.warn('[verify-otp] OTP expired', { email });
+            return res.status(400).json({ message: 'Invalid or expired OTP.' });
+        }
 
         user.passwordHash = await bcrypt.hash(newPassword, 12);
         user.otpCode = undefined;
         user.otpExpiry = undefined;
         await user.save();
 
+        logger.info('[verify-otp] Password reset successful', { email });
         res.json({ message: 'Password reset successful' });
     } catch (err) {
-        console.error('[verify-otp]', err);
+        logger.error('[verify-otp] Failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Reset failed. Please try again.' });
     }
 });
@@ -164,15 +191,15 @@ router.post('/logout', async (req, res) => {
             if (decoded) {
                 const user = await User.findById(decoded.userId);
                 if (user) {
-                    // "whenever logs our reset the activeSeasion in User modal"
                     user.activeSessions = [];
                     await user.save();
+                    logger.info('[logout] User logged out — sessions cleared', { userId: decoded.userId });
                 }
             }
         }
         res.json({ message: 'Logged out successfully' });
     } catch (err) {
-        console.error('[logout]', err);
+        logger.error('[logout] Logout failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Logout failed.' });
     }
 });
@@ -181,21 +208,27 @@ router.post('/logout', async (req, res) => {
 router.post('/refresh', async (req, res) => {
     try {
         const { refreshToken } = req.body;
-        if (!refreshToken) return res.status(401).json({ message: 'No refresh token provided' });
+        if (!refreshToken) {
+            logger.warn('[refresh] No refresh token provided', { ip: req.ip });
+            return res.status(401).json({ message: 'No refresh token provided' });
+        }
 
         let decoded;
         try {
             decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
         } catch (err) {
+            logger.warn('[refresh] Invalid or expired refresh token', { ip: req.ip, error: err.message });
             return res.status(401).json({ message: 'Invalid or expired refresh token' });
         }
 
         if (decoded.type !== 'refresh') {
+            logger.warn('[refresh] Wrong token type', { userId: decoded.userId, type: decoded.type });
             return res.status(401).json({ message: 'Invalid token type' });
         }
 
         const user = await User.findById(decoded.userId);
         if (!user || !user.activeSessions || !user.activeSessions.includes(refreshToken)) {
+            logger.warn('[refresh] Refresh token not in active sessions — possible theft or logout', { userId: decoded.userId });
             return res.status(401).json({ message: 'Session invalidated. Please login again.' });
         }
 
@@ -207,9 +240,10 @@ router.post('/refresh', async (req, res) => {
         user.activeSessions.push(newRefreshToken);
         await user.save();
 
+        logger.debug('[refresh] Token rotated successfully', { userId: user._id });
         res.json({ token: newAccessToken, refreshToken: newRefreshToken });
     } catch (err) {
-        console.error('[refresh]', err);
+        logger.error('[refresh] Token refresh failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Token refresh failed.' });
     }
 });

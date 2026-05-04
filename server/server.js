@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const path = require('path');
+const logger = require('./utils/logger');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -57,6 +58,7 @@ app.use(cors({
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
+            logger.warn('CORS blocked request', { origin });
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -66,6 +68,24 @@ app.use(cors({
 // Body parsers — limit to 20mb to support bulk uploads and photos
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+
+// HTTP request logger — logs every incoming request on critical paths
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const ms = Date.now() - start;
+        const level = res.statusCode >= 500 ? 'error'
+            : res.statusCode >= 400 ? 'warn'
+            : 'info';
+        logger[level](`${req.method} ${req.originalUrl}`, {
+            status: res.statusCode,
+            ms,
+            ip: req.ip,
+            userId: req.userId || undefined,
+        });
+    });
+    next();
+});
 
 // Static uploads (no directory listing)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -80,24 +100,44 @@ app.use('/api/reminders', apiLimiter, remindersRoutes);
 app.use('/api/tenant', apiLimiter, tenantRoutes);
 app.use('/api/webauthn', authLimiter, webauthnRoutes);
 
-app.get('/health', (req, res) => res.json({ status: 'ok', app: 'MOI VIBARAM API' }));
+app.get('/health', (req, res) => {
+    logger.debug('Health check hit');
+    res.json({ status: 'ok', app: 'MOI VIBARAM API' });
+});
 
 // Global error handler — never leak internal error details to clients
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-    console.error('[ERROR]', err);
+    logger.error('Unhandled server error', {
+        message: err.message,
+        stack: err.stack,
+        url: req.originalUrl,
+        method: req.method,
+        userId: req.userId || undefined,
+    });
     res.status(err.status || 500).json({ message: 'An internal server error occurred.' });
 });
 
 // Connect DB and start server
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
-        console.log('✅ MongoDB connected');
-        app.listen(process.env.PORT, () => {
-            console.log(`🚀 MOI VIBARAM Server running on port ${process.env.PORT}`);
+        logger.info('MongoDB connected', { uri: process.env.MONGO_URI?.replace(/\/\/.*@/, '//***@') });
+        const port = process.env.PORT || 5001;
+        app.listen(port, () => {
+            logger.info(`MOI VIBARAM Server started`, { port, env: process.env.NODE_ENV || 'development' });
         });
     })
     .catch(err => {
-        console.error('❌ MongoDB connection error:', err.message);
+        logger.error('MongoDB connection failed', { message: err.message });
         process.exit(1);
     });
+
+// Catch unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Promise Rejection', { reason: String(reason) });
+});
+
+process.on('uncaughtException', (err) => {
+    logger.error('Uncaught Exception — shutting down', { message: err.message, stack: err.stack });
+    process.exit(1);
+});
