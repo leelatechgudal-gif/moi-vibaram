@@ -8,7 +8,7 @@ let commitHash = ''
 try {
     commitHash = execSync('git rev-parse --short HEAD').toString().trim()
 } catch (e) {
-    commitHash = 'unknown'
+    commitHash = 'beta-1.0.3'
 }
 
 export default defineConfig({
