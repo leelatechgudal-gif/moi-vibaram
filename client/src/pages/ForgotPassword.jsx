@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { authAPI } from '../api/api'
+import Footer from '../components/Footer'
+
 
 export default function ForgotPassword() {
     const { t } = useTranslation()
@@ -97,9 +99,8 @@ export default function ForgotPassword() {
                     <Link to="/login" className="auth-link">← Back to Login</Link>
                 </div>
             </div>
-            <div style={{ position: 'absolute', bottom: 20, textAlign: 'center', width: '100%', fontSize: '13px', color: 'var(--text-muted)' }}>
-                &copy; {new Date().getFullYear()} Leela Tech. Copyright reserved.
-            </div>
+            <Footer style={{ position: 'absolute', bottom: 20, width: '100%', padding: 0 }} />
         </div>
+
     )
 }

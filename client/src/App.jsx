@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { App as CapApp } from '@capacitor/app'
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
@@ -71,11 +73,10 @@ function AppRoutes() {
                                     <Route path="/contact-us" element={<ContactUs />} />
                                     <Route path="/tenant" element={<TenantManagement />} />
                                 </Routes>
-                                <footer style={{ textAlign: 'center', padding: '20px 0', marginTop: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
-                                    &copy; {new Date().getFullYear()} Leela Tech. Copyright reserved.
-                                </footer>
+                                <Footer />
                             </div>
                         </div>
+
                     </Protected>
                 } />
             </Routes>

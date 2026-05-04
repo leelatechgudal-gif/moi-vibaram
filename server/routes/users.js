@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const multer = require('multer');
 const path = require('path');
 const QRCode = require('qrcode');
@@ -31,7 +32,7 @@ router.get('/profile', auth, async (req, res) => {
         if (!user) return res.status(404).json({ message: 'User not found' });
         res.json(user);
     } catch (err) {
-        console.error('[users]', err);
+        logger.error('[users]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -64,7 +65,7 @@ router.get('/admin/all', auth, async (req, res) => {
             res.json(users);
         }
     } catch (err) {
-        console.error('[users]', err);
+        logger.error('[users]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to fetch users' });
     }
 });
@@ -89,7 +90,7 @@ router.put('/profile', auth, async (req, res) => {
 
         res.json({ message: 'Profile updated', user: { ...user.toObject(), passwordHash: undefined, otpCode: undefined, otpExpiry: undefined } });
     } catch (err) {
-        console.error('[users]', err);
+        logger.error('[users]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -108,7 +109,7 @@ router.put('/profile/theme', auth, async (req, res) => {
 
         res.json({ message: 'Theme updated', themePreference: user.themePreference });
     } catch (err) {
-        console.error('[users theme]', err);
+        logger.error('[users theme]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -122,7 +123,7 @@ router.post('/profile/photo', auth, upload.single('photo'), async (req, res) => 
         await user.save();
         res.json({ profilePhoto: user.profilePhoto });
     } catch (err) {
-        console.error('[users]', err);
+        logger.error('[users]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -161,7 +162,7 @@ router.post('/admin', auth, async (req, res) => {
         
         res.status(201).json({ message: 'User created successfully', user: { _id: user._id, name, email, mobile, role } });
     } catch (err) {
-        console.error('[admin create user]', err);
+        logger.error('[admin create user]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to create user' });
     }
 });
@@ -197,7 +198,7 @@ router.put('/admin/:id', auth, async (req, res) => {
         await user.save();
         res.json({ message: 'User updated successfully', user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, role: user.role } });
     } catch (err) {
-        console.error('[admin update user]', err);
+        logger.error('[admin update user]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to update user' });
     }
 });
@@ -222,7 +223,7 @@ router.delete('/admin/:id', auth, async (req, res) => {
 
         res.json({ message: 'User deleted successfully' });
     } catch (err) {
-        console.error('[admin delete user]', err);
+        logger.error('[admin delete user]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to delete user' });
     }
 });

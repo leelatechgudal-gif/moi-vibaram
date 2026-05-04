@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const Reminder = require('../models/Reminder');
 const auth = require('../middleware/auth');
 
@@ -26,7 +27,7 @@ router.get('/', auth, async (req, res) => {
             res.json(reminders);
         }
     } catch (err) {
-        console.error('[reminders]', err);
+        logger.error('[reminders]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -47,7 +48,7 @@ router.post('/', auth, async (req, res) => {
         await reminder.save();
         res.status(201).json(reminder);
     } catch (err) {
-        console.error('[reminders]', err);
+        logger.error('[reminders]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -69,7 +70,7 @@ router.put('/:id', auth, async (req, res) => {
         await reminder.save();
         res.json(reminder);
     } catch (err) {
-        console.error('[reminders]', err);
+        logger.error('[reminders]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -81,7 +82,7 @@ router.delete('/:id', auth, async (req, res) => {
         if (!reminder) return res.status(404).json({ message: 'Reminder not found' });
         res.json({ message: 'Reminder deleted' });
     } catch (err) {
-        console.error('[reminders]', err);
+        logger.error('[reminders]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -102,7 +103,7 @@ router.get('/upcoming', auth, async (req, res) => {
 
         res.json(reminders);
     } catch (err) {
-        console.error('[reminders upcoming]', err);
+        logger.error('[reminders upcoming]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });

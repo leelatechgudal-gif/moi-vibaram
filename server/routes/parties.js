@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const Party = require('../models/Party');
 const Transaction = require('../models/Transaction');
 const auth = require('../middleware/auth');
@@ -39,7 +40,7 @@ router.get('/', auth, async (req, res) => {
             res.json(parties);
         }
     } catch (err) {
-        console.error('[parties get]', err);
+        logger.error('[parties get]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to fetch parties.' });
     }
 });
@@ -72,7 +73,7 @@ router.post('/', auth, async (req, res) => {
         if (err.code === 11000) {
             return res.status(409).json({ message: 'A party with this Name and Phone number already exists.' });
         }
-        console.error('[parties create]', err);
+        logger.error('[parties create]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to create party.' });
     }
 });
@@ -112,7 +113,7 @@ router.put('/:id', auth, async (req, res) => {
         if (err.code === 11000) {
             return res.status(409).json({ message: 'A party with this Name and Phone number already exists.' });
         }
-        console.error('[parties update]', err);
+        logger.error('[parties update]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to update party.' });
     }
 });
@@ -134,7 +135,7 @@ router.delete('/:id', auth, async (req, res) => {
 
         res.json({ message: 'Party deleted successfully' });
     } catch (err) {
-        console.error('[parties delete]', err);
+        logger.error('[parties delete]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to delete party.' });
     }
 });

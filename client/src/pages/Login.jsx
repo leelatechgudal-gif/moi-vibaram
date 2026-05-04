@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext'
 import { startAuthentication } from '@simplewebauthn/browser'
 import api from '../api/api'
 import { Download } from 'lucide-react'
+import Footer from '../components/Footer'
+
 
 export default function Login() {
     const { t } = useTranslation()
@@ -221,9 +223,8 @@ export default function Login() {
                     </div>
                 )}
             </div>
-            <div style={{ position: 'absolute', bottom: 20, textAlign: 'center', width: '100%', fontSize: '13px', color: 'var(--text-muted)' }}>
-                &copy; {new Date().getFullYear()} Leela Tech. Copyright reserved.
-            </div>
+            <Footer style={{ position: 'absolute', bottom: 20, width: '100%', padding: 0 }} />
         </div>
+
     )
 }

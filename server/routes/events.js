@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const multer = require('multer');
 const path = require('path');
 const Event = require('../models/Event');
@@ -47,7 +48,7 @@ router.get('/', auth, async (req, res) => {
             res.json(events);
         }
     } catch (err) {
-        console.error('[events]', err);
+        logger.error('[events]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -117,7 +118,7 @@ router.get('/upcoming', auth, async (req, res) => {
             res.json(allUpcoming);
         }
     } catch (err) {
-        console.error('[events]', err);
+        logger.error('[events]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -138,7 +139,7 @@ router.post('/', auth, upload.single('invitation'), async (req, res) => {
         await event.save();
         res.status(201).json(event);
     } catch (err) {
-        console.error('[events]', err);
+        logger.error('[events]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -155,7 +156,7 @@ router.put('/:id', auth, upload.single('invitation'), async (req, res) => {
         await event.save();
         res.json(event);
     } catch (err) {
-        console.error('[events]', err);
+        logger.error('[events]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });
@@ -169,7 +170,7 @@ router.delete('/:id', auth, async (req, res) => {
         await Transaction.deleteMany({ eventId: req.params.id });
         res.json({ message: 'Event and transactions deleted' });
     } catch (err) {
-        console.error('[events]', err);
+        logger.error('[events]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
     }
 });

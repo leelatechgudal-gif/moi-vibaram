@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { authAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
+import Footer from '../components/Footer'
+
 
 export default function Register() {
     const { t } = useTranslation()
@@ -89,9 +91,8 @@ export default function Register() {
                     Already have an account? <Link to="/login" className="auth-link">{t('login')}</Link>
                 </div>
             </div>
-            <div style={{ position: 'absolute', bottom: 20, textAlign: 'center', width: '100%', fontSize: '13px', color: 'var(--text-muted)' }}>
-                &copy; {new Date().getFullYear()} Leela Tech. Copyright reserved.
-            </div>
+            <Footer style={{ position: 'absolute', bottom: 20, width: '100%', padding: 0 }} />
         </div>
+
     )
 }

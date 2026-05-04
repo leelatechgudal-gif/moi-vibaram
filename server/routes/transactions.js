@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/logger');
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 const Party = require('../models/Party');
@@ -42,7 +43,7 @@ router.get('/', auth, async (req, res) => {
             res.json(transactions.map(flattenTransaction));
         }
     } catch (err) {
-        console.error("[transactions]", err);
+        logger.error('[transactions]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
@@ -82,7 +83,7 @@ router.get('/person-detail', auth, async (req, res) => {
             balance: totalReceived - totalPaid
         });
     } catch (err) {
-        console.error("[transactions person-detail]", err);
+        logger.error("[transactions person-detail]", { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
@@ -180,7 +181,7 @@ router.post('/', auth, async (req, res) => {
         const populated = await transaction.populate(['eventId', 'partyId']);
         res.status(201).json(populated);
     } catch (err) {
-        console.error("[transactions]", err);
+        logger.error("[transactions]", { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
@@ -213,7 +214,7 @@ router.post('/bulk', auth, async (req, res) => {
         await Transaction.insertMany(toInsert);
         res.status(201).json({ message: `${toInsert.length} entries added successfully` });
     } catch (err) {
-        console.error("[transactions bulk]", err);
+        logger.error("[transactions bulk]", { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Bulk insert failed. Please check your data." });
     }
 });
@@ -239,7 +240,7 @@ router.put('/:id', auth, async (req, res) => {
         const populated = await transaction.populate(['eventId', 'partyId']);
         res.json(populated);
     } catch (err) {
-        console.error("[transactions]", err);
+        logger.error("[transactions]", { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
@@ -255,7 +256,7 @@ router.delete('/:id', auth, async (req, res) => {
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
         res.json({ message: 'Transaction deleted' });
     } catch (err) {
-        console.error("[transactions]", err);
+        logger.error("[transactions]", { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
@@ -291,7 +292,7 @@ router.get('/balance-sheet', auth, async (req, res) => {
 
         res.json(result);
     } catch (err) {
-        console.error("[transactions]", err);
+        logger.error("[transactions]", { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
@@ -331,7 +332,7 @@ router.get('/master-sheet', auth, async (req, res) => {
             closingBalance: grandTotalReceived - grandTotalPaid,
         });
     } catch (err) {
-        console.error("[transactions]", err);
+        logger.error("[transactions]", { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
@@ -395,7 +396,7 @@ router.get('/search', auth, async (req, res) => {
             res.json(results.map(flattenTransaction));
         }
     } catch (err) {
-        console.error('[search]', err);
+        logger.error('[search]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Search failed. Please try again.' });
     }
 });
@@ -407,7 +408,7 @@ router.get('/:id', auth, async (req, res) => {
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
         res.json(flattenTransaction(transaction));
     } catch (err) {
-        console.error("[transactions]", err);
+        logger.error("[transactions]", { message: err.message, stack: err.stack });
         res.status(500).json({ message: "Request failed. Please try again." });
     }
 });
