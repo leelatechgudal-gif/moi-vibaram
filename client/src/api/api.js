@@ -145,4 +145,12 @@ export const transactionsAPI = {
     search: params => api.get('/transactions/search', { params }),
 };
 
+export const tenantAPI = {
+    getMembers: () => api.get('/tenant/members'),
+    invite: data => api.post('/tenant/invite', data),
+    remove: userId => api.post(`/tenant/remove/${userId}`),
+    leave: () => api.post('/tenant/leave'),
+    transfer: userId => api.post(`/tenant/transfer/${userId}`),
+};
+
 export default api;

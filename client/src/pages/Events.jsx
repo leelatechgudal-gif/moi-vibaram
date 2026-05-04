@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { eventsAPI } from '../api/api'
 import { useReactToPrint } from 'react-to-print'
 import { useNavigate } from 'react-router-dom'
-import { Tent, Share2, Printer, Plus, Edit2, Trash2 } from 'lucide-react'
+import { Tent, Share2, Printer, Plus, Edit2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 
 const EVENT_NAMES = [
     { en: 'Wedding', ta: 'திருமணம்' },
@@ -117,6 +117,7 @@ export default function Events() {
     const [editing, setEditing] = useState(null)
     const printRef = useRef()
     const navigate = useNavigate()
+    const [expandedEvent, setExpandedEvent] = useState(null)
 
     useEffect(() => { fetchEvents(1) }, [])
 
@@ -204,19 +205,59 @@ export default function Events() {
                         </thead>
                         <tbody>
                             {events.map((e, i) => (
-                                <tr key={e._id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/master-sheet?event=${e._id}`)}>
-                                    <td className="text-muted" style={{ fontSize: 12 }}>{i + 1}</td>
-                                    <td><strong>{e.eventName}</strong></td>
-                                    <td>{new Date(e.date).toLocaleDateString('en-IN')}</td>
-                                    <td>{e.venue || '—'}</td>
-                                    <td>{[e.location, e.city].filter(Boolean).join(', ') || '—'}</td>
-                                    <td className="no-print" onClick={(ev) => ev.stopPropagation()}>
-                                        <div className="flex gap-8">
-                                            <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(e); setShowModal(true) }}><Edit2 size={14} /></button>
-                                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e._id)}><Trash2 size={14} /></button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <React.Fragment key={e._id}>
+                                    <tr>
+                                        <td className="text-muted" style={{ fontSize: 12 }}>{i + 1}</td>
+                                        <td><strong>{e.eventName}</strong></td>
+                                        <td>{new Date(e.date).toLocaleDateString('en-IN')}</td>
+                                        <td>{e.venue || '—'}</td>
+                                        <td>{[e.location, e.city].filter(Boolean).join(', ') || '—'}</td>
+                                        <td className="no-print" onClick={(ev) => ev.stopPropagation()}>
+                                            <div className="flex gap-8">
+                                                <button className="btn btn-secondary btn-sm" onClick={() => setExpandedEvent(expandedEvent === e._id ? null : e._id)}>
+                                                    {expandedEvent === e._id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                </button>
+                                                <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(e); setShowModal(true) }}><Edit2 size={14} /></button>
+                                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e._id)}><Trash2 size={14} /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {expandedEvent === e._id && (
+                                        <tr>
+                                            <td colSpan={6} style={{ padding: 0 }}>
+                                                <div style={{ background: 'var(--glass)', padding: 20, borderBottom: '1px solid var(--border)' }}>
+                                                    <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 15, color: 'var(--primary)' }}>
+                                                        {e.eventName} — Event Details
+                                                    </div>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
+                                                        <div>
+                                                            <div className="text-muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Date</div>
+                                                            <div style={{ fontWeight: 600 }}>{new Date(e.date).toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Venue</div>
+                                                            <div style={{ fontWeight: 600 }}>{e.venue || '—'}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Location</div>
+                                                            <div style={{ fontWeight: 600 }}>{e.location || '—'}</div>
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>City</div>
+                                                            <div style={{ fontWeight: 600 }}>{e.city || '—'}</div>
+                                                        </div>
+                                                    </div>
+                                                    {e.invitation && (
+                                                        <div style={{ marginTop: 16 }}>
+                                                            <div className="text-muted" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Invitation Card</div>
+                                                            <img src={`/uploads/${e.invitation}`} alt="Invitation" style={{ maxWidth: 300, borderRadius: 8, border: '1px solid var(--border)' }} />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>

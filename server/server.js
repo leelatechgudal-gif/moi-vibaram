@@ -13,6 +13,7 @@ const transactionRoutes = require('./routes/transactions');
 const partiesRoutes = require('./routes/parties');
 const webauthnRoutes = require('./routes/webauthn');
 const remindersRoutes = require('./routes/reminders');
+const tenantRoutes = require('./routes/tenant');
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use('/api/events', apiLimiter, eventRoutes);
 app.use('/api/parties', apiLimiter, partiesRoutes);
 app.use('/api/transactions', apiLimiter, transactionRoutes);
 app.use('/api/reminders', apiLimiter, remindersRoutes);
+app.use('/api/tenant', apiLimiter, tenantRoutes);
 app.use('/api/webauthn', authLimiter, webauthnRoutes);
 
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'MOI VIBARAM API' }));

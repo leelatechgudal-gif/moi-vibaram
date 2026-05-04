@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { authAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { startAuthentication } from '@simplewebauthn/browser'
 import api from '../api/api'
+import { Download } from 'lucide-react'
 
 export default function Login() {
     const { t } = useTranslation()
@@ -16,6 +17,43 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false)
 
     const [showForceLogout, setShowForceLogout] = useState(false)
+
+    // PWA Install Prompt
+    const [deferredPrompt, setDeferredPrompt] = useState(null)
+    const [isInstalled, setIsInstalled] = useState(false)
+
+    useEffect(() => {
+        // Check if already installed as PWA
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+            setIsInstalled(true)
+        }
+
+        const handler = (e) => {
+            e.preventDefault()
+            setDeferredPrompt(e)
+        }
+        window.addEventListener('beforeinstallprompt', handler)
+
+        const installedHandler = () => {
+            setIsInstalled(true)
+            setDeferredPrompt(null)
+        }
+        window.addEventListener('appinstalled', installedHandler)
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handler)
+            window.removeEventListener('appinstalled', installedHandler)
+        }
+    }, [])
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return
+        deferredPrompt.prompt()
+        const { outcome } = await deferredPrompt.userChoice
+        if (outcome === 'accepted') {
+            setDeferredPrompt(null)
+        }
+    }
 
     const onChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -126,6 +164,35 @@ export default function Login() {
                     <span style={{ margin: '0 10px' }}>·</span>
                     <Link to="/register" className="auth-link">{t('register')}</Link>
                 </div>
+
+                {/* PWA Install Button */}
+                {deferredPrompt && !isInstalled && (
+                    <div style={{ textAlign: 'center', marginTop: 20 }}>
+                        <button
+                            type="button"
+                            className="btn w-full"
+                            onClick={handleInstallClick}
+                            style={{
+                                justifyContent: 'center',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                background: 'linear-gradient(135deg, var(--primary), var(--saffron))',
+                                color: 'white',
+                                border: 'none',
+                                padding: '12px 20px',
+                                fontSize: 14,
+                                fontWeight: 600,
+                                boxShadow: '0 4px 15px rgba(184,134,11,0.3)',
+                            }}
+                        >
+                            <Download size={18} /> Install Moi Vibaram App
+                        </button>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                            Install for quick access &amp; offline support
+                        </div>
+                    </div>
+                )}
             </div>
             <div style={{ position: 'absolute', bottom: 20, textAlign: 'center', width: '100%', fontSize: '13px', color: 'var(--text-muted)' }}>
                 &copy; {new Date().getFullYear()} Leela Tech. Copyright reserved.

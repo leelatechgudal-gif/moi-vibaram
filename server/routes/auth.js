@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
         user.activeSessions = [refreshToken];
         await user.save();
 
-        res.status(201).json({ token: accessToken, refreshToken, user: { _id: user._id, name, email, mobile, location, street, qrCode, role: user.role } });
+        res.status(201).json({ token: accessToken, refreshToken, user: { _id: user._id, name, email, mobile, location, street, qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole } });
     } catch (err) {
         console.error('[register]', err);
         res.status(500).json({ message: 'Registration failed. Please try again.' });
@@ -89,7 +89,7 @@ router.post('/login', async (req, res) => {
         res.json({
             token: accessToken,
             refreshToken,
-            user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role }
+            user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole }
         });
     } catch (err) {
         console.error('[login]', err);

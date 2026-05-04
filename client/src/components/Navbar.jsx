@@ -23,7 +23,8 @@ import {
     Moon,
     Menu,
     Download,
-    ShieldCheck
+    ShieldCheck,
+    Building2
 } from 'lucide-react'
 
 const navItems = [
@@ -34,7 +35,7 @@ const navItems = [
     { icon: <Scale size={18} />, key: 'balanceSheet', path: '/balance-sheet' },
     { icon: <BookMarked size={18} />, key: 'masterSheet', path: '/master-sheet' },
     { icon: <UploadCloud size={18} />, key: 'Bulk Upload', path: '/bulk-upload' },
-    { icon: <Search size={18} />, key: 'search', path: '/search' },
+    // { icon: <Search size={18} />, key: 'search', path: '/search' },
     { icon: <UserCircle size={18} />, key: 'profile', path: '/profile' },
     { icon: <Phone size={18} />, key: 'contactUs', path: '/contact-us' },
 ]
@@ -56,7 +57,7 @@ export default function Navbar() {
         const newTheme = dark ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', newTheme)
         localStorage.setItem('mv_theme', newTheme)
-        
+
         if (user && user.themePreference !== newTheme) {
             import('../api/api').then(({ usersAPI }) => {
                 usersAPI.updateThemePreference({ themePreference: newTheme }).then(() => {
@@ -116,6 +117,9 @@ export default function Navbar() {
                 ))}
                 <NavLink to="/parties" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
                     <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> Party Management
+                </NavLink>
+                <NavLink to="/tenant" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
+                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={18} /></span> Family / Tenant
                 </NavLink>
                 {user?.role === 'admin' && (
                     <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>

@@ -19,6 +19,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import BulkUpload from './pages/BulkUpload'
 import PersonDetail from './pages/PersonDetail'
 import PartiesManagement from './pages/PartiesManagement'
+import TenantManagement from './pages/TenantManagement'
 import ContactUs from './pages/ContactUs'
 
 function Protected({ children }) {
@@ -68,6 +69,7 @@ function AppRoutes() {
                                     <Route path="/bulk-upload" element={<BulkUpload />} />
                                     <Route path="/person-detail" element={<PersonDetail />} />
                                     <Route path="/contact-us" element={<ContactUs />} />
+                                    <Route path="/tenant" element={<TenantManagement />} />
                                 </Routes>
                                 <footer style={{ textAlign: 'center', padding: '20px 0', marginTop: 'auto', fontSize: '13px', color: 'var(--text-muted)' }}>
                                     &copy; {new Date().getFullYear()} Leela Tech. Copyright reserved.

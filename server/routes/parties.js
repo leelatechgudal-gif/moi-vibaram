@@ -4,11 +4,11 @@ const Party = require('../models/Party');
 const Transaction = require('../models/Transaction');
 const auth = require('../middleware/auth');
 
-// GET /api/parties - Get all contacts (parties)
+// GET /api/parties - Get all contacts (parties) for this tenant
 router.get('/', auth, async (req, res) => {
     try {
         const { page, limit, search } = req.query;
-        const filter = { isDeleted: { $ne: true } };
+        const filter = { tenantId: req.tenantId, isDeleted: { $ne: true } };
         
         if (search) {
             const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -53,9 +53,9 @@ router.post('/', auth, async (req, res) => {
             return res.status(400).json({ message: 'Name is required' });
         }
 
-        // Check for unique Name and Phone combination
+        // Check for unique Name and Phone combination within this tenant
         const mobileToSave = mobile || '';
-        const existing = await Party.findOne({ name: finalName, mobile: mobileToSave, isDeleted: { $ne: true } });
+        const existing = await Party.findOne({ name: finalName, mobile: mobileToSave, tenantId: req.tenantId, isDeleted: { $ne: true } });
         if (existing) {
             return res.status(409).json({ message: 'A party with this Name and Phone number already exists.' });
         }
@@ -63,7 +63,8 @@ router.post('/', auth, async (req, res) => {
         const partyObj = new Party({
             ...rest,
             name: finalName,
-            mobile: mobileToSave
+            mobile: mobileToSave,
+            tenantId: req.tenantId
         });
         await partyObj.save();
         res.status(201).json(partyObj);
@@ -82,7 +83,7 @@ router.put('/:id', auth, async (req, res) => {
         const { partyName, name, mobile, ...rest } = req.body;
         const partyId = req.params.id;
 
-        const partyObj = await Party.findOne({ _id: partyId, isDeleted: { $ne: true } });
+        const partyObj = await Party.findOne({ _id: partyId, tenantId: req.tenantId, isDeleted: { $ne: true } });
         if (!partyObj) {
             return res.status(404).json({ message: 'Party not found' });
         }
@@ -90,9 +91,9 @@ router.put('/:id', auth, async (req, res) => {
         const finalName = name || partyName || partyObj.name;
         const newMobile = mobile !== undefined ? mobile : partyObj.mobile;
 
-        // Check unique constraint if name or mobile changed
+        // Check unique constraint if name or mobile changed (within this tenant)
         if (finalName !== partyObj.name || newMobile !== partyObj.mobile) {
-            const existing = await Party.findOne({ name: finalName, mobile: newMobile, _id: { $ne: partyId }, isDeleted: { $ne: true } });
+            const existing = await Party.findOne({ name: finalName, mobile: newMobile, tenantId: req.tenantId, _id: { $ne: partyId }, isDeleted: { $ne: true } });
             if (existing) {
                 return res.status(409).json({ message: 'A party with this Name and Phone number already exists.' });
             }
@@ -120,7 +121,7 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
     try {
         const partyObj = await Party.findOneAndUpdate(
-            { _id: req.params.id },
+            { _id: req.params.id, tenantId: req.tenantId },
             { isDeleted: true },
             { new: true }
         );

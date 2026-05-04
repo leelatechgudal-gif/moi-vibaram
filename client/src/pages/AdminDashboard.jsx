@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { usersAPI } from '../api/api';
-import { Users, Plus, Edit2, Trash2, Save, ShieldCheck } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Save, ShieldCheck, Search } from 'lucide-react';
 
 export default function AdminDashboard() {
     const { user } = useAuth();
@@ -21,6 +21,7 @@ export default function AdminDashboard() {
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
     const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: '' });
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         if (user?.role !== 'admin') {
@@ -137,6 +138,28 @@ export default function AdminDashboard() {
                 <button className="btn btn-primary" onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={16} /> Add User</button>
             </div>
 
+            <div className="mb-16">
+                <input
+                    type="search"
+                    className="form-control"
+                    placeholder="Search by name, email, or mobile..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                />
+            </div>
+
+            {(() => {
+                const filteredUsers = users.filter(u => {
+                    if (!searchQuery) return true;
+                    const q = searchQuery.toLowerCase();
+                    return (
+                        u.name?.toLowerCase().includes(q) ||
+                        u.email?.toLowerCase().includes(q) ||
+                        u.mobile?.includes(q)
+                    );
+                });
+
+                return (
             <div className="card table-wrap">
                 <table className="table">
                     <thead>
@@ -151,7 +174,7 @@ export default function AdminDashboard() {
                         </tr>
                     </thead>
                     <tbody>
-                        {users.map(u => (
+                        {filteredUsers.map(u => (
                             <tr key={u._id}>
                                 <td><strong>{u.name}</strong></td>
                                 <td>{u.mobile}</td>
@@ -175,6 +198,8 @@ export default function AdminDashboard() {
                     </div>
                 )}
             </div>
+                );
+            })()}
 
             {showModal && (
                 <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>

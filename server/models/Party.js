@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const partySchema = new mongoose.Schema(
   {
+    tenantId: { type: String, required: true, index: true },
     initial: String,
     name: { type: String, required: true },
     fatherName: String,
@@ -19,6 +20,6 @@ const partySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-partySchema.index({ name: 1, mobile: 1 }, { unique: true });
+partySchema.index({ name: 1, mobile: 1, tenantId: 1 }, { unique: true });
 
 module.exports = mongoose.model("Party", partySchema);

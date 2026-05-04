@@ -55,10 +55,11 @@ router.get('/person-detail', auth, async (req, res) => {
         let targetPartyId = partyId;
 
         if (!targetPartyId) {
-            // If no partyId, try to find by name and mobile
+            // If no partyId, try to find by name and mobile within this tenant
             const party = await Party.findOne({ 
                 name: partyName, 
                 mobile: mobile || '',
+                tenantId: req.tenantId,
                 isDeleted: { $ne: true }
             });
             if (!party) return res.json({ transactions: [], totalReceived: 0, totalPaid: 0, balance: 0 });
@@ -110,16 +111,17 @@ function flattenTransaction(t) {
     return obj;
 }
 
-// Helper to find or create a party
-async function findOrCreateParty(data) {
+// Helper to find or create a party (scoped by tenantId)
+async function findOrCreateParty(data, tenantId) {
     const { partyName, name, mobile, initial, fatherName, motherName, spouseName, nickname, occupation, location, street, remarks } = data;
     const finalName = name || partyName;
     const finalMobile = mobile || '';
-    const filter = { name: finalName, mobile: finalMobile, isDeleted: { $ne: true } };
+    const filter = { name: finalName, mobile: finalMobile, tenantId, isDeleted: { $ne: true } };
 
     let party = await Party.findOne(filter);
     if (!party) {
         party = new Party({
+            tenantId,
             initial,
             name: finalName,
             mobile: finalMobile,
@@ -157,7 +159,7 @@ router.post('/', auth, async (req, res) => {
 
         let finalPartyId = partyId;
         if (!finalPartyId) {
-            const party = await findOrCreateParty(partyData);
+            const party = await findOrCreateParty(partyData, req.tenantId);
             finalPartyId = party._id;
         }
 
@@ -195,7 +197,7 @@ router.post('/bulk', auth, async (req, res) => {
         for (const t of transactions) {
             let finalPartyId = t.partyId;
             if (!finalPartyId) {
-                const party = await findOrCreateParty(t);
+                const party = await findOrCreateParty(t, req.tenantId);
                 finalPartyId = party._id;
             }
             toInsert.push({
@@ -229,7 +231,7 @@ router.put('/:id', auth, async (req, res) => {
         if (req.body.partyId) {
             transaction.partyId = req.body.partyId;
         } else if (req.body.partyName || req.body.name) {
-            const party = await findOrCreateParty(req.body);
+            const party = await findOrCreateParty(req.body, req.tenantId);
             transaction.partyId = party._id;
         }
 
@@ -346,7 +348,7 @@ router.get('/search', auth, async (req, res) => {
         
         // If searching by location or query, we first need to find matching parties
         let partyIds = [];
-        const partyFilter = { isDeleted: { $ne: true } };
+        const partyFilter = { tenantId: req.tenantId, isDeleted: { $ne: true } };
         let partySearchActive = false;
 
         if (location) {
