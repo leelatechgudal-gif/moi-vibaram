@@ -28,6 +28,7 @@ function EventModal({ event, onClose, onSave }) {
 
     const onSubmit = async e => {
         e.preventDefault()
+        if (!window.confirm(t('confirmSaveEvent') || 'Confirm saving this event?')) return
         setLoading(true)
         setError('')
         try {
@@ -148,7 +149,7 @@ export default function Events() {
     }
 
     const handleDelete = async (id) => {
-        if (!confirm('Delete this event and all its transactions?')) return
+        if (!window.confirm(t('confirmDeleteEvent') || 'Delete this event and all its transactions?')) return
         await eventsAPI.delete(id)
         setEvents(e => e.filter(x => x._id !== id))
     }

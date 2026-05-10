@@ -177,6 +177,7 @@ export default function CreateMoi() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (!window.confirm(t("confirmSaveMoi") || "Confirm saving this Moi entry?")) return;
     if (form.type === "received" && !form.eventId) {
       setError("Please select an event");
       return;

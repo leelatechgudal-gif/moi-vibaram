@@ -133,7 +133,12 @@ export default function Search() {
                                             <div style={{ fontWeight: 500 }}>{tx.location || '—'}</div>
                                             {tx.street && <div className="text-muted" style={{ fontSize: 11 }}>{tx.street}</div>}
                                         </td>
-                                        <td>{tx.eventId?.eventName || tx.eventName || '—'}</td>
+                                        <td>
+                                            {tx.eventId?.eventName || tx.eventName || '—'}
+                                            {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
+                                                <span style={{ marginLeft: 6 }} title="Gifts/Seer Varisai Included">🎁</span>
+                                            )}
+                                        </td>
                                         <td>
                                             <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
                                                 {t(tx.type)}

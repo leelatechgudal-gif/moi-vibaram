@@ -107,6 +107,7 @@ export const usersAPI = {
     adminCreate: data => api.post('/users/admin', data),
     adminUpdate: (id, data) => api.put(`/users/admin/${id}`, data),
     adminDelete: id => api.delete(`/users/admin/${id}`),
+    adminGetUserParties: userId => api.get(`/users/admin/user-parties/${userId}`),
 };
 
 export const partiesAPI = {

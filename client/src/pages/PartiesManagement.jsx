@@ -93,6 +93,7 @@ export default function PartiesManagement() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!window.confirm(t('confirmSaveParty') || 'Confirm saving this party detail?')) return;
         setActionLoading(true);
         setError('');
         try {

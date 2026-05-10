@@ -14,7 +14,11 @@ router.get('/', auth, async (req, res) => {
         if (pageNum) {
             const skip = (pageNum - 1) * limitNum;
             const total = await Reminder.countDocuments({ userId: req.userId });
-            const reminders = await Reminder.find({ userId: req.userId }).sort({ date: 1 }).skip(skip).limit(limitNum);
+            const reminders = await Reminder.find({ userId: req.userId })
+                .populate('partyId')
+                .sort({ date: 1 })
+                .skip(skip)
+                .limit(limitNum);
             res.json({
                 data: reminders,
                 total,
@@ -23,7 +27,9 @@ router.get('/', auth, async (req, res) => {
                 hasMore: pageNum * limitNum < total
             });
         } else {
-            const reminders = await Reminder.find({ userId: req.userId }).sort({ date: 1 });
+            const reminders = await Reminder.find({ userId: req.userId })
+                .populate('partyId')
+                .sort({ date: 1 });
             res.json(reminders);
         }
     } catch (err) {
@@ -35,9 +41,10 @@ router.get('/', auth, async (req, res) => {
 // POST /api/reminders
 router.post('/', auth, async (req, res) => {
     try {
-        const { name, location, eventName, notes, date, notifyOnLogin } = req.body;
+        const { name, location, eventName, notes, date, notifyOnLogin, partyId } = req.body;
         const reminder = new Reminder({
             userId: req.userId,
+            partyId,
             name,
             location,
             eventName,
@@ -59,13 +66,14 @@ router.put('/:id', auth, async (req, res) => {
         const reminder = await Reminder.findOne({ _id: req.params.id, userId: req.userId });
         if (!reminder) return res.status(404).json({ message: 'Reminder not found' });
 
-        const { name, location, eventName, notes, date, notifyOnLogin } = req.body;
+        const { name, location, eventName, notes, date, notifyOnLogin, partyId } = req.body;
         if (name !== undefined) reminder.name = name;
         if (location !== undefined) reminder.location = location;
         if (eventName !== undefined) reminder.eventName = eventName;
         if (notes !== undefined) reminder.notes = notes;
         if (date !== undefined) reminder.date = date;
         if (notifyOnLogin !== undefined) reminder.notifyOnLogin = notifyOnLogin;
+        if (partyId !== undefined) reminder.partyId = partyId;
 
         await reminder.save();
         res.json(reminder);

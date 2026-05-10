@@ -30,7 +30,7 @@ function Protected({ children }) {
 }
 
 function AppRoutes() {
-    const { isAuthenticated } = useAuth()
+    const { isAuthenticated, user } = useAuth()
     React.useEffect(() => {
         const backHandler = CapApp.addListener('backButton', ({ canGoBack }) => {
             if (canGoBack) {
@@ -66,7 +66,9 @@ function AppRoutes() {
                                     <Route path="/master-sheet" element={<MasterSheet />} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/search" element={<Search />} />
-                                    <Route path="/admin" element={<AdminDashboard />} />
+                                    {user?.role === 'admin' && user?.isSuperAdmin && (
+                                        <Route path="/admin" element={<AdminDashboard />} />
+                                    )}
                                     <Route path="/parties" element={<PartiesManagement />} />
                                     <Route path="/bulk-upload" element={<BulkUpload />} />
                                     <Route path="/person-detail" element={<PersonDetail />} />

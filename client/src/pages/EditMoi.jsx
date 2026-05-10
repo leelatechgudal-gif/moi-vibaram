@@ -113,6 +113,7 @@ export default function EditMoi() {
 
     const onSubmit = async e => {
         e.preventDefault()
+        if (!window.confirm(t('confirmUpdateMoi') || 'Confirm updating this Moi entry?')) return
         if (form.type === 'received' && !form.eventId) { setError('Please select an event'); return }
         if (form.type === 'paid' && !form.eventName) { setError('Please enter event name'); return }
         setLoading(true)

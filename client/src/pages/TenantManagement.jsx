@@ -86,7 +86,7 @@ export default function TenantManagement() {
             <div className="page-header" style={{ flexWrap: 'wrap', gap: 16 }}>
                 <div>
                     <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Building2 size={28} /> Family / Tenant
+                        <Building2 size={28} /> Family Members
                     </h1>
                     <div className="page-subtitle">Manage who shares your party ledger</div>
                 </div>
@@ -105,11 +105,11 @@ export default function TenantManagement() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Shield size={18} color="var(--primary)" />
                         <strong>Tenant ID:</strong>
-                        <code style={{ 
-                            fontSize: 12, 
-                            background: 'var(--glass)', 
-                            padding: '4px 8px', 
-                            borderRadius: 6, 
+                        <code style={{
+                            fontSize: 12,
+                            background: 'var(--glass)',
+                            padding: '4px 8px',
+                            borderRadius: 6,
                             letterSpacing: 0.5,
                             color: 'var(--text-muted)'
                         }}>
@@ -163,15 +163,15 @@ export default function TenantManagement() {
                                             <td style={{ textAlign: 'center' }}>
                                                 {!isMe && m.tenantRole !== 'owner' && (
                                                     <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                                                        <button 
-                                                            className="btn btn-secondary btn-sm" 
+                                                        <button
+                                                            className="btn btn-secondary btn-sm"
                                                             onClick={() => handleTransfer(m._id, m.name)}
                                                             title="Transfer Ownership"
                                                         >
                                                             <ArrowRightLeft size={14} />
                                                         </button>
-                                                        <button 
-                                                            className="btn btn-secondary btn-sm" 
+                                                        <button
+                                                            className="btn btn-secondary btn-sm"
                                                             onClick={() => handleRemove(m._id, m.name)}
                                                             title="Remove Member"
                                                         >

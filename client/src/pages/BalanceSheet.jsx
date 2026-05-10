@@ -59,7 +59,7 @@ export default function BalanceSheet() {
                     p.mobile?.includes(searchQuery) ||
                     p.location?.toLowerCase().includes(searchQuery.toLowerCase())
                 );
-                
+
                 if (filteredSheet.length === 0) {
                     return (
                         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No records found matching your search.</div>
@@ -67,100 +67,102 @@ export default function BalanceSheet() {
                 }
 
                 return (
-                <div ref={printRef}>
-                    <div className="card table-wrap">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Name & Spouse name</th>
-                                    <th>{t('mobile')}</th>
-                                    <th>{t('location')}</th>
-                                    <th>Paid</th>
-                                    <th>Received</th>
-                                    <th>{t('balance')}</th>
-                                    <th className="no-print"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredSheet.map((p, i) => (
-                                    <React.Fragment key={p._id || i}>
-                                        <tr>
-                                            <td className="text-muted">{i + 1}</td>
-                                            <td>
-                                                <Link 
-                                                    to={`/person-detail?partyName=${encodeURIComponent(p.partyName)}&mobile=${p.mobile || ''}&spouseName=${encodeURIComponent(p.spouseName || '')}&location=${encodeURIComponent(p.location || '')}`}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    style={{ textDecoration: 'none', color: 'inherit' }}
-                                                    className="hover-underline"
-                                                >
-                                                    <strong style={{ color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
-                                                </Link>
-                                                {p.spouseName && <span className="text-muted" style={{ display: 'block', fontSize: 11 }}>& {p.spouseName}</span>}
-                                            </td>
-                                            <td>{p.mobile || '—'}</td>
-                                            <td>{p.location || '—'}</td>
-                                            <td className="text-success">{fmt(p.totalPaid)}</td>
-                                            <td className="text-primary">{fmt(p.totalReceived)}</td>
-                                            <td style={{ fontWeight: 700 }}>
-                                                <span className={p.balance >= 0 ? 'text-primary' : 'text-danger'}>
-                                                    {p.balance >= 0 ? '+' : ''}{fmt(p.balance)}
-                                                </span>
-                                            </td>
-                                            <td className="no-print">
-                                                <button className="btn btn-secondary btn-sm" onClick={() => setSelected(selected === p._id ? null : p._id)}>
-                                                    {selected === p._id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                </button>
-                                            </td>
-                                        </tr>
-                                        {/* Drill-down row */}
-                                        {selected === p._id && (
+                    <div ref={printRef}>
+                        <div className="card table-wrap">
+                            <table className="table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name & Spouse name</th>
+                                        <th>{t('mobile')}</th>
+                                        <th>{t('location')}</th>
+                                        <th>Paid</th>
+                                        <th>Received</th>
+                                        <th>{t('balance')}</th>
+                                        <th className="no-print"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredSheet.map((p, i) => (
+                                        <React.Fragment key={p._id || i}>
                                             <tr>
-                                                <td colSpan={8} style={{ padding: 0 }}>
-                                                    <div style={{ background: 'var(--glass)', padding: 16, borderBottom: '1px solid var(--border)' }}>
-                                                        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>Transaction History with {p.partyName}</div>
-                                                        <table className="table" style={{ fontSize: 12 }}>
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Date</th>
-                                                                    <th>Event</th>
-                                                                    <th>Type</th>
-                                                                    <th>Amount</th>
-                                                                    <th>Remarks</th>
-                                                                    <th>Action</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {p.transactions.map(tx => (
-                                                                    <tr key={tx._id}>
-                                                                        <td>{new Date(tx.date).toLocaleDateString('en-IN')}</td>
-                                                                         <td>{tx.eventId?.eventName || tx.eventName || '—'}</td>
-                                                                        <td>
-                                                                            <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
-                                                                                {t(tx.type)}
-                                                                            </span>
-                                                                        </td>
-                                                                        <td className="text-primary">{fmt(tx.cashAmount)}</td>
-                                                                        <td className="text-muted">{tx.remarks || '—'}</td>
-                                                                        <td>
-                                                                            <Link to={`/transactions/edit/${tx._id}`} className="btn btn-secondary btn-sm" style={{ padding: '4px 8px', fontSize: 11, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                                <Edit2 size={12} /> Edit
-                                                                            </Link>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
+                                                <td className="text-muted">{i + 1}</td>
+                                                <td>
+                                                    <Link
+                                                        to={`/person-detail?partyName=${encodeURIComponent(p.partyName)}&mobile=${p.mobile || ''}&spouseName=${encodeURIComponent(p.spouseName || '')}&location=${encodeURIComponent(p.location || '')}`}
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        style={{ textDecoration: 'none', color: 'inherit' }}
+                                                        className="hover-underline"
+                                                    >
+                                                        <strong style={{ color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
+                                                    </Link>
+                                                    {p.transactions.some(tx => tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks))) && (
+                                                        <span style={{ marginLeft: 6 }} title="Gifts/Seer Varisai included in history">🎁</span>
+                                                    )}
+                                                    {p.spouseName && <span className="text-muted" style={{ display: 'block', fontSize: 11 }}>& {p.spouseName}</span>}
+                                                </td>
+                                                <td>{p.mobile || '—'}</td>
+                                                <td>{p.location || '—'}</td>
+                                                <td className="text-success">{fmt(p.totalPaid)}</td>
+                                                <td className="text-primary">{fmt(p.totalReceived)}</td>
+                                                <td style={{ fontWeight: 700 }}>
+                                                    <span className={p.balance >= 0 ? 'text-primary' : 'text-danger'}>
+                                                        {p.balance >= 0 ? '+' : ''}{fmt(p.balance)}
+                                                    </span>
+                                                </td>
+                                                <td className="no-print">
+                                                    <button className="btn btn-secondary btn-sm" onClick={() => setSelected(selected === p._id ? null : p._id)}>
+                                                        {selected === p._id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                    </button>
                                                 </td>
                                             </tr>
-                                        )}
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
+                                            {/* Drill-down row */}
+                                            {selected === p._id && (
+                                                <tr>
+                                                    <td colSpan={8} style={{ padding: 0 }}>
+                                                        <div style={{ background: 'var(--glass)', padding: 16, borderBottom: '1px solid var(--border)' }}>
+                                                            <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>Transaction History with {p.partyName}</div>
+                                                            <table className="table" style={{ fontSize: 12 }}>
+                                                                <thead>
+                                                                    <tr>
+                                                                        <th>Date</th>
+                                                                        <th>Event</th>
+                                                                        <th>Type</th>
+                                                                        <th>Amount</th>
+                                                                        <th>Remarks</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {p.transactions.map(tx => (
+                                                                        <tr key={tx._id}>
+                                                                            <td>{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                                                            <td>
+                                                                                {tx.eventId?.eventName || tx.eventName || '—'}
+                                                                                {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
+                                                                                    <span style={{ marginLeft: 4 }} title="Gifts/Seer Varisai included">🎁</span>
+                                                                                )}
+                                                                            </td>
+                                                                            <td>
+                                                                                <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
+                                                                                    {t(tx.type)}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="text-primary">{fmt(tx.cashAmount)}</td>
+                                                                            <td className="text-muted">{tx.remarks || '—'}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
                 );
             })()}
         </div>

@@ -6,6 +6,10 @@ const path = require('path');
 const QRCode = require('qrcode');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const AdminWhitelist = require('../models/AdminWhitelist');
+const Transaction = require('../models/Transaction');
+const Party = require('../models/Party');
+const { isWhitelistedAdmin } = require('../utils/admin');
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -28,8 +32,10 @@ const upload = multer({
 // GET /api/users/profile
 router.get('/profile', auth, async (req, res) => {
     try {
-        const user = await User.findById(req.userId).select('-passwordHash -otpCode -otpExpiry');
+        const user = await User.findById(req.userId).select('-passwordHash -otpCode -otpExpiry').lean();
         if (!user) return res.status(404).json({ message: 'User not found' });
+        
+        user.isSuperAdmin = await isWhitelistedAdmin(user.email);
         res.json(user);
     } catch (err) {
         logger.error('[users]', { message: err.message, stack: err.stack });
@@ -41,8 +47,8 @@ router.get('/profile', auth, async (req, res) => {
 router.get('/admin/all', auth, async (req, res) => {
     try {
         const adminUser = await User.findById(req.userId);
-        if (adminUser.role !== 'admin') {
-            return res.status(403).json({ message: 'Forbidden: Admins only' });
+        if (adminUser.role !== 'admin' || !(await isWhitelistedAdmin(adminUser.email))) {
+            return res.status(403).json({ message: 'Forbidden: Insufficient administrative privileges' });
         }
         const { page, limit } = req.query;
         const pageNum = parseInt(page);
@@ -52,7 +58,20 @@ router.get('/admin/all', auth, async (req, res) => {
             const skip = (pageNum - 1) * limitNum;
             const filter = { isDeleted: { $ne: true } };
             const total = await User.countDocuments(filter);
-            const users = await User.find(filter).select('-passwordHash -otpCode -otpExpiry -webAuthnCredentials -activeSessions').sort({ createdAt: -1 }).skip(skip).limit(limitNum);
+            
+            const users = await User.find(filter)
+                .select('-passwordHash -otpCode -otpExpiry -webAuthnCredentials -activeSessions')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNum)
+                .lean();
+
+            // Add transaction and party counts
+            for (let u of users) {
+                u.transactionCount = await Transaction.countDocuments({ userId: u._id, isDeleted: { $ne: true } });
+                u.partyCount = await Party.countDocuments({ createdBy: u._id, isDeleted: { $ne: true } });
+            }
+
             res.json({
                 data: users,
                 total,
@@ -225,6 +244,21 @@ router.delete('/admin/:id', auth, async (req, res) => {
     } catch (err) {
         logger.error('[admin delete user]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to delete user' });
+    }
+});
+
+// GET /api/users/admin/user-parties/:userId
+router.get('/admin/user-parties/:userId', auth, async (req, res) => {
+    try {
+        const adminUser = await User.findById(req.userId);
+        if (adminUser.role !== 'admin' || !(await isWhitelistedAdmin(adminUser.email))) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const parties = await Party.find({ createdBy: req.params.userId, isDeleted: { $ne: true } }).sort({ createdAt: -1 });
+        res.json(parties);
+    } catch (err) {
+        logger.error('[admin user parties]', { message: err.message, stack: err.stack });
+        res.status(500).json({ message: 'Failed to fetch user parties' });
     }
 });
 

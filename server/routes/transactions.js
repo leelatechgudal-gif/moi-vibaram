@@ -113,7 +113,7 @@ function flattenTransaction(t) {
 }
 
 // Helper to find or create a party (scoped by tenantId)
-async function findOrCreateParty(data, tenantId) {
+async function findOrCreateParty(data, tenantId, userId) {
     const { partyName, name, mobile, initial, fatherName, motherName, spouseName, nickname, occupation, location, street, remarks } = data;
     const finalName = name || partyName;
     const finalMobile = mobile || '';
@@ -133,7 +133,8 @@ async function findOrCreateParty(data, tenantId) {
             occupation,
             location: location || 'Unknown',
             street,
-            remarks
+            remarks,
+            createdBy: userId
         });
         await party.save();
     }
@@ -160,7 +161,7 @@ router.post('/', auth, async (req, res) => {
 
         let finalPartyId = partyId;
         if (!finalPartyId) {
-            const party = await findOrCreateParty(partyData, req.tenantId);
+            const party = await findOrCreateParty(partyData, req.tenantId, req.userId);
             finalPartyId = party._id;
         }
 

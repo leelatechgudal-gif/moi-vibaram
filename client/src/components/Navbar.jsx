@@ -119,11 +119,11 @@ export default function Navbar() {
                     <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> Party Management
                 </NavLink>
                 <NavLink to="/tenant" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={18} /></span> Family / Tenant
+                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={18} /></span> Family Members
                 </NavLink>
-                {user?.role === 'admin' && (
+                {user?.role === 'admin' && user?.isSuperAdmin && (
                     <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                        <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={18} /></span> App Users (Admin)
+                        <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={18} /></span> App Users
                     </NavLink>
                 )}
             </nav>

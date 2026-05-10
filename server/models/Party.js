@@ -15,6 +15,7 @@ const partySchema = new mongoose.Schema(
     mobile: String,
     remarks: String,
     qrCode: String,
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true },

@@ -11,6 +11,12 @@ export default function TransactionHistory({ transactions, type, person, user, t
 
   return (
     <div className="card" style={{ padding: '0', background: '#fff', border: 'none', boxShadow: 'none' }}>
+      {/* Application Title for Printing */}
+      <div style={{ textAlign: 'center', padding: '20px 0 10px 0' }}>
+        <h1 style={{ margin: 0, color: 'var(--maroon)', fontSize: '28px', fontWeight: 800, letterSpacing: '2px' }}>MOI VIBARAM</h1>
+        <div style={{ fontSize: '12px', color: '#666', textTransform: 'uppercase', letterSpacing: '4px', fontWeight: 500 }}>Traditional Digital Ledger</div>
+      </div>
+
       {/* Top Person Details Section */}
       {person && (
         <div style={{ margin: '10px 0', padding: '16px', border: '2px solid black', background: '#fff', display: 'flex', flexWrap: 'wrap', gap: '12px 32px' }}>
@@ -72,6 +78,11 @@ export default function TransactionHistory({ transactions, type, person, user, t
                 </td>
                 <td style={{ border: '1px solid black', padding: 8, color: 'black' }}>
                   {tx.eventId?.eventName || tx.eventName || "—"}
+                  {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
+                    <span style={{ marginLeft: 8, color: 'var(--maroon)' }} title="Gifts/Seer Varisai Included">
+                      🎁
+                    </span>
+                  )}
                   {tx.remarks && <span style={{ fontSize: 11, color: '#666', marginLeft: 8 }}>({tx.remarks})</span>}
                 </td>
                 <td style={{ border: '1px solid black', textAlign: 'center', padding: 8, color: 'black' }}>
@@ -139,7 +150,6 @@ export default function TransactionHistory({ transactions, type, person, user, t
             </tbody>
           </table>
         </div>
-
         <div className="no-print" style={{ padding: '0 20px 20px 20px', textAlign: 'center' }}>
           <Link
             to="/transactions/new"
@@ -148,6 +158,19 @@ export default function TransactionHistory({ transactions, type, person, user, t
           >
             <Plus size={16} style={{ marginRight: 4 }} /> Create Moi ({type === "paid" ? "I paid" : "I have received"})
           </Link>
+        </div>
+
+        {/* Branded Footer */}
+        <div style={{ marginTop: '30px', padding: '20px 0', textAlign: 'center', borderTop: '1px solid #eee' }}>
+          <div style={{ fontSize: '12px', fontWeight: 'bold', color: 'black', marginBottom: '4px' }}>
+            Powered by Leela Tech
+          </div>
+          <div style={{ fontSize: '11px', color: '#666' }}>
+            &copy; {new Date().getFullYear()} Leela Tech. All rights reserved.
+          </div>
+          <div style={{ fontSize: '10px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>
+            Generated via Moi Vibaram - Modern Ledger for Traditional Celebrations
+          </div>
         </div>
       </div>
     </div>

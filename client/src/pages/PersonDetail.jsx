@@ -4,6 +4,7 @@ import { transactionsAPI } from "../api/api";
 import { useTranslation } from "react-i18next";
 import { useReactToPrint } from "react-to-print";
 import TransactionHistory from "../components/TransactionHistory";
+import SeerVarisaiHistory from "../components/SeerVarisaiHistory";
 import { useAuth } from "../context/AuthContext";
 import { ArrowLeft, Printer, Gift, Coins } from "lucide-react";
 
@@ -41,6 +42,7 @@ export default function PersonDetail() {
   });
 
   const handleDeleteTransaction = async (id) => {
+    if (!window.confirm(t("confirmDeleteTransaction") || "Are you sure you want to delete this transaction?")) return;
     try {
       await transactionsAPI.delete(id);
       const params = {};
@@ -168,6 +170,11 @@ export default function PersonDetail() {
           totalReceived={totalReceived}
           balance={balance}
           onDelete={handleDeleteTransaction} 
+        />
+
+        <SeerVarisaiHistory 
+          transactions={transactions} 
+          person={person} 
         />
       </div>
     </div>

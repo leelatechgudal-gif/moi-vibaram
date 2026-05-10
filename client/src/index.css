@@ -564,8 +564,10 @@ select.form-control option { background: var(--bg-card); color: var(--text); }
 .flex { display: flex; }
 .flex-center { display: flex; align-items: center; justify-content: center; }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
+.flex-end { display: flex; align-items: center; justify-content: flex-end; }
 .gap-8 { gap: 8px; }
 .gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
 .mt-8 { margin-top: 8px; }
 .mb-16 { margin-bottom: 16px; }
 .w-full { width: 100%; }

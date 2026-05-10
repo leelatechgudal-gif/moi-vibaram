@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { remindersAPI } from '../api/api'
-import { CalendarClock, Plus, Edit, Trash2, Bell, BellOff } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { remindersAPI, partiesAPI } from '../api/api'
+import { CalendarClock, Plus, Edit, Trash2, Bell, BellOff, Search, User, Coins } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function UpcomingEvents() {
     const { t } = useTranslation()
+    const navigate = useNavigate()
     const [reminders, setReminders] = useState([])
     const [loading, setLoading] = useState(true)
 
@@ -13,6 +15,7 @@ export default function UpcomingEvents() {
     const [isEditing, setIsEditing] = useState(false)
     const [currentId, setCurrentId] = useState(null)
     const [formData, setFormData] = useState({
+        partyId: '',
         name: '',
         location: '',
         eventName: '',
@@ -20,8 +23,38 @@ export default function UpcomingEvents() {
         date: '',
         notifyOnLogin: true
     })
+    const [parties, setParties] = useState([])
+    const [searchQuery, setSearchQuery] = useState('')
+    const [searchResults, setSearchResults] = useState([])
 
-    useEffect(() => { fetchReminders() }, [])
+    useEffect(() => { 
+        fetchReminders()
+        fetchParties()
+    }, [])
+
+    const fetchParties = async () => {
+        try {
+            const res = await partiesAPI.getAll()
+            setParties(res.data || res) // Handle both pagination and direct array
+        } catch (err) {
+            console.error('Failed to fetch parties', err)
+        }
+    }
+
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([])
+            return
+        }
+        const q = searchQuery.toLowerCase()
+        const results = parties.filter(p => 
+            (p.name && p.name.toLowerCase().includes(q)) ||
+            (p.mobile && p.mobile.includes(q)) ||
+            (p.location && p.location.toLowerCase().includes(q)) ||
+            (p.spouseName && p.spouseName.toLowerCase().includes(q))
+        )
+        setSearchResults(results)
+    }, [searchQuery, parties])
 
     const fetchReminders = async () => {
         setLoading(true)
@@ -41,6 +74,7 @@ export default function UpcomingEvents() {
             setIsEditing(true)
             setCurrentId(reminder._id)
             setFormData({
+                partyId: reminder.partyId || '',
                 name: reminder.name,
                 location: reminder.location || '',
                 eventName: reminder.eventName,
@@ -48,10 +82,12 @@ export default function UpcomingEvents() {
                 date: reminder.date ? new Date(reminder.date).toISOString().substring(0, 10) : '',
                 notifyOnLogin: reminder.notifyOnLogin !== undefined ? reminder.notifyOnLogin : true
             })
+            setSearchQuery('')
         } else {
             setIsEditing(false)
             setCurrentId(null)
             setFormData({
+                partyId: '',
                 name: '',
                 location: '',
                 eventName: '',
@@ -59,6 +95,7 @@ export default function UpcomingEvents() {
                 date: '',
                 notifyOnLogin: true
             })
+            setSearchQuery('')
         }
         setShowModal(true)
     }
@@ -67,6 +104,7 @@ export default function UpcomingEvents() {
 
     const handleSave = async (e) => {
         e.preventDefault()
+        if (!window.confirm(t('confirmSaveReminder') || 'Confirm saving this reminder?')) return
         try {
             if (isEditing) {
                 await remindersAPI.update(currentId, formData)
@@ -103,6 +141,30 @@ export default function UpcomingEvents() {
         } catch (err) {
             console.error(err)
             toast.error('Failed to update alert preference')
+        }
+    }
+
+    const handleAddMoi = (reminder) => {
+        if (reminder.partyId) {
+            // If linked to a party, pass the party object
+            navigate('/transactions/new', { 
+                state: { 
+                    party: {
+                        ...reminder.partyId,
+                        partyName: reminder.partyId.name // CreateMoi expects partyName
+                    }
+                } 
+            })
+        } else {
+            // Otherwise just pass the name
+            navigate('/transactions/new', { 
+                state: { 
+                    party: {
+                        partyName: reminder.name,
+                        location: reminder.location
+                    }
+                } 
+            })
         }
     }
 
@@ -163,6 +225,14 @@ export default function UpcomingEvents() {
                                         </button>
                                     </td>
                                     <td style={{ textAlign: 'center' }}>
+                                        <button 
+                                            className="btn btn-secondary btn-sm" 
+                                            style={{ marginRight: 8 }} 
+                                            onClick={() => handleAddMoi(r)}
+                                            title="Add Moi Entry"
+                                        >
+                                            <Coins size={16} color="var(--primary)" />
+                                        </button>
                                         <button className="btn btn-secondary btn-sm" style={{ marginRight: 8 }} onClick={() => handleOpenModal(r)}>
                                             <Edit size={16} />
                                         </button>
@@ -185,15 +255,82 @@ export default function UpcomingEvents() {
                             <button className="modal-close" onClick={handleCloseModal}>&times;</button>
                         </div>
                         <form onSubmit={handleSave}>
-                            <div className="form-group">
+                            <div className="form-group" style={{ position: 'relative' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <Search size={14} /> Search Person
+                                </label>
+                                <input 
+                                    type="text" 
+                                    className="form-control" 
+                                    placeholder="Search by name, phone or location..."
+                                    value={searchQuery} 
+                                    onChange={e => setSearchQuery(e.target.value)} 
+                                />
+                                {searchResults.length > 0 && (
+                                    <div className="search-results-dropdown" style={{
+                                        border: '1px solid var(--border)',
+                                        borderRadius: 8,
+                                        marginTop: 4,
+                                        maxHeight: 200,
+                                        overflowY: 'auto',
+                                        background: 'var(--surface)',
+                                        position: 'absolute',
+                                        width: '100%',
+                                        zIndex: 10,
+                                        boxShadow: 'var(--shadow-lg)'
+                                    }}>
+                                        {searchResults.map(p => (
+                                            <div 
+                                                key={p._id} 
+                                                className="search-result-item"
+                                                style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                                                onClick={() => {
+                                                    setFormData({
+                                                        ...formData,
+                                                        partyId: p._id,
+                                                        name: p.name,
+                                                        location: p.location || ''
+                                                    })
+                                                    setSearchQuery('')
+                                                    setSearchResults([])
+                                                }}
+                                            >
+                                                <div style={{ fontWeight: 600, color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.name}</div>
+                                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                                    {p.location || 'No location'} {p.mobile && `• ${p.mobile}`}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="form-group" style={{ position: 'relative' }}>
                                 <label>Person Name</label>
                                 <input 
                                     type="text" 
                                     className="form-control" 
                                     required 
                                     value={formData.name} 
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })} 
+                                    onChange={e => setFormData({ ...formData, name: e.target.value, partyId: '' })} 
                                 />
+                                {formData.partyId && (
+                                    <span style={{ 
+                                        position: 'absolute', 
+                                        right: 10, 
+                                        top: 38, 
+                                        fontSize: 10, 
+                                        background: 'var(--primary-light)', 
+                                        color: 'var(--primary)', 
+                                        padding: '2px 6px', 
+                                        borderRadius: 4,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 4
+                                    }}>
+                                        <User size={10} /> Linked to Address Book
+                                    </span>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>Event Name</label>
@@ -248,9 +385,9 @@ export default function UpcomingEvents() {
                                 />
                                 <label htmlFor="notifyCheck" style={{ marginBottom: 0 }}>Notify on login</label>
                             </div>
-                            <div className="flex gap-16" style={{ marginTop: 24 }}>
-                                <button type="button" className="btn btn-secondary flex-1" onClick={handleCloseModal}>Cancel</button>
-                                <button type="submit" className="btn btn-primary flex-1">{isEditing ? 'Update' : 'Save'}</button>
+                            <div className="flex-end gap-12" style={{ marginTop: 32 }}>
+                                <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>Cancel</button>
+                                <button type="submit" className="btn btn-primary" style={{ minWidth: 120 }}>{isEditing ? 'Update' : 'Save'}</button>
                             </div>
                         </form>
                     </div>

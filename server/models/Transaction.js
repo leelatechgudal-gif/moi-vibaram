@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const seerVarisaiSchema = new mongoose.Schema({
     dress: { value: Number, quantity: Number, remarks: String },
     thattuVarisai: { value: Number, quantity: Number, remarks: String },
-    jewels: { type: String, value: Number, quantity: Number, remarks: String },
+    jewels: { value: Number, quantity: Number, remarks: String },
     marakkal: { value: Number, quantity: Number, remarks: String },
     maalai: { value: Number, quantity: Number, remarks: String },
     arisMootai: { value: Number, quantity: Number, remarks: String },

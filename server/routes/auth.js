@@ -7,6 +7,7 @@ const QRCode = require('qrcode');
 const User = require('../models/User');
 const { generateOTP, sendOTPEmail } = require('../utils/email');
 const logger = require('../utils/logger');
+const { isWhitelistedAdmin } = require('../utils/admin');
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
@@ -42,7 +43,8 @@ router.post('/register', async (req, res) => {
         await user.save();
 
         logger.info('[register] New user registered', { userId: user._id, email, tenantId: user.tenantId });
-        res.status(201).json({ token: accessToken, refreshToken, user: { _id: user._id, name, email, mobile, location, street, qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole } });
+        const isSuperAdmin = await isWhitelistedAdmin(email);
+        res.status(201).json({ token: accessToken, refreshToken, user: { _id: user._id, name, email, mobile, location, street, qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole, isSuperAdmin } });
     } catch (err) {
         logger.error('[register] Registration failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Registration failed. Please try again.' });
@@ -100,10 +102,11 @@ router.post('/login', async (req, res) => {
         await user.save();
 
         logger.info('[login] User logged in successfully', { userId: user._id, email, tenantId: user.tenantId, ip: req.ip });
+        const isSuperAdmin = await isWhitelistedAdmin(email);
         res.json({
             token: accessToken,
             refreshToken,
-            user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole }
+            user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole, isSuperAdmin }
         });
     } catch (err) {
         logger.error('[login] Login failed', { message: err.message, stack: err.stack });

@@ -65,7 +65,8 @@ router.post('/', auth, async (req, res) => {
             ...rest,
             name: finalName,
             mobile: mobileToSave,
-            tenantId: req.tenantId
+            tenantId: req.tenantId,
+            createdBy: req.userId
         });
         await partyObj.save();
         res.status(201).json(partyObj);

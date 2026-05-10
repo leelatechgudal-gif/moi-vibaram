@@ -101,6 +101,7 @@ export default function AdminDashboard() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!window.confirm('Confirm saving system user details?')) return;
         setActionLoading(true);
         setError('');
         try {
@@ -122,6 +123,29 @@ export default function AdminDashboard() {
 
     const handleInputChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const [expandedUser, setExpandedUser] = useState(null);
+    const [userParties, setUserParties] = useState({});
+    const [loadingParties, setLoadingParties] = useState(false);
+
+    const toggleParties = async (userId) => {
+        if (expandedUser === userId) {
+            setExpandedUser(null);
+            return;
+        }
+        setExpandedUser(userId);
+        if (!userParties[userId]) {
+            setLoadingParties(true);
+            try {
+                const res = await usersAPI.adminGetUserParties(userId);
+                setUserParties(prev => ({ ...prev, [userId]: res.data }));
+            } catch (err) {
+                console.error('Failed to fetch parties', err);
+            } finally {
+                setLoadingParties(false);
+            }
+        }
     };
 
     if (user?.role !== 'admin') return null;
@@ -168,25 +192,71 @@ export default function AdminDashboard() {
                             <th>Mobile</th>
                             <th>Email</th>
                             <th>Role</th>
-                            <th>Subscription Expiry</th>
-                            <th>Joined</th>
+                            <th style={{ textAlign: 'center' }}>Txns</th>
+                            <th style={{ textAlign: 'center' }}>Parties</th>
+                            <th>Expiry</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredUsers.map(u => (
-                            <tr key={u._id}>
-                                <td><strong>{u.name}</strong></td>
-                                <td>{u.mobile}</td>
-                                <td>{u.email}</td>
-                                <td><span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-warning'}`}>{u.role}</span></td>
-                                <td>{u.subscriptionExpiry ? new Date(u.subscriptionExpiry).toLocaleDateString() : '—'}</td>
-                                <td>{new Date(u.createdAt).toLocaleDateString()}</td>
-                                <td>
-                                    <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(u)} style={{ marginRight: 8 }}><Edit2 size={14} /></button>
-                                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u)} disabled={u._id === user._id}><Trash2 size={14} /></button>
-                                </td>
-                            </tr>
+                            <React.Fragment key={u._id}>
+                                <tr>
+                                    <td><strong>{u.name}</strong></td>
+                                    <td>{u.mobile}</td>
+                                    <td>{u.email}</td>
+                                    <td><span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-warning'}`}>{u.role}</span></td>
+                                    <td style={{ fontWeight: 600, textAlign: 'center' }}>{u.transactionCount || 0}</td>
+                                    <td style={{ fontWeight: 600, textAlign: 'center' }}>{u.partyCount || 0}</td>
+                                    <td>{u.subscriptionExpiry ? new Date(u.subscriptionExpiry).toLocaleDateString() : '—'}</td>
+                                    <td>
+                                        <div className="flex gap-8">
+                                            <button className="btn btn-secondary btn-sm" title="View Parties" onClick={() => toggleParties(u._id)}>
+                                                <Users size={14} />
+                                            </button>
+                                            <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(u)}><Edit2 size={14} /></button>
+                                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u)} disabled={u._id === user._id}><Trash2 size={14} /></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {expandedUser === u._id && (
+                                    <tr>
+                                        <td colSpan={7} style={{ padding: 0 }}>
+                                            <div style={{ background: 'var(--glass)', padding: 16, borderBottom: '1px solid var(--border)' }}>
+                                                <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>Parties Created by {u.name}</div>
+                                                {loadingParties ? (
+                                                    <div className="flex-center" style={{ height: 60 }}><span className="spinner" /></div>
+                                                ) : !userParties[u._id] || userParties[u._id].length === 0 ? (
+                                                    <div className="text-muted" style={{ fontSize: 12, textAlign: 'center', padding: 10 }}>No parties created by this user.</div>
+                                                ) : (
+                                                    <table className="table" style={{ fontSize: 12 }}>
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Name</th>
+                                                                <th>Spouse Name</th>
+                                                                <th>Mobile</th>
+                                                                <th>Location</th>
+                                                                <th>Created</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {userParties[u._id].map(p => (
+                                                                <tr key={p._id}>
+                                                                    <td>{p.initial ? `${p.initial}. ` : ''}{p.name}</td>
+                                                                    <td>{p.spouseName || '—'}</td>
+                                                                    <td>{p.mobile || '—'}</td>
+                                                                    <td>{p.location || '—'}</td>
+                                                                    <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                )}
+                            </React.Fragment>
                         ))}
                     </tbody>
                 </table>
