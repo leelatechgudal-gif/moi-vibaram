@@ -84,7 +84,9 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // DELETE /api/reminders/:id
-router.delete('/:id', auth, async (req, res) => {
+const verifyPassword = require('../middleware/verifyPassword');
+
+router.delete('/:id', auth, verifyPassword, async (req, res) => {
     try {
         const reminder = await Reminder.findOneAndDelete({ _id: req.params.id, userId: req.userId });
         if (!reminder) return res.status(404).json({ message: 'Reminder not found' });

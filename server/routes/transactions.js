@@ -247,7 +247,9 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // DELETE /api/transactions/:id
-router.delete('/:id', auth, async (req, res) => {
+const verifyPassword = require('../middleware/verifyPassword');
+
+router.delete('/:id', auth, verifyPassword, async (req, res) => {
     try {
         const transaction = await Transaction.findOneAndUpdate(
             { _id: req.params.id, userId: req.userId },

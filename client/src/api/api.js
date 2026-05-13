@@ -106,7 +106,7 @@ export const usersAPI = {
     getAdminAll: params => api.get('/users/admin/all', { params }),
     adminCreate: data => api.post('/users/admin', data),
     adminUpdate: (id, data) => api.put(`/users/admin/${id}`, data),
-    adminDelete: id => api.delete(`/users/admin/${id}`),
+    adminDelete: (id, password) => api.delete(`/users/admin/${id}`, { data: { password } }),
     adminGetUserParties: userId => api.get(`/users/admin/user-parties/${userId}`),
 };
 
@@ -114,7 +114,7 @@ export const partiesAPI = {
     getAll: params => api.get('/parties', { params }),
     create: data => api.post('/parties', data),
     update: (id, data) => api.put(`/parties/${id}`, data),
-    delete: id => api.delete(`/parties/${id}`),
+    delete: (id, password) => api.delete(`/parties/${id}`, { data: { password } }),
 };
 
 export const eventsAPI = {
@@ -122,7 +122,7 @@ export const eventsAPI = {
     getUpcoming: config => api.get('/events/upcoming', config),
     create: formData => api.post('/events', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
     update: (id, formData) => api.put(`/events/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-    delete: id => api.delete(`/events/${id}`),
+    delete: (id, password) => api.delete(`/events/${id}`, { data: { password } }),
 };
 
 export const remindersAPI = {
@@ -130,7 +130,7 @@ export const remindersAPI = {
     getUpcoming: config => api.get('/reminders/upcoming', config),
     create: data => api.post('/reminders', data),
     update: (id, data) => api.put(`/reminders/${id}`, data),
-    delete: id => api.delete(`/reminders/${id}`),
+    delete: (id, password) => api.delete(`/reminders/${id}`, { data: { password } }),
 };
 
 export const transactionsAPI = {
@@ -139,7 +139,7 @@ export const transactionsAPI = {
     create: data => api.post('/transactions', data),
     bulkCreate: data => api.post('/transactions/bulk', data),
     update: (id, data) => api.put(`/transactions/${id}`, data),
-    delete: id => api.delete(`/transactions/${id}`),
+    delete: (id, password) => api.delete(`/transactions/${id}`, { data: { password } }),
     getBalanceSheet: () => api.get('/transactions/balance-sheet'),
     getMasterSheet: () => api.get('/transactions/master-sheet'),
     getPersonDetail: params => api.get('/transactions/person-detail', { params }),

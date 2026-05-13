@@ -21,6 +21,6 @@ const partySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-partySchema.index({ name: 1, mobile: 1, tenantId: 1 }, { unique: true });
+partySchema.index({ tenantId: 1, name: 1, initial: 1, spouseName: 1, location: 1, mobile: 1 }, { unique: true });
 
 module.exports = mongoose.model("Party", partySchema);

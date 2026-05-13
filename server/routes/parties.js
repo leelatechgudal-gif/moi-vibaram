@@ -54,11 +54,22 @@ router.post('/', auth, async (req, res) => {
             return res.status(400).json({ message: 'Name is required' });
         }
 
-        // Check for unique Name and Phone combination within this tenant
+        // Check for unique combination within this tenant
         const mobileToSave = mobile || '';
-        const existing = await Party.findOne({ name: finalName, mobile: mobileToSave, tenantId: req.tenantId, isDeleted: { $ne: true } });
+        const initialToSave = rest.initial || '';
+        const spouseNameToSave = rest.spouseName || '';
+        const locationToSave = rest.location || '';
+        const existing = await Party.findOne({ 
+            name: finalName, 
+            initial: initialToSave,
+            spouseName: spouseNameToSave,
+            location: locationToSave,
+            mobile: mobileToSave, 
+            tenantId: req.tenantId, 
+            isDeleted: { $ne: true } 
+        });
         if (existing) {
-            return res.status(409).json({ message: 'A party with this Name and Phone number already exists.' });
+            return res.status(409).json({ message: 'A party with this Initial, Name, Mobile, Spouse Name, and Location already exists.' });
         }
 
         const partyObj = new Party({
@@ -72,7 +83,7 @@ router.post('/', auth, async (req, res) => {
         res.status(201).json(partyObj);
     } catch (err) {
         if (err.code === 11000) {
-            return res.status(409).json({ message: 'A party with this Name and Phone number already exists.' });
+            return res.status(409).json({ message: 'A party with this Initial, Name, Mobile, Spouse Name, and Location already exists.' });
         }
         logger.error('[parties create]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to create party.' });
@@ -93,11 +104,24 @@ router.put('/:id', auth, async (req, res) => {
         const finalName = name || partyName || partyObj.name;
         const newMobile = mobile !== undefined ? mobile : partyObj.mobile;
 
-        // Check unique constraint if name or mobile changed (within this tenant)
-        if (finalName !== partyObj.name || newMobile !== partyObj.mobile) {
-            const existing = await Party.findOne({ name: finalName, mobile: newMobile, tenantId: req.tenantId, _id: { $ne: partyId }, isDeleted: { $ne: true } });
+        const initialToSave = req.body.initial !== undefined ? req.body.initial : (partyObj.initial || '');
+        const spouseNameToSave = req.body.spouseName !== undefined ? req.body.spouseName : (partyObj.spouseName || '');
+        const locationToSave = req.body.location !== undefined ? req.body.location : (partyObj.location || '');
+
+        // Check unique constraint (within this tenant)
+        if (finalName !== partyObj.name || newMobile !== partyObj.mobile || initialToSave !== partyObj.initial || spouseNameToSave !== partyObj.spouseName || locationToSave !== partyObj.location) {
+            const existing = await Party.findOne({ 
+                name: finalName, 
+                initial: initialToSave,
+                spouseName: spouseNameToSave,
+                location: locationToSave,
+                mobile: newMobile, 
+                tenantId: req.tenantId, 
+                _id: { $ne: partyId }, 
+                isDeleted: { $ne: true } 
+            });
             if (existing) {
-                return res.status(409).json({ message: 'A party with this Name and Phone number already exists.' });
+                return res.status(409).json({ message: 'A party with this Initial, Name, Mobile, Spouse Name, and Location already exists.' });
             }
         }
 
@@ -112,15 +136,17 @@ router.put('/:id', auth, async (req, res) => {
         res.json(partyObj);
     } catch (err) {
         if (err.code === 11000) {
-            return res.status(409).json({ message: 'A party with this Name and Phone number already exists.' });
+            return res.status(409).json({ message: 'A party with this Initial, Name, Mobile, Spouse Name, and Location already exists.' });
         }
         logger.error('[parties update]', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Failed to update party.' });
     }
 });
 
+const verifyPassword = require('../middleware/verifyPassword');
+
 // DELETE /api/parties/:id - Delete a contact (party)
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, verifyPassword, async (req, res) => {
     try {
         const partyObj = await Party.findOneAndUpdate(
             { _id: req.params.id, tenantId: req.tenantId },

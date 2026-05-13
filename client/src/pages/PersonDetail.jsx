@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { transactionsAPI } from "../api/api";
 import { useTranslation } from "react-i18next";
 import { useReactToPrint } from "react-to-print";
+import PasswordConfirmModal from "../components/PasswordConfirmModal";
 import TransactionHistory from "../components/TransactionHistory";
 import SeerVarisaiHistory from "../components/SeerVarisaiHistory";
 import { useAuth } from "../context/AuthContext";
@@ -15,6 +16,7 @@ export default function PersonDetail() {
   const [searchParams] = useSearchParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deleteModal, setDeleteModal] = useState({ show: false, id: null });
   const printRef = useRef();
 
   const partyName = searchParams.get("partyName");
@@ -41,10 +43,14 @@ export default function PersonDetail() {
     content: () => printRef.current,
   });
 
-  const handleDeleteTransaction = async (id) => {
-    if (!window.confirm(t("confirmDeleteTransaction") || "Are you sure you want to delete this transaction?")) return;
+  const handleDeleteTransactionClick = (id) => {
+    setDeleteModal({ show: true, id });
+  };
+
+  const confirmDelete = async (password) => {
     try {
-      await transactionsAPI.delete(id);
+      await transactionsAPI.delete(deleteModal.id, password);
+      setDeleteModal({ show: false, id: null });
       const params = {};
       if (partyName) params.partyName = partyName;
       if (mobile) params.mobile = mobile;
@@ -55,7 +61,7 @@ export default function PersonDetail() {
       setData(res.data);
     } catch (err) {
       console.error(err);
-      alert("Failed to delete transaction");
+      alert(err.response?.data?.message || "Failed to delete transaction");
     }
   };
 
@@ -169,7 +175,7 @@ export default function PersonDetail() {
           totalPaid={totalPaid}
           totalReceived={totalReceived}
           balance={balance}
-          onDelete={handleDeleteTransaction} 
+          onDelete={handleDeleteTransactionClick} 
         />
 
         <SeerVarisaiHistory 
@@ -177,6 +183,14 @@ export default function PersonDetail() {
           person={person} 
         />
       </div>
+
+      <PasswordConfirmModal
+        show={deleteModal.show}
+        title="Delete Transaction"
+        message="Are you sure you want to delete this transaction record? This cannot be undone."
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal({ show: false, id: null })}
+      />
     </div>
   );
 }

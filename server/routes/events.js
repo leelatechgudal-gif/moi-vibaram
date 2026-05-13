@@ -162,7 +162,9 @@ router.put('/:id', auth, upload.single('invitation'), async (req, res) => {
 });
 
 // DELETE /api/events/:id - Delete event
-router.delete('/:id', auth, async (req, res) => {
+const verifyPassword = require('../middleware/verifyPassword');
+
+router.delete('/:id', auth, verifyPassword, async (req, res) => {
     try {
         const event = await Event.findOneAndDelete({ _id: req.params.id, userId: req.userId });
         if (!event) return res.status(404).json({ message: 'Event not found' });

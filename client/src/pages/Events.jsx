@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { eventsAPI } from '../api/api'
 import { useReactToPrint } from 'react-to-print'
 import { useNavigate } from 'react-router-dom'
+import PasswordConfirmModal from '../components/PasswordConfirmModal'
 import { Tent, Share2, Printer, Plus, Edit2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 
 const EVENT_NAMES = [
@@ -116,6 +117,7 @@ export default function Events() {
     const [loadingMore, setLoadingMore] = useState(false)
     const [showModal, setShowModal] = useState(false)
     const [editing, setEditing] = useState(null)
+    const [deleteModal, setDeleteModal] = useState({ show: false, id: null })
     const printRef = useRef()
     const navigate = useNavigate()
     const [expandedEvent, setExpandedEvent] = useState(null)
@@ -148,10 +150,18 @@ export default function Events() {
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!window.confirm(t('confirmDeleteEvent') || 'Delete this event and all its transactions?')) return
-        await eventsAPI.delete(id)
-        setEvents(e => e.filter(x => x._id !== id))
+    const handleDeleteClick = (id) => {
+        setDeleteModal({ show: true, id })
+    }
+
+    const confirmDelete = async (password) => {
+        try {
+            await eventsAPI.delete(deleteModal.id, password)
+            setEvents(e => e.filter(x => x._id !== deleteModal.id))
+            setDeleteModal({ show: false, id: null })
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to delete event')
+        }
     }
 
     const handleSave = (evt) => {
@@ -219,7 +229,7 @@ export default function Events() {
                                                     {expandedEvent === e._id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                                 </button>
                                                 <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(e); setShowModal(true) }}><Edit2 size={14} /></button>
-                                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(e._id)}><Trash2 size={14} /></button>
+                                                <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClick(e._id)}><Trash2 size={14} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -279,6 +289,14 @@ export default function Events() {
                     onSave={handleSave}
                 />
             )}
+
+            <PasswordConfirmModal
+                show={deleteModal.show}
+                title="Delete Event"
+                message="Delete this event and all its transactions? This cannot be undone."
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteModal({ show: false, id: null })}
+            />
         </div>
     )
 }

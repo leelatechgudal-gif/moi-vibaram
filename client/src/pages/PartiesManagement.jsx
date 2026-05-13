@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { partiesAPI } from '../api/api';
+import PasswordConfirmModal from '../components/PasswordConfirmModal';
 import { Users, Plus, Edit2, Trash2, Save, Search, UserCheck } from 'lucide-react';
 
 export default function PartiesManagement() {
@@ -78,14 +79,14 @@ export default function PartiesManagement() {
         setDeleteModal({ show: true, id: p._id, name: p.name });
     };
 
-    const confirmDelete = async () => {
+    const confirmDelete = async (password) => {
         setActionLoading(true);
         try {
-            await partiesAPI.delete(deleteModal.id);
+            await partiesAPI.delete(deleteModal.id, password);
             setPersons(persons.filter(p => p._id !== deleteModal.id));
             setDeleteModal({ show: false, id: null, name: '' });
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to delete user');
+            alert(err.response?.data?.message || 'Failed to delete party');
         } finally {
             setActionLoading(false);
         }
@@ -230,27 +231,21 @@ export default function PartiesManagement() {
                 </div>
             )}
 
-            {deleteModal.show && (
-                <div className="modal-overlay" onClick={() => setDeleteModal({ show: false, id: null, name: '' })}>
-                    <div className="modal" style={{ maxWidth: 400, width: '90%' }}>
-                        <div className="modal-title" style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Trash2 size={24} /> Confirm Deletion
-                        </div>
-                        <div style={{ marginBottom: 24, lineHeight: 1.5 }}>
-                            <p>Are you sure you want to delete <strong>{deleteModal.name}</strong>?</p>
-                            <p style={{ marginTop: 12, padding: 12, background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid var(--danger)', fontSize: 14 }}>
-                                <strong>Warning:</strong> Deleting the party record will also delete all associated transaction records.
-                            </p>
-                        </div>
-                        <div className="flex gap-8">
-                            <button className="btn btn-danger" onClick={confirmDelete} disabled={actionLoading} style={{ flex: 1 }}>
-                                {actionLoading ? <span className="spinner" /> : 'Delete Everything'}
-                            </button>
-                            <button className="btn btn-secondary" onClick={() => setDeleteModal({ show: false, id: null, name: '' })} style={{ flex: 1 }}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <PasswordConfirmModal
+                show={deleteModal.show}
+                title="Confirm Deletion"
+                message={
+                    <>
+                        <p>Are you sure you want to delete <strong>{deleteModal.name}</strong>?</p>
+                        <p style={{ marginTop: 12, padding: 12, background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid var(--danger)', fontSize: 14 }}>
+                            <strong>Warning:</strong> Deleting the party record will also delete all associated transaction records.
+                        </p>
+                    </>
+                }
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteModal({ show: false, id: null, name: '' })}
+                loading={actionLoading}
+            />
         </div>
     );
 }

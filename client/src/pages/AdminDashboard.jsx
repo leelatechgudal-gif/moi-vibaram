@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { usersAPI } from '../api/api';
+import PasswordConfirmModal from '../components/PasswordConfirmModal';
 import { Users, Plus, Edit2, Trash2, Save, ShieldCheck, Search } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -86,10 +87,10 @@ export default function AdminDashboard() {
         setDeleteModal({ show: true, id: u._id, name: u.name });
     };
 
-    const confirmDelete = async () => {
+    const confirmDelete = async (password) => {
         setActionLoading(true);
         try {
-            await usersAPI.adminDelete(deleteModal.id);
+            await usersAPI.adminDelete(deleteModal.id, password);
             setUsers(users.filter(u => u._id !== deleteModal.id));
             setDeleteModal({ show: false, id: null, name: '' });
         } catch (err) {
@@ -323,27 +324,21 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            {deleteModal.show && (
-                <div className="modal-overlay" onClick={() => setDeleteModal({ show: false, id: null, name: '' })}>
-                    <div className="modal" style={{ maxWidth: 400, width: '90%' }}>
-                        <div className="modal-title" style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Trash2 size={24} /> Confirm Deletion
-                        </div>
-                        <div style={{ marginBottom: 24, lineHeight: 1.5 }}>
-                            <p>Are you sure you want to delete system user <strong>{deleteModal.name}</strong>?</p>
-                            <p style={{ marginTop: 12, padding: 12, background: 'rgba(59, 130, 246, 0.1)', borderLeft: '4px solid var(--primary)', fontSize: 14 }}>
-                                This will deactivate the user's login access.
-                            </p>
-                        </div>
-                        <div className="flex gap-8">
-                            <button className="btn btn-danger" onClick={confirmDelete} disabled={actionLoading} style={{ flex: 1 }}>
-                                {actionLoading ? <span className="spinner" /> : 'Confirm Deactivation'}
-                            </button>
-                            <button className="btn btn-secondary" onClick={() => setDeleteModal({ show: false, id: null, name: '' })} style={{ flex: 1 }}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <PasswordConfirmModal
+                show={deleteModal.show}
+                title="Confirm Deactivation"
+                message={
+                    <>
+                        <p>Are you sure you want to delete system user <strong>{deleteModal.name}</strong>?</p>
+                        <p style={{ marginTop: 12, padding: 12, background: 'rgba(59, 130, 246, 0.1)', borderLeft: '4px solid var(--primary)', fontSize: 14 }}>
+                            This will deactivate the user's login access.
+                        </p>
+                    </>
+                }
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteModal({ show: false, id: null, name: '' })}
+                loading={actionLoading}
+            />
         </div>
     );
 }

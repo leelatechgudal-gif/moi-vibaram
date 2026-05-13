@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { remindersAPI, partiesAPI } from '../api/api'
+import PasswordConfirmModal from '../components/PasswordConfirmModal'
 import { CalendarClock, Plus, Edit, Trash2, Bell, BellOff, Search, User, Coins } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -14,6 +15,7 @@ export default function UpcomingEvents() {
     const [showModal, setShowModal] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
     const [currentId, setCurrentId] = useState(null)
+    const [deleteModal, setDeleteModal] = useState({ show: false, id: null })
     const [formData, setFormData] = useState({
         partyId: '',
         name: '',
@@ -121,15 +123,19 @@ export default function UpcomingEvents() {
         }
     }
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this reminder?')) return
+    const handleDeleteClick = (id) => {
+        setDeleteModal({ show: true, id })
+    }
+
+    const confirmDelete = async (password) => {
         try {
-            await remindersAPI.delete(id)
+            await remindersAPI.delete(deleteModal.id, password)
             toast.success('Reminder deleted')
+            setDeleteModal({ show: false, id: null })
             fetchReminders()
         } catch (err) {
             console.error(err)
-            toast.error('Failed to delete reminder')
+            toast.error(err.response?.data?.message || 'Failed to delete reminder')
         }
     }
 
@@ -236,7 +242,7 @@ export default function UpcomingEvents() {
                                         <button className="btn btn-secondary btn-sm" style={{ marginRight: 8 }} onClick={() => handleOpenModal(r)}>
                                             <Edit size={16} />
                                         </button>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => handleDelete(r._id)}>
+                                        <button className="btn btn-secondary btn-sm" onClick={() => handleDeleteClick(r._id)}>
                                             <Trash2 size={16} color="var(--danger)" />
                                         </button>
                                     </td>
@@ -393,6 +399,14 @@ export default function UpcomingEvents() {
                     </div>
                 </div>
             )}
+
+            <PasswordConfirmModal
+                show={deleteModal.show}
+                title="Delete Reminder"
+                message="Are you sure you want to delete this reminder?"
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteModal({ show: false, id: null })}
+            />
         </div>
     )
 }

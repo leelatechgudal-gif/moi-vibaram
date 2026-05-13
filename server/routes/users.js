@@ -223,7 +223,9 @@ router.put('/admin/:id', auth, async (req, res) => {
 });
 
 // DELETE /api/users/admin/:id
-router.delete('/admin/:id', auth, async (req, res) => {
+const verifyPassword = require('../middleware/verifyPassword');
+
+router.delete('/admin/:id', auth, verifyPassword, async (req, res) => {
     try {
         const adminUser = await User.findById(req.userId);
         if (adminUser.role !== 'admin') {
