@@ -89,7 +89,7 @@ export default function BalanceSheet() {
                                                 <td className="text-muted">{i + 1}</td>
                                                 <td>
                                                     <Link
-                                                        to={`/person-detail?partyName=${encodeURIComponent(p.partyName)}&mobile=${p.mobile || ''}&spouseName=${encodeURIComponent(p.spouseName || '')}&location=${encodeURIComponent(p.location || '')}`}
+                                                        to={`/person-detail?partyId=${p._id || ''}&partyName=${encodeURIComponent(p.partyName)}&mobile=${p.mobile || ''}&spouseName=${encodeURIComponent(p.spouseName || '')}&location=${encodeURIComponent(p.location || '')}`}
                                                         onClick={(e) => e.stopPropagation()}
                                                         style={{ textDecoration: 'none', color: 'inherit' }}
                                                         className="hover-underline"

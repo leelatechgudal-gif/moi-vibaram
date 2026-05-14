@@ -19,6 +19,7 @@ export default function PersonDetail() {
   const [deleteModal, setDeleteModal] = useState({ show: false, id: null });
   const printRef = useRef();
 
+  const partyId = searchParams.get("partyId");
   const partyName = searchParams.get("partyName");
   const mobile = searchParams.get("mobile");
   const spouseName = searchParams.get("spouseName");
@@ -27,6 +28,7 @@ export default function PersonDetail() {
 
   useEffect(() => {
     const params = {};
+    if (partyId) params.partyId = partyId;
     if (partyName) params.partyName = partyName;
     if (mobile) params.mobile = mobile;
     if (spouseName) params.spouseName = spouseName;
@@ -37,7 +39,7 @@ export default function PersonDetail() {
       .then((res) => setData(res.data))
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
-  }, [partyName, mobile, spouseName, location]);
+  }, [partyId, partyName, mobile, spouseName, location]);
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
@@ -52,6 +54,7 @@ export default function PersonDetail() {
       await transactionsAPI.delete(deleteModal.id, password);
       setDeleteModal({ show: false, id: null });
       const params = {};
+      if (partyId) params.partyId = partyId;
       if (partyName) params.partyName = partyName;
       if (mobile) params.mobile = mobile;
       if (spouseName) params.spouseName = spouseName;

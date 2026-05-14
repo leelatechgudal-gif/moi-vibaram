@@ -295,7 +295,7 @@ export default function Dashboard() {
                                                     <tr key={tx._id}>
                                                         <td>
                                                             <Link
-                                                                to={`/person-detail?partyName=${encodeURIComponent(tx.partyName)}&mobile=${tx.mobile || ''}&spouseName=${encodeURIComponent(tx.spouseName || '')}&location=${encodeURIComponent(tx.location || '')}&type=${tx.type}`}
+                                                                to={`/person-detail?partyId=${tx.partyId || ''}&partyName=${encodeURIComponent(tx.partyName)}&mobile=${tx.mobile || ''}&spouseName=${encodeURIComponent(tx.spouseName || '')}&location=${encodeURIComponent(tx.location || '')}&type=${tx.type}`}
                                                                 style={{ textDecoration: 'none', color: 'inherit' }}
                                                                 className="hover-underline"
                                                             >
