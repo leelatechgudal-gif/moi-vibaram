@@ -69,6 +69,24 @@ app.use(cors({
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
+// Global string trimming middleware
+app.use((req, res, next) => {
+    const trimStrings = (obj) => {
+        if (!obj || typeof obj !== 'object') return;
+        Object.keys(obj).forEach(key => {
+            if (key.toLowerCase().includes('password')) return; // Never trim passwords
+            if (typeof obj[key] === 'string') {
+                obj[key] = obj[key].trim();
+            } else if (typeof obj[key] === 'object') {
+                trimStrings(obj[key]);
+            }
+        });
+    };
+    if (req.body) trimStrings(req.body);
+    if (req.query) trimStrings(req.query);
+    next();
+});
+
 // HTTP request logger — logs every incoming request on critical paths
 app.use((req, res, next) => {
     const start = Date.now();
