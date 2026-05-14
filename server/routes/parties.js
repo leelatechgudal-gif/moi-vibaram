@@ -59,12 +59,15 @@ router.post('/', auth, async (req, res) => {
         const initialToSave = rest.initial || '';
         const spouseNameToSave = rest.spouseName || '';
         const locationToSave = rest.location || '';
+        
+        const buildOptQuery = (val) => val ? val : { $in: ['', null] };
+        
         const existing = await Party.findOne({ 
             name: finalName, 
-            initial: initialToSave,
-            spouseName: spouseNameToSave,
-            location: locationToSave,
-            mobile: mobileToSave, 
+            initial: buildOptQuery(initialToSave),
+            spouseName: buildOptQuery(spouseNameToSave),
+            location: buildOptQuery(locationToSave),
+            mobile: buildOptQuery(mobileToSave), 
             tenantId: req.tenantId, 
             isDeleted: { $ne: true } 
         });
@@ -75,6 +78,9 @@ router.post('/', auth, async (req, res) => {
         const partyObj = new Party({
             ...rest,
             name: finalName,
+            initial: initialToSave,
+            spouseName: spouseNameToSave,
+            location: locationToSave,
             mobile: mobileToSave,
             tenantId: req.tenantId,
             createdBy: req.userId
@@ -108,14 +114,16 @@ router.put('/:id', auth, async (req, res) => {
         const spouseNameToSave = req.body.spouseName !== undefined ? req.body.spouseName : (partyObj.spouseName || '');
         const locationToSave = req.body.location !== undefined ? req.body.location : (partyObj.location || '');
 
+        const buildOptQuery = (val) => val ? val : { $in: ['', null] };
+
         // Check unique constraint (within this tenant)
         if (finalName !== partyObj.name || newMobile !== partyObj.mobile || initialToSave !== partyObj.initial || spouseNameToSave !== partyObj.spouseName || locationToSave !== partyObj.location) {
             const existing = await Party.findOne({ 
                 name: finalName, 
-                initial: initialToSave,
-                spouseName: spouseNameToSave,
-                location: locationToSave,
-                mobile: newMobile, 
+                initial: buildOptQuery(initialToSave),
+                spouseName: buildOptQuery(spouseNameToSave),
+                location: buildOptQuery(locationToSave),
+                mobile: buildOptQuery(newMobile), 
                 tenantId: req.tenantId, 
                 _id: { $ne: partyId }, 
                 isDeleted: { $ne: true } 
@@ -125,12 +133,15 @@ router.put('/:id', auth, async (req, res) => {
             }
         }
 
-        const fields = ['initial', 'fatherName', 'motherName', 'spouseName', 'nickname', 'occupation', 'location', 'street', 'remarks'];
+        const fields = ['fatherName', 'motherName', 'nickname', 'occupation', 'street', 'remarks'];
         fields.forEach(f => {
             if (req.body[f] !== undefined) partyObj[f] = req.body[f];
         });
         partyObj.name = finalName;
         partyObj.mobile = newMobile;
+        partyObj.initial = initialToSave;
+        partyObj.spouseName = spouseNameToSave;
+        partyObj.location = locationToSave;
 
         await partyObj.save();
         res.json(partyObj);

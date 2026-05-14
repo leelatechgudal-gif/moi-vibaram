@@ -51,15 +51,20 @@ router.get('/', auth, async (req, res) => {
 // GET /api/transactions/person-detail - Detailed history for a specific person
 router.get('/person-detail', auth, async (req, res) => {
     try {
-        const { partyId, partyName, mobile } = req.query;
+        const { partyId, partyName, mobile, initial, spouseName, location } = req.query;
         
         let targetPartyId = partyId;
 
         if (!targetPartyId) {
-            // If no partyId, try to find by name and mobile within this tenant
+            const buildOptQuery = (val) => val ? val : { $in: ['', null] };
+            
+            // If no partyId, try to find by all unique constraints within this tenant
             const party = await Party.findOne({ 
                 name: partyName, 
-                mobile: mobile || '',
+                mobile: buildOptQuery(mobile),
+                initial: buildOptQuery(initial),
+                spouseName: buildOptQuery(spouseName),
+                location: buildOptQuery(location),
                 tenantId: req.tenantId,
                 isDeleted: { $ne: true }
             });
@@ -117,21 +122,35 @@ async function findOrCreateParty(data, tenantId, userId) {
     const { partyName, name, mobile, initial, fatherName, motherName, spouseName, nickname, occupation, location, street, remarks } = data;
     const finalName = name || partyName;
     const finalMobile = mobile || '';
-    const filter = { name: finalName, mobile: finalMobile, tenantId, isDeleted: { $ne: true } };
+    const finalInitial = initial || '';
+    const finalSpouseName = spouseName || '';
+    const finalLocation = location || '';
+
+    const buildOptQuery = (val) => val ? val : { $in: ['', null] };
+
+    const filter = { 
+        name: finalName, 
+        mobile: buildOptQuery(finalMobile), 
+        initial: buildOptQuery(finalInitial),
+        spouseName: buildOptQuery(finalSpouseName),
+        location: buildOptQuery(finalLocation),
+        tenantId, 
+        isDeleted: { $ne: true } 
+    };
 
     let party = await Party.findOne(filter);
     if (!party) {
         party = new Party({
             tenantId,
-            initial,
+            initial: finalInitial,
             name: finalName,
             mobile: finalMobile,
             fatherName,
             motherName,
-            spouseName,
+            spouseName: finalSpouseName,
             nickname,
             occupation,
-            location: location || 'Unknown',
+            location: finalLocation,
             street,
             remarks,
             createdBy: userId
