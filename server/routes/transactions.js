@@ -246,7 +246,15 @@ router.put('/:id', auth, async (req, res) => {
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
         const fields = ['eventId', 'eventName', 'type', 'cashAmount', 'date', 'seerVarisai', 'remarks', 'thaiMama', 'labels'];
-        fields.forEach(f => { if (req.body[f] !== undefined) transaction[f] = req.body[f]; });
+        fields.forEach(f => { 
+            if (req.body[f] !== undefined) {
+                if (f === 'eventId' && req.body[f] === '') {
+                    transaction.eventId = undefined;
+                } else {
+                    transaction[f] = req.body[f]; 
+                }
+            }
+        });
 
         // Handle party change if needed
         if (req.body.partyId) {

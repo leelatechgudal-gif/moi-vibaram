@@ -73,7 +73,7 @@ router.put('/:id', auth, async (req, res) => {
         if (notes !== undefined) reminder.notes = notes;
         if (date !== undefined) reminder.date = date;
         if (notifyOnLogin !== undefined) reminder.notifyOnLogin = notifyOnLogin;
-        if (partyId !== undefined) reminder.partyId = partyId;
+        if (partyId !== undefined) reminder.partyId = partyId === '' ? undefined : partyId;
 
         await reminder.save();
         res.json(reminder);
