@@ -221,11 +221,27 @@ router.post('/bulk', auth, async (req, res) => {
                 const party = await findOrCreateParty(t, req.tenantId);
                 finalPartyId = party._id;
             }
+
+            // Auto-create Event if not provided but eventName is given
+            let finalEventId = t.eventId;
+            if (!finalEventId && t.eventName && t.type === 'received') {
+                let event = await Event.findOne({ eventName: t.eventName, userId: req.userId });
+                if (!event) {
+                    event = new Event({
+                        eventName: t.eventName,
+                        date: t.date ? new Date(t.date) : Date.now(),
+                        userId: req.userId
+                    });
+                    await event.save();
+                }
+                finalEventId = event._id;
+            }
+
             toInsert.push({
                 ...t,
                 userId: req.userId,
                 partyId: finalPartyId,
-                eventId: t.eventId || undefined,
+                eventId: finalEventId || undefined,
                 date: t.date ? new Date(t.date) : Date.now(),
                 cashAmount: parseFloat(t.cashAmount) || 0
             });

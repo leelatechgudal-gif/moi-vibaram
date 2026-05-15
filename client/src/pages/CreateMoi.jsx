@@ -475,22 +475,24 @@ export default function CreateMoi() {
             </div>
           )}
 
-          <div className="flex gap-8" style={{ marginTop: 16 }}>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              {loading ? <span className="spinner" /> : <><Save size={16} style={{ marginRight: 6 }} /> {t("save")} Moi</>}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => navigate(-1)}
-            >
-              {t("cancel")}
-            </button>
-          </div>
+          {!isNewPerson && (
+            <div className="flex gap-8" style={{ marginTop: 16 }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading ? <span className="spinner" /> : <><Save size={16} style={{ marginRight: 6 }} /> {t("save")} Moi</>}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => navigate(-1)}
+              >
+                {t("cancel")}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Personal Detail */}
@@ -1009,6 +1011,25 @@ export default function CreateMoi() {
             </div>
           )}
         </div>
+
+        {isNewPerson && (
+          <div className="card flex gap-8" style={{ marginBottom: 16 }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading}
+            >
+              {loading ? <span className="spinner" /> : <><Save size={16} style={{ marginRight: 6 }} /> {t("save")} Moi</>}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => navigate(-1)}
+            >
+              {t("cancel")}
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );

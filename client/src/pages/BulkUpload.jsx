@@ -5,8 +5,8 @@ import * as XLSX from 'xlsx';
 import { UploadCloud, Download, Gift, Coins, Upload } from 'lucide-react';
 
 const TEMPLATE_HEADERS = [
-    'Initial', 'Name', 'FatherName', 'MotherName', 'SpouseName', 
-    'Nickname', 'Location', 'Street', 'Mobile', 'Amount', 'Date', 'EventName', 'Remarks', 'Labels'
+    'S.No', 'Initial', 'Name', 'FatherName', 'MotherName', 'SpouseName', 
+    'Nickname', 'Occupation', 'Mobile', 'Location', 'Street', 'Remarks', 'Labels', 'Amount', 'Date', 'EventName'
 ];
 
 export default function BulkUpload() {
@@ -66,6 +66,7 @@ export default function BulkUpload() {
                         if (h === 'mothername') item.motherName = val;
                         if (h === 'spousename') item.spouseName = val;
                         if (h === 'nickname') item.nickname = val;
+                        if (h === 'occupation') item.occupation = val;
                         if (h === 'location') item.location = val;
                         if (h === 'street') item.street = val;
                         if (h === 'mobile') item.mobile = val;
@@ -89,7 +90,9 @@ export default function BulkUpload() {
     };
 
     const handleUpload = async () => {
-        if (globalType === 'received' && !selectedEventId) return setError('Please select an event first');
+        if (globalType === 'received' && !selectedEventId && parsedData.some(t => !t.eventName)) {
+            return setError('Please select an event from the dropdown OR ensure all rows have an EventName in the file');
+        }
         if (parsedData.length === 0) return setError('No data to upload');
 
         setLoading(true);
@@ -98,8 +101,8 @@ export default function BulkUpload() {
         try {
             const transactions = parsedData.map(t => ({
                 ...t,
-                eventId: globalType === 'received' ? selectedEventId : (t.eventId || undefined),
-                eventName: globalType === 'paid' ? (t.eventName || 'External Event') : undefined,
+                eventId: (globalType === 'received' && selectedEventId) ? selectedEventId : undefined,
+                eventName: t.eventName || (globalType === 'paid' ? 'External Event' : undefined),
                 type: globalType,
                 // Basic cleanup
                 cashAmount: parseFloat(t.cashAmount) || 0
@@ -132,7 +135,7 @@ export default function BulkUpload() {
                 <div className="form-grid">
                     {globalType === 'received' && (
                         <div className="form-group">
-                            <label className="form-label">Select Event *</label>
+                            <label className="form-label">Select Event (Optional if EventName is in file)</label>
                             <select className="form-control" value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}>
                                 <option value="">-- Choose Event --</option>
                                 {events.map(e => (
