@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import { UploadCloud, Download, Gift, Coins, Upload } from 'lucide-react';
 
 const TEMPLATE_HEADERS = [
-    'S.No', 'Initial', 'Name', 'FatherName', 'MotherName', 'SpouseName', 
+    'S.No', 'Initial', 'Name', 'FatherName', 'MotherName', 'SpouseName',
     'Nickname', 'Occupation', 'Mobile', 'Location', 'Street', 'Remarks', 'Labels', 'Amount', 'Date', 'EventName'
 ];
 
@@ -135,7 +135,7 @@ export default function BulkUpload() {
                 <div className="form-grid">
                     {globalType === 'received' && (
                         <div className="form-group">
-                            <label className="form-label">Select Event (Optional if EventName is in file)</label>
+                            <label className="form-label">Select Event</label>
                             <select className="form-control" value={selectedEventId} onChange={e => setSelectedEventId(e.target.value)}>
                                 <option value="">-- Choose Event --</option>
                                 {events.map(e => (
@@ -154,13 +154,13 @@ export default function BulkUpload() {
                         </select>
                     </div>
                 </div>
-                
+
                 <div className="form-group mt-16">
                     <label className="form-label">Upload File (.xlsx or .csv)</label>
-                    <input 
-                        type="file" 
-                        accept=".xlsx, .xls, .csv" 
-                        className="form-control" 
+                    <input
+                        type="file"
+                        accept=".xlsx, .xls, .csv"
+                        className="form-control"
                         onChange={handleFileChange}
                         ref={fileInputRef}
                     />
@@ -196,8 +196,8 @@ export default function BulkUpload() {
                                             <td style={{ fontWeight: 600 }}>₹{row.cashAmount}</td>
                                             <td className="text-muted">{row.date || 'Auto'}</td>
                                             <td>
-                                                {(!row.partyName || !row.cashAmount) ? 
-                                                    <span className="badge badge-warning">Invalid</span> : 
+                                                {(!row.partyName || !row.cashAmount) ?
+                                                    <span className="badge badge-warning">Invalid</span> :
                                                     <span className="badge badge-success">Ready</span>
                                                 }
                                             </td>
