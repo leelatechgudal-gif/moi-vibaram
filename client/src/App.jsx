@@ -14,7 +14,6 @@ import CreateMoi from './pages/CreateMoi'
 import EditMoi from './pages/EditMoi'
 import UpcomingEvents from './pages/UpcomingEvents'
 import BalanceSheet from './pages/BalanceSheet'
-import MasterSheet from './pages/MasterSheet'
 import Profile from './pages/Profile'
 import Search from './pages/Search'
 import AdminDashboard from './pages/AdminDashboard'
@@ -63,7 +62,6 @@ function AppRoutes() {
                                     <Route path="/transactions/edit/:id" element={<EditMoi />} />
                                     <Route path="/upcoming" element={<UpcomingEvents />} />
                                     <Route path="/balance-sheet" element={<BalanceSheet />} />
-                                    <Route path="/master-sheet" element={<MasterSheet />} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/search" element={<Search />} />
                                     {user?.role === 'admin' && user?.isSuperAdmin && (

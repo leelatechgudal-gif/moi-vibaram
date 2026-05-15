@@ -121,6 +121,11 @@ export default function Events() {
     const printRef = useRef()
     const navigate = useNavigate()
     const [expandedEvent, setExpandedEvent] = useState(null)
+    const [eventTxMap, setEventTxMap] = useState({})
+    const [eventPages, setEventPages] = useState({})
+    const [eventHasMore, setEventHasMore] = useState({})
+    const [loadingTx, setLoadingTx] = useState(false)
+    const [txSearchQuery, setTxSearchQuery] = useState('')
 
     useEffect(() => { fetchEvents(1) }, [])
 
@@ -141,6 +146,24 @@ export default function Events() {
         } finally {
             setLoading(false)
             setLoadingMore(false)
+        }
+    }
+
+    const loadEventTransactions = async (eventId, pageNum = 1) => {
+        setLoadingTx(true);
+        try {
+            const res = await transactionsAPI.getAll({ eventId, page: pageNum, limit: 10 });
+            const { data, hasMore } = res.data;
+            setEventTxMap(prev => ({
+                ...prev,
+                [eventId]: pageNum === 1 ? data : [...(prev[eventId] || []), ...data]
+            }));
+            setEventPages(prev => ({ ...prev, [eventId]: pageNum }));
+            setEventHasMore(prev => ({ ...prev, [eventId]: hasMore }));
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoadingTx(false);
         }
     }
 
@@ -219,13 +242,27 @@ export default function Events() {
                                 <React.Fragment key={e._id}>
                                     <tr>
                                         <td className="text-muted" style={{ fontSize: 12 }}>{i + 1}</td>
-                                        <td><strong>{e.eventName}</strong></td>
+                                        <td style={{ cursor: 'pointer' }} onClick={() => {
+                                            const isExpanded = expandedEvent === e._id;
+                                            if (!isExpanded && !eventTxMap[e._id]) {
+                                                loadEventTransactions(e._id, 1);
+                                            }
+                                            setExpandedEvent(isExpanded ? null : e._id);
+                                            setTxSearchQuery('');
+                                        }} className="hover-underline"><strong style={{ color: 'var(--primary)' }}>{e.eventName}</strong></td>
                                         <td>{new Date(e.date).toLocaleDateString('en-IN')}</td>
                                         <td>{e.venue || '—'}</td>
                                         <td>{[e.location, e.city].filter(Boolean).join(', ') || '—'}</td>
                                         <td className="no-print" onClick={(ev) => ev.stopPropagation()}>
                                             <div className="flex gap-8">
-                                                <button className="btn btn-secondary btn-sm" onClick={() => setExpandedEvent(expandedEvent === e._id ? null : e._id)}>
+                                                <button className="btn btn-secondary btn-sm" onClick={() => {
+                                                    const isExpanded = expandedEvent === e._id;
+                                                    if (!isExpanded && !eventTxMap[e._id]) {
+                                                        loadEventTransactions(e._id, 1);
+                                                    }
+                                                    setExpandedEvent(isExpanded ? null : e._id);
+                                                    setTxSearchQuery('');
+                                                }}>
                                                     {expandedEvent === e._id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                                                 </button>
                                                 <button className="btn btn-secondary btn-sm" onClick={() => { setEditing(e); setShowModal(true) }}><Edit2 size={14} /></button>
@@ -264,6 +301,70 @@ export default function Events() {
                                                             <img src={`/uploads/${e.invitation}`} alt="Invitation" style={{ maxWidth: 300, borderRadius: 8, border: '1px solid var(--border)' }} />
                                                         </div>
                                                     )}
+
+                                                    {/* Transactions List */}
+                                                    <div style={{ marginTop: 24 }}>
+                                                        <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 15 }}>Transactions for {e.eventName}</div>
+                                                        <div style={{ marginBottom: 16 }}>
+                                                            <input
+                                                                type="search"
+                                                                className="form-control"
+                                                                placeholder="Search transactions..."
+                                                                value={txSearchQuery}
+                                                                onChange={ev => setTxSearchQuery(ev.target.value)}
+                                                            />
+                                                        </div>
+                                                        {loadingTx && (!eventTxMap[e._id] || eventTxMap[e._id].length === 0) ? (
+                                                            <div className="flex-center"><span className="spinner" /></div>
+                                                        ) : (
+                                                            <div className="table-wrap">
+                                                                <table className="table">
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Name</th>
+                                                                            <th>Type</th>
+                                                                            <th>Amount</th>
+                                                                            <th>Date</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {(eventTxMap[e._id] || [])
+                                                                            .filter(tx => !txSearchQuery || tx.partyName?.toLowerCase().includes(txSearchQuery.toLowerCase()) || tx.mobile?.includes(txSearchQuery) || tx.location?.toLowerCase().includes(txSearchQuery.toLowerCase()))
+                                                                            .map(tx => (
+                                                                            <tr key={tx._id}>
+                                                                                <td>
+                                                                                    <strong style={{ color: 'var(--text)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                                                                    <br />
+                                                                                    <span className="text-muted" style={{ fontSize: 12 }}>{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span>
+                                                                                </td>
+                                                                                <td>
+                                                                                    <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
+                                                                                        {t(tx.type)}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td style={{ fontWeight: 600 }}>₹{(tx.cashAmount || 0).toLocaleString('en-IN')}</td>
+                                                                                <td className="text-muted" style={{ fontSize: 12 }}>{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                        {(eventTxMap[e._id] || []).length === 0 && (
+                                                                            <tr><td colSpan={4} className="text-center text-muted">No transactions found.</td></tr>
+                                                                        )}
+                                                                    </tbody>
+                                                                </table>
+                                                                {eventHasMore[e._id] && !txSearchQuery && (
+                                                                    <div style={{ textAlign: 'center', marginTop: 16 }}>
+                                                                        <button
+                                                                            className="btn btn-secondary"
+                                                                            onClick={() => loadEventTransactions(e._id, (eventPages[e._id] || 1) + 1)}
+                                                                            disabled={loadingTx}
+                                                                        >
+                                                                            {loadingTx ? <span className="spinner" /> : 'Load More Transactions'}
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>

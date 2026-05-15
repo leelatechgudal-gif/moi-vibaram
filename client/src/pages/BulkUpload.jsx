@@ -43,7 +43,7 @@ export default function BulkUpload() {
         reader.onload = (evt) => {
             try {
                 const bstr = evt.target.result;
-                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wb = XLSX.read(bstr, { type: 'binary', cellDates: true });
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
                 const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
@@ -71,7 +71,15 @@ export default function BulkUpload() {
                         if (h === 'street') item.street = val;
                         if (h === 'mobile') item.mobile = val;
                         if (h === 'amount') item.cashAmount = val;
-                        if (h === 'date') item.date = val;
+                        if (h === 'date') {
+                            if (val instanceof Date) {
+                                // Adjust timezone offset before slicing to get correct local date string
+                                const offset = val.getTimezoneOffset() * 60000;
+                                item.date = new Date(val.getTime() - offset).toISOString().slice(0, 10);
+                            } else {
+                                item.date = val;
+                            }
+                        }
                         if (h === 'eventname' || h === 'event') item.eventName = val;
                         if (h === 'remarks') item.remarks = val;
                         if (h === 'labels') item.labels = String(val).split(';').map(l => l.trim());
@@ -99,14 +107,34 @@ export default function BulkUpload() {
         setError('');
 
         try {
-            const transactions = parsedData.map(t => ({
-                ...t,
-                eventId: (globalType === 'received' && selectedEventId) ? selectedEventId : undefined,
-                eventName: t.eventName || (globalType === 'paid' ? 'External Event' : undefined),
-                type: globalType,
-                // Basic cleanup
-                cashAmount: parseFloat(t.cashAmount) || 0
-            }));
+            const selectedEvent = events.find(e => e._id === selectedEventId);
+
+            const transactions = parsedData.map(t => {
+                let finalEventId = undefined;
+                let finalEventName = undefined;
+                let finalDate = t.date;
+
+                if (globalType === 'received') {
+                    if (selectedEventId && selectedEvent) {
+                        finalEventId = selectedEventId;
+                        finalEventName = selectedEvent.eventName;
+                        finalDate = selectedEvent.date;
+                    } else {
+                        finalEventName = t.eventName;
+                    }
+                } else {
+                    finalEventName = t.eventName || 'External Event';
+                }
+
+                return {
+                    ...t,
+                    eventId: finalEventId,
+                    eventName: finalEventName,
+                    date: finalDate,
+                    type: globalType,
+                    cashAmount: parseFloat(t.cashAmount) || 0
+                };
+            });
 
             const res = await transactionsAPI.bulkCreate({ transactions });
             setSuccess(res.data.message);

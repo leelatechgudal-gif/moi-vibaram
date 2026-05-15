@@ -33,7 +33,6 @@ const navItems = [
     // { icon: <PlusCircle size={18} />, key: 'createMoi', path: '/transactions/new' },
     { icon: <CalendarClock size={18} />, key: 'upcomingEvents', path: '/upcoming' },
     { icon: <Scale size={18} />, key: 'balanceSheet', path: '/balance-sheet' },
-    { icon: <BookMarked size={18} />, key: 'masterSheet', path: '/master-sheet' },
     { icon: <UploadCloud size={18} />, key: 'bulkUpload', path: '/bulk-upload' },
     // { icon: <Search size={18} />, key: 'search', path: '/search' },
     { icon: <UserCircle size={18} />, key: 'profile', path: '/profile' },
