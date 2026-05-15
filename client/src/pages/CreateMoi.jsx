@@ -150,9 +150,20 @@ export default function CreateMoi() {
   };
 
   const onChange = (e) => {
+    const name = e.target.name;
     const value =
       e.target.type === "checkbox" ? e.target.checked : e.target.value;
-    setForm((f) => ({ ...f, [e.target.name]: value }));
+
+    if (name === "eventId" && value) {
+      const selectedEvent = events.find((ev) => ev._id === value);
+      if (selectedEvent && selectedEvent.date) {
+        const formattedDate = new Date(selectedEvent.date).toISOString().slice(0, 10);
+        setForm((f) => ({ ...f, [name]: value, date: formattedDate }));
+        return;
+      }
+    }
+
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
   const onSeerChange = (field, key, value) => {
