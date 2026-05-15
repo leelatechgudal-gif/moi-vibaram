@@ -202,6 +202,14 @@ export default function PartiesManagement() {
                                 </div>
                             </div>
                             <div className="form-group">
+                                <label className="form-label">Father Name</label>
+                                <input className="form-control" name="fatherName" value={formData.fatherName || ''} onChange={handleInputChange} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Mother Name</label>
+                                <input className="form-control" name="motherName" value={formData.motherName || ''} onChange={handleInputChange} />
+                            </div>
+                            <div className="form-group">
                                 <label className="form-label">Mobile</label>
                                 <input className="form-control" name="mobile" value={formData.mobile || ''} onChange={handleInputChange} placeholder="Phone Number" />
                             </div>
@@ -210,12 +218,24 @@ export default function PartiesManagement() {
                                 <input className="form-control" name="spouseName" value={formData.spouseName || ''} onChange={handleInputChange} />
                             </div>
                             <div className="form-group">
+                                <label className="form-label">Nickname</label>
+                                <input className="form-control" name="nickname" value={formData.nickname || ''} onChange={handleInputChange} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Occupation</label>
+                                <input className="form-control" name="occupation" value={formData.occupation || ''} onChange={handleInputChange} />
+                            </div>
+                            <div className="form-group">
                                 <label className="form-label">Location</label>
                                 <input className="form-control" name="location" value={formData.location || ''} onChange={handleInputChange} />
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Street</label>
                                 <input className="form-control" name="street" value={formData.street || ''} onChange={handleInputChange} />
+                            </div>
+                            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                                <label className="form-label">Remarks</label>
+                                <input className="form-control" name="remarks" value={formData.remarks || ''} onChange={handleInputChange} placeholder="Any notes" />
                             </div>
 
                             {error && <div className="error-msg" style={{ gridColumn: '1 / -1', marginTop: 10 }}>{error}</div>}

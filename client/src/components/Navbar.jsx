@@ -34,7 +34,7 @@ const navItems = [
     { icon: <CalendarClock size={18} />, key: 'upcomingEvents', path: '/upcoming' },
     { icon: <Scale size={18} />, key: 'balanceSheet', path: '/balance-sheet' },
     { icon: <BookMarked size={18} />, key: 'masterSheet', path: '/master-sheet' },
-    { icon: <UploadCloud size={18} />, key: 'Bulk Upload', path: '/bulk-upload' },
+    { icon: <UploadCloud size={18} />, key: 'bulkUpload', path: '/bulk-upload' },
     // { icon: <Search size={18} />, key: 'search', path: '/search' },
     { icon: <UserCircle size={18} />, key: 'profile', path: '/profile' },
     { icon: <Phone size={18} />, key: 'contactUs', path: '/contact-us' },
@@ -45,7 +45,7 @@ export default function Navbar() {
     const { user, logout, updateUser } = useAuth()
     const navigate = useNavigate()
     const [open, setOpen] = useState(false)
-    const [lang, setLang] = useState('en')
+    const [lang, setLang] = useState(i18n.language || 'ta')
     const [dark, setDark] = useState(() => {
         const saved = localStorage.getItem('mv_theme')
         if (saved) return saved === 'dark'
@@ -116,14 +116,14 @@ export default function Navbar() {
                     </NavLink>
                 ))}
                 <NavLink to="/parties" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> Party Management
+                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> {t('partyManagement')}
                 </NavLink>
                 <NavLink to="/tenant" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={18} /></span> Family Members
+                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={18} /></span> {t('familyMembers')}
                 </NavLink>
                 {user?.role === 'admin' && user?.isSuperAdmin && (
                     <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                        <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={18} /></span> App Users
+                        <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={18} /></span> {t('appUsers')}
                     </NavLink>
                 )}
             </nav>
@@ -137,7 +137,7 @@ export default function Navbar() {
                     </button>
                     {deferredPrompt && (
                         <button className="theme-toggle" onClick={handleInstall} style={{ background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)' }}>
-                            <Download size={14} /> Install App
+                            <Download size={14} /> {t('installApp')}
                         </button>
                     )}
                 </div>

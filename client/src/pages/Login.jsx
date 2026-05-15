@@ -5,7 +5,8 @@ import { authAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { startAuthentication } from '@simplewebauthn/browser'
 import api from '../api/api'
-import { Download } from 'lucide-react'
+import { Download, Sun, Moon, Globe } from 'lucide-react'
+import i18n from '../i18n/i18n'
 import Footer from '../components/Footer'
 
 
@@ -26,6 +27,26 @@ export default function Login() {
     const [showIOSGuide, setShowIOSGuide] = useState(false)
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+    const [lang, setLang] = useState(i18n.language || 'ta')
+    const [dark, setDark] = useState(() => {
+        const saved = localStorage.getItem('mv_theme')
+        if (saved) return saved === 'dark'
+        return true
+    })
+
+    useEffect(() => {
+        const newTheme = dark ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme)
+        localStorage.setItem('mv_theme', newTheme)
+    }, [dark])
+
+    const toggleLang = () => {
+        const next = lang === 'en' ? 'ta' : 'en'
+        i18n.changeLanguage(next)
+        localStorage.setItem('i18nextLng', next)
+        setLang(next)
+    }
 
     useEffect(() => {
         // Check if already installed as PWA
@@ -110,6 +131,22 @@ export default function Login() {
 
     return (
         <div className="auth-bg">
+            <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 12 }}>
+                <button 
+                    type="button" 
+                    onClick={() => setDark(d => !d)} 
+                    style={{ background: 'var(--glass)', border: '1px solid var(--border)', padding: '8px 12px', borderRadius: 8, color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                >
+                    {dark ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+                <button 
+                    type="button" 
+                    onClick={toggleLang} 
+                    style={{ background: 'var(--glass)', border: '1px solid var(--border)', padding: '8px 12px', borderRadius: 8, color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 14 }}
+                >
+                    <Globe size={16} /> {lang === 'en' ? 'தமிழ்' : 'English'}
+                </button>
+            </div>
             <div className="auth-card">
                 <div className="auth-logo">
                     <div className="brand">{t('appName')}</div>
@@ -162,7 +199,7 @@ export default function Login() {
                                 {loading ? <span className="spinner" /> : t('login')}
                             </button>
                             <button type="button" className="btn btn-secondary w-full" onClick={onFingerprintLogin} disabled={loading} style={{ justifyContent: 'center', marginTop: 12 }}>
-                                👆 Login with Fingerprint
+                                👆 {t('loginWithFingerprint')}
                             </button>
                         </>
                     )}
@@ -194,10 +231,10 @@ export default function Login() {
                                 boxShadow: '0 4px 15px rgba(184,134,11,0.3)',
                             }}
                         >
-                            <Download size={18} /> Install Moi Vibaram App
+                            <Download size={18} /> {t('installMoiVibaramApp')}
                         </button>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
-                            Install for quick access &amp; offline support
+                            {t('installForQuickAccess')}
                         </div>
 
                         {/* iOS Safari guide */}
@@ -212,11 +249,11 @@ export default function Login() {
                                 lineHeight: 1.6,
                                 textAlign: 'left',
                             }}>
-                                <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--primary)' }}>📱 Install on iPhone / iPad</div>
+                                <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--primary)' }}>📱 {t('installOnIphone')}</div>
                                 <ol style={{ margin: 0, paddingLeft: 20 }}>
-                                    <li>Tap the <strong>Share</strong> button <span style={{ fontSize: 16 }}>⬆️</span> at the bottom of Safari</li>
-                                    <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
-                                    <li>Tap <strong>"Add"</strong> to confirm</li>
+                                    <li>{t('tapShareButton1')} <strong>{t('tapShareButton2')}</strong> <span style={{ fontSize: 16 }}>⬆️</span> {t('tapShareButton3')}</li>
+                                    <li>{t('scrollDownAndTap')} <strong>"Add to Home Screen"</strong></li>
+                                    <li>{t('tapAdd')} <strong>"Add"</strong> {t('toConfirm')}</li>
                                 </ol>
                             </div>
                         )}
