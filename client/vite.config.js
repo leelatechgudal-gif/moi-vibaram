@@ -8,7 +8,7 @@ let commitHash = ''
 try {
     commitHash = execSync('git rev-parse --short HEAD').toString().trim()
 } catch (e) {
-    commitHash = 'beta-2.0.3'
+    commitHash = 'beta-3.0.3'
 }
 
 export default defineConfig({
@@ -47,14 +47,15 @@ export default defineConfig({
         })
     ],
     server: {
+        host: true,
         port: 5173,
         proxy: {
             '/api': {
-                target: 'http://host.docker.internal:5001',  //use localhost if not using docker 
+                target: 'http://localhost:5001',  //use localhost if not using docker 
                 changeOrigin: true,
             },
             '/uploads': {
-                target: 'http://host.docker.internal:5001', //use localhost if not using docker
+                target: 'http://localhost:5001', //use localhost if not using docker
                 changeOrigin: true,
             },
         },

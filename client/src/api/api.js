@@ -1,7 +1,19 @@
 import axios from 'axios';
+import { Capacitor } from '@capacitor/core';
 
-// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
-const API_BASE_URL = '/api';
+let API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://leelatech.co.in/api';
+
+if (import.meta.env.DEV) {
+    if (Capacitor.isNativePlatform()) {
+        if (Capacitor.getPlatform() === 'android') {
+            API_BASE_URL = 'http://10.0.2.2:5001/api';
+        } else {
+            API_BASE_URL = 'http://localhost:5001/api';
+        }
+    } else {
+        API_BASE_URL = '/api';
+    }
+}
 
 const api = axios.create({ baseURL: API_BASE_URL });
 

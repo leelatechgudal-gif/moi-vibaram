@@ -224,7 +224,7 @@ router.post('/bulk', auth, async (req, res) => {
 
             // Auto-create Event if not provided but eventName is given
             let finalEventId = t.eventId;
-            if (!finalEventId && t.eventName && t.type === 'received') {
+            if (!finalEventId && t.eventName) {
                 let event = await Event.findOne({ eventName: t.eventName, userId: req.userId });
                 if (!event) {
                     event = new Event({

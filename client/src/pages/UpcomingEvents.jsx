@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { remindersAPI, partiesAPI } from '../api/api'
 import PasswordConfirmModal from '../components/PasswordConfirmModal'
+import ResponsiveTable from '../components/ResponsiveTable'
 import { CalendarClock, Plus, Edit, Trash2, Bell, BellOff, Search, User, Coins } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -200,57 +201,79 @@ export default function UpcomingEvents() {
                     <div>No reminders found. Create one to get started!</div>
                 </div>
             ) : (
-                <div className="card table-wrap">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Event Name</th>
-                                <th>Location</th>
-                                <th>Date</th>
-                                <th>Notes</th>
-                                <th style={{ textAlign: 'center' }}>Notify on Login</th>
-                                <th style={{ textAlign: 'center' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reminders.map((r, i) => (
-                                <tr key={r._id}>
-                                    <td><strong>{r.name}</strong></td>
-                                    <td>{r.eventName}</td>
-                                    <td>{r.location || '—'}</td>
-                                    <td>{new Date(r.date).toLocaleDateString()}</td>
-                                    <td>{r.notes || '—'}</td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <button 
-                                            className="btn btn-secondary btn-sm" 
-                                            onClick={() => toggleNotify(r)}
-                                            title={r.notifyOnLogin ? 'Disable Alert' : 'Enable Alert'}
-                                        >
-                                            {r.notifyOnLogin ? <Bell size={16} color="var(--success)" /> : <BellOff size={16} color="var(--text-muted)" />}
-                                        </button>
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <button 
-                                            className="btn btn-secondary btn-sm" 
-                                            style={{ marginRight: 8 }} 
-                                            onClick={() => handleAddMoi(r)}
-                                            title="Add Moi Entry"
-                                        >
-                                            <Coins size={16} color="var(--primary)" />
-                                        </button>
-                                        <button className="btn btn-secondary btn-sm" style={{ marginRight: 8 }} onClick={() => handleOpenModal(r)}>
-                                            <Edit size={16} />
-                                        </button>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => handleDeleteClick(r._id)}>
-                                            <Trash2 size={16} color="var(--danger)" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <ResponsiveTable
+                    headers={['Name', 'Event Name', 'Location', 'Date', 'Notes', 'Notify on Login', 'Actions']}
+                    rows={reminders}
+                    renderRow={(r) => [
+                        <strong>{r.name}</strong>,
+                        r.eventName,
+                        r.location || '—',
+                        new Date(r.date).toLocaleDateString(),
+                        r.notes || '—',
+                        <div style={{ textAlign: 'center' }}>
+                            <button 
+                                className="btn btn-secondary btn-sm" 
+                                onClick={() => toggleNotify(r)}
+                                title={r.notifyOnLogin ? 'Disable Alert' : 'Enable Alert'}
+                            >
+                                {r.notifyOnLogin ? <Bell size={16} color="var(--success)" /> : <BellOff size={16} color="var(--text-muted)" />}
+                            </button>
+                        </div>,
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                            <button 
+                                className="btn btn-secondary btn-sm" 
+                                onClick={() => handleAddMoi(r)}
+                                title="Add Moi Entry"
+                            >
+                                <Coins size={16} color="var(--primary)" />
+                            </button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleOpenModal(r)}>
+                                <Edit size={16} />
+                            </button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleDeleteClick(r._id)}>
+                                <Trash2 size={16} color="var(--danger)" />
+                            </button>
+                        </div>
+                    ]}
+                    renderMobileCard={(r) => (
+                        <div key={r._id} className="card" style={{ padding: 16, marginBottom: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                <div>
+                                    <strong style={{ fontSize: 16, color: 'var(--text)' }}>{r.name}</strong>
+                                    <div style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600, marginTop: 4 }}>{r.eventName}</div>
+                                </div>
+                                <button 
+                                    className="btn btn-secondary btn-sm" 
+                                    onClick={() => toggleNotify(r)}
+                                    title={r.notifyOnLogin ? 'Disable Alert' : 'Enable Alert'}
+                                    style={{ flexShrink: 0 }}
+                                >
+                                    {r.notifyOnLogin ? <Bell size={16} color="var(--success)" /> : <BellOff size={16} color="var(--text-muted)" />}
+                                </button>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📅 {new Date(r.date).toLocaleDateString()}</div>
+                                {r.location && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📍 {r.location}</div>}
+                            </div>
+                            {r.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12, padding: 8, background: 'var(--bg)', borderRadius: 4 }}>{r.notes}</div>}
+                            <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                                <button 
+                                    className="btn btn-primary btn-sm w-full" 
+                                    onClick={() => handleAddMoi(r)}
+                                    style={{ justifyContent: 'center' }}
+                                >
+                                    <Coins size={14} style={{ marginRight: 6 }} /> Add Moi
+                                </button>
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleOpenModal(r)} style={{ flex: '0 0 auto' }}>
+                                    <Edit size={16} />
+                                </button>
+                                <button className="btn btn-danger btn-sm" onClick={() => handleDeleteClick(r._id)} style={{ flex: '0 0 auto' }}>
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                />
             )}
 
             {showModal && (

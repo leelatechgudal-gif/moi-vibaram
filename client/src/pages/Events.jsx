@@ -225,7 +225,8 @@ export default function Events() {
                     <button className="btn btn-primary mt-8" onClick={() => setShowModal(true)}><Plus size={16} style={{ marginRight: 4 }} /> Create First Event</button>
                 </div>
             ) : (
-                <div ref={printRef} className="table-wrap card">
+                <>
+                    <div ref={printRef} className="table-wrap card hide-mobile">
                     <table className="table">
                         <thead>
                             <tr>
@@ -373,6 +374,98 @@ export default function Events() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
+                    <div className="show-mobile">
+                        {events.map((e, i) => {
+                            const isExpanded = expandedEvent === e._id;
+                            return (
+                                <div key={e._id} className="card" style={{ padding: 16, marginBottom: 12 }}>
+                                    <div 
+                                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }}
+                                        onClick={() => {
+                                            if (!isExpanded && !eventTxMap[e._id]) {
+                                                loadEventTransactions(e._id, 1);
+                                            }
+                                            setExpandedEvent(isExpanded ? null : e._id);
+                                            setTxSearchQuery('');
+                                        }}
+                                    >
+                                        <div>
+                                            <strong style={{ fontSize: 16, color: 'var(--primary)' }}>{e.eventName}</strong>
+                                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                                                {new Date(e.date).toLocaleDateString('en-IN')} {e.venue && `• ${e.venue}`}
+                                            </div>
+                                        </div>
+                                        <button className="btn btn-secondary btn-sm" style={{ padding: '6px' }}>
+                                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 12, marginTop: 12, fontSize: 13, color: 'var(--text-muted)' }}>
+                                        {e.location && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📍 {e.location}</div>}
+                                        {e.city && <div>{e.city}</div>}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                                        <button className="btn btn-secondary btn-sm w-full" onClick={() => { setEditing(e); setShowModal(true) }} style={{ justifyContent: 'center' }}><Edit2 size={14} style={{ marginRight: 6 }} /> Edit</button>
+                                        <button className="btn btn-danger btn-sm w-full" onClick={() => handleDeleteClick(e._id)} style={{ justifyContent: 'center' }}><Trash2 size={14} style={{ marginRight: 6 }} /> Delete</button>
+                                    </div>
+
+                                    {isExpanded && (
+                                        <div style={{ marginTop: 16, background: 'var(--bg)', padding: 16, borderRadius: 8, border: '1px solid var(--border)' }}>
+                                            <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 15 }}>Transactions</div>
+                                            <div style={{ marginBottom: 16 }}>
+                                                <input
+                                                    type="search"
+                                                    className="form-control"
+                                                    placeholder="Search transactions..."
+                                                    value={txSearchQuery}
+                                                    onChange={ev => setTxSearchQuery(ev.target.value)}
+                                                />
+                                            </div>
+                                            {loadingTx && (!eventTxMap[e._id] || eventTxMap[e._id].length === 0) ? (
+                                                <div className="flex-center"><span className="spinner" /></div>
+                                            ) : (
+                                                <>
+                                                    {(eventTxMap[e._id] || [])
+                                                        .filter(tx => !txSearchQuery || tx.partyName?.toLowerCase().includes(txSearchQuery.toLowerCase()) || tx.mobile?.includes(txSearchQuery) || tx.location?.toLowerCase().includes(txSearchQuery.toLowerCase()))
+                                                        .map(tx => (
+                                                            <div key={tx._id} style={{ background: 'var(--glass)', padding: 12, marginBottom: 8, borderRadius: 8, border: '1px solid var(--glass-border)' }}>
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                                                    <div>
+                                                                        <strong style={{ fontSize: 14, color: 'var(--text)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                                                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tx.location || '—'}</div>
+                                                                    </div>
+                                                                    <div style={{ textAlign: 'right' }}>
+                                                                        <div style={{ fontWeight: 700, fontSize: 15, color: tx.type === 'received' ? 'var(--primary)' : 'var(--success)' }}>
+                                                                            {tx.type === 'paid' ? '-' : '+'}₹{(tx.cashAmount || 0).toLocaleString('en-IN')}
+                                                                        </div>
+                                                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(tx.date).toLocaleDateString('en-IN')}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                    {(eventTxMap[e._id] || []).length === 0 && (
+                                                        <div className="text-center text-muted" style={{ padding: 12 }}>No transactions found.</div>
+                                                    )}
+                                                    {eventHasMore[e._id] && !txSearchQuery && (
+                                                        <div style={{ textAlign: 'center', marginTop: 12 }}>
+                                                            <button
+                                                                className="btn btn-secondary btn-sm"
+                                                                onClick={() => loadEventTransactions(e._id, (eventPages[e._id] || 1) + 1)}
+                                                                disabled={loadingTx}
+                                                            >
+                                                                {loadingTx ? <span className="spinner" /> : 'Load More'}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                     {hasMore && (
                         <div style={{ textAlign: 'center', marginTop: 16 }}>
                             <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
@@ -380,7 +473,7 @@ export default function Events() {
                             </button>
                         </div>
                     )}
-                </div>
+                </>
             )}
 
             {showModal && (

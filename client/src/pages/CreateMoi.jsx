@@ -717,6 +717,7 @@ export default function CreateMoi() {
                         style={{
                           maxHeight: 150,
                           overflowY: "auto",
+                          overflowX: "auto",
                           border: "1px solid var(--border)",
                           borderRadius: 6,
                           background: "var(--surface)",

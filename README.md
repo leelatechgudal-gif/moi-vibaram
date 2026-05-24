@@ -126,3 +126,9 @@ Anand/
 - **OTP in dev mode**: If email is not configured, OTP prints to **server console**
 - **JWT expiry**: 15 minutes of inactivity triggers auto-logout
 - **QR scanning**: Works on https or localhost via browser camera API
+
+
+## Android setup
+
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+cd android && ./gradlew assembleDebug

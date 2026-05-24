@@ -132,62 +132,102 @@ export default function TenantManagement() {
                     <div>No members found.</div>
                 </div>
             ) : (
-                <div className="card table-wrap">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Mobile</th>
-                                <th>Role</th>
-                                {myRole === 'owner' && <th style={{ textAlign: 'center' }}>Actions</th>}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {members.map(m => {
-                                const isMe = m._id === user?._id
-                                return (
-                                    <tr key={m._id}>
-                                        <td>
-                                            <strong>{m.name}</strong>
-                                            {isMe && <span style={{ fontSize: 11, color: 'var(--primary)', marginLeft: 6 }}>(You)</span>}
-                                        </td>
-                                        <td>{m.email}</td>
-                                        <td>{m.mobile || '—'}</td>
-                                        <td>
-                                            <span className={`badge ${m.tenantRole === 'owner' ? 'badge-warning' : 'badge-primary'}`} style={{ display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content' }}>
-                                                {m.tenantRole === 'owner' ? <><Crown size={12} /> Owner</> : <><Users size={12} /> Member</>}
-                                            </span>
-                                        </td>
-                                        {myRole === 'owner' && (
-                                            <td style={{ textAlign: 'center' }}>
-                                                {!isMe && m.tenantRole !== 'owner' && (
-                                                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                                                        <button
-                                                            className="btn btn-secondary btn-sm"
-                                                            onClick={() => handleTransfer(m._id, m.name)}
-                                                            title="Transfer Ownership"
-                                                        >
-                                                            <ArrowRightLeft size={14} />
-                                                        </button>
-                                                        <button
-                                                            className="btn btn-secondary btn-sm"
-                                                            onClick={() => handleRemove(m._id, m.name)}
-                                                            title="Remove Member"
-                                                        >
-                                                            <UserMinus size={14} color="var(--danger)" />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {isMe && <span className="text-muted" style={{ fontSize: 12 }}>—</span>}
+                <>
+                    <div className="card table-wrap hide-mobile">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Mobile</th>
+                                    <th>Role</th>
+                                    {myRole === 'owner' && <th style={{ textAlign: 'center' }}>Actions</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {members.map(m => {
+                                    const isMe = m._id === user?._id
+                                    return (
+                                        <tr key={m._id}>
+                                            <td>
+                                                <strong>{m.name}</strong>
+                                                {isMe && <span style={{ fontSize: 11, color: 'var(--primary)', marginLeft: 6 }}>(You)</span>}
                                             </td>
-                                        )}
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                                            <td>{m.email}</td>
+                                            <td>{m.mobile || '—'}</td>
+                                            <td>
+                                                <span className={`badge ${m.tenantRole === 'owner' ? 'badge-warning' : 'badge-primary'}`} style={{ display: 'flex', alignItems: 'center', gap: 4, width: 'fit-content' }}>
+                                                    {m.tenantRole === 'owner' ? <><Crown size={12} /> Owner</> : <><Users size={12} /> Member</>}
+                                                </span>
+                                            </td>
+                                            {myRole === 'owner' && (
+                                                <td style={{ textAlign: 'center' }}>
+                                                    {!isMe && m.tenantRole !== 'owner' && (
+                                                        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                                                            <button
+                                                                className="btn btn-secondary btn-sm"
+                                                                onClick={() => handleTransfer(m._id, m.name)}
+                                                                title="Transfer Ownership"
+                                                            >
+                                                                <ArrowRightLeft size={14} />
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-secondary btn-sm"
+                                                                onClick={() => handleRemove(m._id, m.name)}
+                                                                title="Remove Member"
+                                                            >
+                                                                <UserMinus size={14} color="var(--danger)" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {isMe && <span className="text-muted" style={{ fontSize: 12 }}>—</span>}
+                                                </td>
+                                            )}
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="show-mobile">
+                        {members.map(m => {
+                            const isMe = m._id === user?._id
+                            return (
+                                <div key={m._id} className="card" style={{ padding: 16, marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                        <div>
+                                            <strong style={{ fontSize: 16, color: 'var(--text)' }}>{m.name}</strong>
+                                            {isMe && <span style={{ fontSize: 11, color: 'var(--primary)', marginLeft: 6 }}>(You)</span>}
+                                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{m.email}</div>
+                                        </div>
+                                        <span className={`badge ${m.tenantRole === 'owner' ? 'badge-warning' : 'badge-primary'}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            {m.tenantRole === 'owner' ? <><Crown size={12} /> Owner</> : <><Users size={12} /> Member</>}
+                                        </span>
+                                    </div>
+                                    {m.mobile && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>📱 {m.mobile}</div>}
+                                    {myRole === 'owner' && !isMe && m.tenantRole !== 'owner' && (
+                                        <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                                            <button
+                                                className="btn btn-secondary btn-sm w-full"
+                                                onClick={() => handleTransfer(m._id, m.name)}
+                                                style={{ justifyContent: 'center' }}
+                                            >
+                                                <ArrowRightLeft size={14} style={{ marginRight: 6 }} /> Transfer
+                                            </button>
+                                            <button
+                                                className="btn btn-danger btn-sm w-full"
+                                                onClick={() => handleRemove(m._id, m.name)}
+                                                style={{ justifyContent: 'center' }}
+                                            >
+                                                <UserMinus size={14} style={{ marginRight: 6 }} /> Remove
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </>
             )}
 
             {/* Leave button for members */}

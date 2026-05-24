@@ -102,7 +102,7 @@ export default function Profile() {
                 <button className="btn btn-secondary btn-sm no-print" onClick={handlePrint}><Printer size={16} style={{ marginRight: 4 }} /> Print QR</button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
+            <div className="profile-grid" style={{ alignItems: 'start' }}>
                 {/* Profile Form */}
                 <div className="card">
                     <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Personal Information</h3>

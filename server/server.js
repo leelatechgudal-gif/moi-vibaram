@@ -41,25 +41,43 @@ const apiLimiter = rateLimit({
 // CORS
 const allowedOrigins = [
     process.env.CLIENT_URL,
+    'http://192.168.0.125:5173/',
+    'http://192.168.0.125:5173',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost',          // Android Capacitor
     'capacitor://localhost',      // iOS Capacitor
+    'http://10.0.2.2:5173',       // Android Emulator Live Reload
+    'http://10.0.2.2:5001',       // Android Emulator Local API
+    'http://10.0.2.2',
     'https://leelatech.co.in',
     'http://leelatech.co.in',
     'https://www.leelatech.co.in',
     'http://www.leelatech.co.in',
 ].filter(Boolean);
 
+const isDev = process.env.NODE_ENV !== 'production';
+
+// Helper to check if origin is a local address (localhost, private network, or capacitor/local schemes)
+const isLocalOrigin = (origin) => {
+    if (!origin) return false;
+    // Match localhost or 127.0.0.1 with any port
+    if (/^(https?|capacitor):\/\/localhost(:\d+)?$/.test(origin)) return true;
+    if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
+    // Match private IP subnets: 192.168.x.x, 10.x.x.x, 172.16.x.x to 172.31.x.x with any port
+    if (/^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin)) return true;
+    return false;
+};
+
 app.use(cors({
     origin: (origin, callback) => {
         // allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.indexOf(origin) !== -1) {
+        if (allowedOrigins.indexOf(origin) !== -1 || (isDev && isLocalOrigin(origin))) {
             callback(null, true);
         } else {
             logger.warn('CORS blocked request', { origin });
-            callback(new Error('Not allowed by CORS'));
+            callback(new Error(`Not allowed by CORS: origin ${origin} is not in allowedOrigins`));
         }
     },
     credentials: true
@@ -94,7 +112,7 @@ app.use((req, res, next) => {
         const ms = Date.now() - start;
         const level = res.statusCode >= 500 ? 'error'
             : res.statusCode >= 400 ? 'warn'
-            : 'info';
+                : 'info';
         logger[level](`${req.method} ${req.originalUrl}`, {
             status: res.statusCode,
             ms,

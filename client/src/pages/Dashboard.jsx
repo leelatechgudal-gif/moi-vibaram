@@ -72,21 +72,63 @@ function StatDrillDown({ type, onClose }) {
             ) : filteredUsers.length === 0 ? (
                 <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No users found.</div>
             ) : (
-                <div className="table-wrap">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>{t('name')}</th>
-                                <th>{t('mobile')}</th>
-                                <th>{t('location')}</th>
-                                <th>{type === 'paid' ? 'Total Paid' : 'Total Received'}</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredUsers.map(p => (
-                                <tr key={p.partyId || p._id}>
-                                    <td>
+                <>
+                    <div className="table-wrap hide-mobile">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>{t('name')}</th>
+                                    <th>{t('mobile')}</th>
+                                    <th>{t('location')}</th>
+                                    <th>{type === 'paid' ? 'Total Paid' : 'Total Received'}</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredUsers.map(p => (
+                                    <tr key={p.partyId || p._id}>
+                                        <td>
+                                            <Link
+                                                to="/transactions/new"
+                                                state={{ 
+                                                    type, 
+                                                    fixedType: true,
+                                                    party: p
+                                                }}
+                                                onClick={(e) => e.stopPropagation()}
+                                                style={{ textDecoration: 'none', color: 'inherit' }}
+                                                className="hover-underline"
+                                            >
+                                                <strong style={{ color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
+                                            </Link>
+                                            {p.spouseName && <div className="text-muted" style={{ fontSize: 11 }}>& {p.spouseName}</div>}
+                                        </td>
+                                        <td>{p.mobile || '—'}</td>
+                                        <td>{p.location || '—'}</td>
+                                        <td style={{ fontWeight: 600 }}>{fmt(type === 'paid' ? p.totalPaid : p.totalReceived)}</td>
+                                        <td>
+                                            <Link 
+                                                to="/transactions/new" 
+                                                state={{ 
+                                                    type, 
+                                                    fixedType: true,
+                                                    party: p
+                                                }}
+                                                className="btn btn-secondary btn-sm"
+                                            >
+                                                <Plus size={12} style={{ marginRight: 4 }} /> Create Moi
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="show-mobile">
+                        {filteredUsers.map(p => (
+                            <div key={p.partyId || p._id} className="card" style={{ padding: 12, marginBottom: 8, background: 'var(--bg-card2)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                    <div>
                                         <Link
                                             to="/transactions/new"
                                             state={{ 
@@ -96,33 +138,38 @@ function StatDrillDown({ type, onClose }) {
                                             }}
                                             onClick={(e) => e.stopPropagation()}
                                             style={{ textDecoration: 'none', color: 'inherit' }}
-                                            className="hover-underline"
                                         >
-                                            <strong style={{ color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
+                                            <strong style={{ fontSize: 15, color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
                                         </Link>
-                                        {p.spouseName && <div className="text-muted" style={{ fontSize: 11 }}>& {p.spouseName}</div>}
-                                    </td>
-                                    <td>{p.mobile || '—'}</td>
-                                    <td>{p.location || '—'}</td>
-                                    <td style={{ fontWeight: 600 }}>{fmt(type === 'paid' ? p.totalPaid : p.totalReceived)}</td>
-                                    <td>
-                                        <Link 
-                                            to="/transactions/new" 
-                                            state={{ 
-                                                type, 
-                                                fixedType: true,
-                                                party: p
-                                            }}
-                                            className="btn btn-secondary btn-sm"
-                                        >
-                                            <Plus size={12} style={{ marginRight: 4 }} /> Create Moi
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                        {p.spouseName && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>& {p.spouseName}</div>}
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{type === 'paid' ? 'Paid' : 'Received'}</div>
+                                        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>
+                                            {fmt(type === 'paid' ? p.totalPaid : p.totalReceived)}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+                                    {p.mobile && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📞 {p.mobile}</div>}
+                                    {p.location && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📍 {p.location}</div>}
+                                </div>
+                                <Link 
+                                    to="/transactions/new" 
+                                    state={{ 
+                                        type, 
+                                        fixedType: true,
+                                        party: p
+                                    }}
+                                    className="btn btn-secondary w-full"
+                                    style={{ justifyContent: 'center' }}
+                                >
+                                    <Plus size={16} style={{ marginRight: 6 }} /> Create Moi
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                </>
             )}
         </div>
     )
@@ -220,7 +267,7 @@ export default function Dashboard() {
             {upcomingReminders.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
                     {upcomingReminders.map(reminder => (
-                        <div key={reminder._id} className="card" style={{ padding: '12px 20px', borderLeft: '4px solid var(--warning)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div key={reminder._id} className="card" style={{ padding: '12px 20px', borderLeft: '4px solid var(--warning)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <Bell size={16} color="var(--warning)" />
@@ -342,7 +389,7 @@ export default function Dashboard() {
                                         return (
                                             <div key={event._id} style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
                                                 <div
-                                                    style={{ padding: 16, background: 'var(--glass)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                                    style={{ padding: 16, background: 'var(--glass)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}
                                                     onClick={() => {
                                                         if (!isExpanded && !eventTxMap[event._id]) {
                                                             loadEventTransactions(event._id, 1);
@@ -382,35 +429,55 @@ export default function Dashboard() {
                                                         ) : filteredTx.length === 0 ? (
                                                             <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No transactions found.</div>
                                                         ) : (
-                                                            <div className="table-wrap">
-                                                                <table className="table">
-                                                                    <thead>
-                                                                        <tr>
-                                                                            <th>{t('partyName')}</th>
-                                                                            <th>{t('type')}</th>
-                                                                            <th>{t('amount')}</th>
-                                                                            <th>{t('date')}</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        {filteredTx.map(tx => (
-                                                                            <tr key={tx._id}>
-                                                                                <td>
-                                                                                    <strong style={{ color: 'var(--text)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
-                                                                                    <br />
-                                                                                    <span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
-                                                                                        {t(tx.type)}
-                                                                                    </span>
-                                                                                </td>
-                                                                                <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
-                                                                                <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                                            <>
+                                                                <div className="table-wrap hide-mobile">
+                                                                    <table className="table">
+                                                                        <thead>
+                                                                            <tr>
+                                                                                <th>{t('partyName')}</th>
+                                                                                <th>{t('type')}</th>
+                                                                                <th>{t('amount')}</th>
+                                                                                <th>{t('date')}</th>
                                                                             </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {filteredTx.map(tx => (
+                                                                                <tr key={tx._id}>
+                                                                                    <td>
+                                                                                        <strong style={{ color: 'var(--text)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                                                                        <br />
+                                                                                        <span className="text-muted">{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</span>
+                                                                                    </td>
+                                                                                    <td>
+                                                                                        <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
+                                                                                            {t(tx.type)}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
+                                                                                    <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                                <div className="show-mobile">
+                                                                    {filteredTx.map(tx => (
+                                                                        <div key={tx._id} className="card" style={{ padding: 12, marginBottom: 8, background: 'var(--bg-card2)' }}>
+                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                                                                                <div>
+                                                                                    <strong style={{ fontSize: 15, color: 'var(--text)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                                                                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tx.location || '—'} {tx.mobile && `• ${tx.mobile}`}</div>
+                                                                                </div>
+                                                                                <div style={{ textAlign: 'right' }}>
+                                                                                    <div style={{ fontWeight: 700, fontSize: 16, color: tx.type === 'received' ? 'var(--primary)' : 'var(--success)' }}>
+                                                                                        {tx.type === 'paid' ? '-' : '+'}{fmt(tx.cashAmount)}
+                                                                                    </div>
+                                                                                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(tx.date).toLocaleDateString('en-IN')}</div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                                 {eventHasMore[event._id] && !searchQuery && (
                                                                     <div style={{ textAlign: 'center', marginTop: 16 }}>
                                                                         <button
@@ -422,7 +489,7 @@ export default function Dashboard() {
                                                                         </button>
                                                                     </div>
                                                                 )}
-                                                            </div>
+                                                            </>
                                                         )}
                                                     </div>
                                                 )}

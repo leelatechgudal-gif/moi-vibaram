@@ -124,8 +124,8 @@ export default function PartiesManagement() {
                     <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><UserCheck size={28} /> Party Management</h1>
                     <div className="page-subtitle">Manage your contacts and parties</div>
                 </div>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div className="search-bar" style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div className="search-bar" style={{ position: 'relative', flex: '1 1 200px' }}>
                         <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
                             type="text"
@@ -133,10 +133,10 @@ export default function PartiesManagement() {
                             placeholder="Search parties..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{ paddingLeft: 36, width: 250 }}
+                            style={{ paddingLeft: 36, width: '100%' }}
                         />
                     </div>
-                    <button className="btn btn-primary" onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={16} /> Add Party</button>
+                    <button className="btn btn-primary" onClick={handleCreate} style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}><Plus size={16} /> Add Party</button>
                 </div>
             </div>
 
@@ -148,32 +148,54 @@ export default function PartiesManagement() {
                     <div>No parties found.</div>
                 </div>
             ) : (
-                <div className="card table-wrap">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Mobile</th>
-                                <th>Spouse</th>
-                                <th>Location</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {persons.map(p => (
-                                <tr key={p._id}>
-                                    <td><strong>{p.initial ? `${p.initial}. ` : ''}{p.name}</strong></td>
-                                    <td>{p.mobile || '—'}</td>
-                                    <td>{p.spouseName || '—'}</td>
-                                    <td>{p.location || '—'}</td>
-                                    <td>
-                                        <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(p)} style={{ marginRight: 8 }}><Edit2 size={14} /></button>
-                                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}><Trash2 size={14} /></button>
-                                    </td>
+                <>
+                    <div className="card table-wrap hide-mobile">
+                        <table className="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Mobile</th>
+                                    <th>Spouse</th>
+                                    <th>Location</th>
+                                    <th>Actions</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {persons.map(p => (
+                                    <tr key={p._id}>
+                                        <td><strong>{p.initial ? `${p.initial}. ` : ''}{p.name}</strong></td>
+                                        <td>{p.mobile || '—'}</td>
+                                        <td>{p.spouseName || '—'}</td>
+                                        <td>{p.location || '—'}</td>
+                                        <td>
+                                            <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(p)} style={{ marginRight: 8 }}><Edit2 size={14} /></button>
+                                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}><Trash2 size={14} /></button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="show-mobile">
+                        {persons.map(p => (
+                            <div key={p._id} className="card" style={{ padding: 16, marginBottom: 12 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                    <div>
+                                        <strong style={{ fontSize: 16, color: 'var(--text)' }}>{p.initial ? `${p.initial}. ` : ''}{p.name}</strong>
+                                        {p.spouseName && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Spouse: {p.spouseName}</div>}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(p)}><Edit2 size={14} /></button>
+                                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p)}><Trash2 size={14} /></button>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: 'var(--text-muted)' }}>
+                                    {p.mobile && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📞 {p.mobile}</div>}
+                                    {p.location && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📍 {p.location}</div>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                     {hasMore && (
                         <div style={{ textAlign: 'center', padding: '16px 0' }}>
                             <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
@@ -181,7 +203,7 @@ export default function PartiesManagement() {
                             </button>
                         </div>
                     )}
-                </div>
+                </>
             )}
 
             {showModal && (

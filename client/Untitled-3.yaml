@@ -1,0 +1,40 @@
+
+Mom - April 26, 206
+
+Person creation
+    - Option to search the existing one, based one  
+        - name
+        - phone number
+        - id
+    - Show the search result with Name, Phone, Spouse name, Location and ID
+    - if Person not found create new with provided details 
+    - if Person exist populate the value
+
+Dashboard 
+    - Should only have consolidated across all the events and transactions
+        - Total Received 
+        - Total Paid
+        - Balance
+    - No other data required for now
+
+My Events - Total Received as a new column
+    - Drill down
+        - Show all the transaction per Event
+        - Remove Paid option since it is my event I will only Received
+        - Remove Balance Field from the table
+        - Rows should be static no functional Rows
+
+Master Sheet - Not needed
+
+Balancing Sheet 
+    - Columns to display
+        - id
+        - Name & Spouse name
+        - Mobile
+        - Location
+        - Paid
+        - Received
+        - Balance   
+    - Drill down
+        - Detailed View
+        - View should be aligned with the screenshot shared by Aanand

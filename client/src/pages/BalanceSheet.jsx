@@ -67,8 +67,9 @@ export default function BalanceSheet() {
                 }
 
                 return (
-                    <div ref={printRef}>
-                        <div className="card table-wrap">
+                    <>
+                        {/* Desktop View */}
+                        <div ref={printRef} className="card table-wrap hide-mobile">
                             <table className="table">
                                 <thead>
                                     <tr>
@@ -122,37 +123,39 @@ export default function BalanceSheet() {
                                                     <td colSpan={8} style={{ padding: 0 }}>
                                                         <div style={{ background: 'var(--glass)', padding: 16, borderBottom: '1px solid var(--border)' }}>
                                                             <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>Transaction History with {p.partyName}</div>
-                                                            <table className="table" style={{ fontSize: 12 }}>
-                                                                <thead>
-                                                                    <tr>
-                                                                        <th>Date</th>
-                                                                        <th>Event</th>
-                                                                        <th>Type</th>
-                                                                        <th>Amount</th>
-                                                                        <th>Remarks</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    {p.transactions.map(tx => (
-                                                                        <tr key={tx._id}>
-                                                                            <td>{new Date(tx.date).toLocaleDateString('en-IN')}</td>
-                                                                            <td>
-                                                                                {tx.eventId?.eventName || tx.eventName || '—'}
-                                                                                {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
-                                                                                    <span style={{ marginLeft: 4 }} title="Gifts/Seer Varisai included">🎁</span>
-                                                                                )}
-                                                                            </td>
-                                                                            <td>
-                                                                                <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
-                                                                                    {t(tx.type)}
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="text-primary">{fmt(tx.cashAmount)}</td>
-                                                                            <td className="text-muted">{tx.remarks || '—'}</td>
+                                                            <div className="table-wrap">
+                                                                <table className="table" style={{ fontSize: 12 }}>
+                                                                    <thead>
+                                                                        <tr>
+                                                                            <th>Date</th>
+                                                                            <th>Event</th>
+                                                                            <th>Type</th>
+                                                                            <th>Amount</th>
+                                                                            <th>Remarks</th>
                                                                         </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {p.transactions.map(tx => (
+                                                                            <tr key={tx._id}>
+                                                                                <td>{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                                                                <td>
+                                                                                    {tx.eventId?.eventName || tx.eventName || '—'}
+                                                                                    {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
+                                                                                        <span style={{ marginLeft: 4 }} title="Gifts/Seer Varisai included">🎁</span>
+                                                                                    )}
+                                                                                </td>
+                                                                                <td>
+                                                                                    <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
+                                                                                        {t(tx.type)}
+                                                                                    </span>
+                                                                                </td>
+                                                                                <td className="text-primary">{fmt(tx.cashAmount)}</td>
+                                                                                <td className="text-muted">{tx.remarks || '—'}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -162,7 +165,81 @@ export default function BalanceSheet() {
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+
+                        {/* Mobile View */}
+                        <div className="show-mobile">
+                            {filteredSheet.map((p, i) => (
+                                <div key={p._id || i} className="card" style={{ padding: 16, marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <Link
+                                                to={`/person-detail?partyId=${p._id || ''}&partyName=${encodeURIComponent(p.partyName)}&mobile=${p.mobile || ''}&spouseName=${encodeURIComponent(p.spouseName || '')}&location=${encodeURIComponent(p.location || '')}`}
+                                                style={{ textDecoration: 'none', color: 'inherit' }}
+                                                className="hover-underline"
+                                            >
+                                                <strong style={{ fontSize: 16, color: 'var(--primary)' }}>{p.initial ? `${p.initial} ` : ''}{p.partyName}</strong>
+                                            </Link>
+                                            {p.spouseName && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>& {p.spouseName}</div>}
+                                            
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 12px', fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+                                                {p.mobile && <div>📱 {p.mobile}</div>}
+                                                {p.location && <div>📍 {p.location}</div>}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: 12, fontSize: 12, marginTop: 8 }}>
+                                                <div>Paid: <span className="text-success" style={{ fontWeight: 500 }}>{fmt(p.totalPaid)}</span></div>
+                                                <div>Received: <span className="text-primary" style={{ fontWeight: 500 }}>{fmt(p.totalReceived)}</span></div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                                            <div style={{ fontWeight: 700, fontSize: 16, color: p.balance >= 0 ? 'var(--primary)' : 'var(--danger)' }}>
+                                                {p.balance >= 0 ? '+' : ''}{fmt(p.balance)}
+                                            </div>
+                                            <button 
+                                                className="btn btn-secondary btn-sm" 
+                                                onClick={() => setSelected(selected === p._id ? null : p._id)}
+                                                style={{ padding: '4px 8px' }}
+                                            >
+                                                {selected === p._id ? 'Hide' : 'History'}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Drill-down inside card */}
+                                    {selected === p._id && (
+                                        <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                                            <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 12, color: 'var(--text)' }}>
+                                                Transaction History
+                                            </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                {p.transactions.map(tx => (
+                                                    <div key={tx._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg)', padding: '8px 12px', borderRadius: 8, fontSize: 12 }}>
+                                                        <div>
+                                                            <div style={{ fontWeight: 500 }}>
+                                                                {tx.eventId?.eventName || tx.eventName || '—'}
+                                                                {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
+                                                                    <span style={{ marginLeft: 4 }} title="Gifts/Seer Varisai included">🎁</span>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>{new Date(tx.date).toLocaleDateString('en-IN')}</div>
+                                                            {tx.remarks && <div style={{ fontSize: 10, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: 2 }}>"{tx.remarks}"</div>}
+                                                        </div>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`} style={{ fontSize: 10 }}>
+                                                                {t(tx.type)}
+                                                            </span>
+                                                            <div style={{ fontWeight: 600, marginTop: 4 }}>{fmt(tx.cashAmount)}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </>
                 );
             })()}
         </div>

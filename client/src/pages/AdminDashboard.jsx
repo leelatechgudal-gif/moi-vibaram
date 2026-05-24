@@ -185,7 +185,8 @@ export default function AdminDashboard() {
                 });
 
                 return (
-            <div className="card table-wrap">
+            <>
+            <div className="card table-wrap hide-mobile">
                 <table className="table">
                     <thead>
                         <tr>
@@ -230,28 +231,30 @@ export default function AdminDashboard() {
                                                 ) : !userParties[u._id] || userParties[u._id].length === 0 ? (
                                                     <div className="text-muted" style={{ fontSize: 12, textAlign: 'center', padding: 10 }}>No parties created by this user.</div>
                                                 ) : (
-                                                    <table className="table" style={{ fontSize: 12 }}>
-                                                        <thead>
-                                                            <tr>
-                                                                <th>Name</th>
-                                                                <th>Spouse Name</th>
-                                                                <th>Mobile</th>
-                                                                <th>Location</th>
-                                                                <th>Created</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {userParties[u._id].map(p => (
-                                                                <tr key={p._id}>
-                                                                    <td>{p.initial ? `${p.initial}. ` : ''}{p.name}</td>
-                                                                    <td>{p.spouseName || '—'}</td>
-                                                                    <td>{p.mobile || '—'}</td>
-                                                                    <td>{p.location || '—'}</td>
-                                                                    <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+                                                    <div className="table-wrap">
+                                                        <table className="table" style={{ fontSize: 12 }}>
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Name</th>
+                                                                    <th>Spouse Name</th>
+                                                                    <th>Mobile</th>
+                                                                    <th>Location</th>
+                                                                    <th>Created</th>
                                                                 </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
+                                                            </thead>
+                                                            <tbody>
+                                                                {userParties[u._id].map(p => (
+                                                                    <tr key={p._id}>
+                                                                        <td>{p.initial ? `${p.initial}. ` : ''}{p.name}</td>
+                                                                        <td>{p.spouseName || '—'}</td>
+                                                                        <td>{p.mobile || '—'}</td>
+                                                                        <td>{p.location || '—'}</td>
+                                                                        <td>{new Date(p.createdAt).toLocaleDateString()}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>
@@ -261,14 +264,73 @@ export default function AdminDashboard() {
                         ))}
                     </tbody>
                 </table>
-                {hasMore && (
-                    <div style={{ textAlign: 'center', padding: '16px 0' }}>
-                        <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
-                            {loadingMore ? <span className="spinner" /> : 'Load More'}
-                        </button>
-                    </div>
-                )}
             </div>
+            <div className="show-mobile">
+                {filteredUsers.map(u => (
+                    <div key={u._id} className="card" style={{ padding: 16, marginBottom: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                            <div>
+                                <strong style={{ fontSize: 16, color: 'var(--text)' }}>{u.name}</strong>
+                                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{u.email}</div>
+                            </div>
+                            <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-warning'}`}>{u.role}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+                            {u.mobile && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📱 {u.mobile}</div>}
+                            {u.subscriptionExpiry && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>Expiry: {new Date(u.subscriptionExpiry).toLocaleDateString()}</div>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 16, marginBottom: 16, background: 'var(--glass)', padding: '8px 12px', borderRadius: 8 }}>
+                            <div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Transactions</div>
+                                <div style={{ fontWeight: 600 }}>{u.transactionCount || 0}</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Parties</div>
+                                <div style={{ fontWeight: 600 }}>{u.partyCount || 0}</div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                            <button className="btn btn-primary btn-sm w-full" onClick={() => toggleParties(u._id)} style={{ justifyContent: 'center' }}>
+                                <Users size={14} style={{ marginRight: 6 }} /> Parties
+                            </button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleEdit(u)} style={{ flex: '0 0 auto' }}><Edit2 size={14} /></button>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u)} disabled={u._id === user._id} style={{ flex: '0 0 auto' }}><Trash2 size={14} /></button>
+                        </div>
+                        {expandedUser === u._id && (
+                            <div style={{ marginTop: 16, background: 'var(--bg)', padding: 16, borderRadius: 8, border: '1px solid var(--border)' }}>
+                                <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 15 }}>Parties Created by {u.name}</div>
+                                {loadingParties ? (
+                                    <div className="flex-center" style={{ height: 60 }}><span className="spinner" /></div>
+                                ) : !userParties[u._id] || userParties[u._id].length === 0 ? (
+                                    <div className="text-muted" style={{ fontSize: 12, textAlign: 'center', padding: 10 }}>No parties created.</div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                        {userParties[u._id].map(p => (
+                                            <div key={p._id} style={{ background: 'var(--glass)', padding: 12, borderRadius: 8, border: '1px solid var(--glass-border)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                    <strong style={{ fontSize: 14 }}>{p.initial ? `${p.initial}. ` : ''}{p.name}</strong>
+                                                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(p.createdAt).toLocaleDateString()}</div>
+                                                </div>
+                                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                                                    {p.mobile || '—'} • {p.location || '—'}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+            {hasMore && (
+                <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                    <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
+                        {loadingMore ? <span className="spinner" /> : 'Load More'}
+                    </button>
+                </div>
+            )}
+            </>
                 );
             })()}
 

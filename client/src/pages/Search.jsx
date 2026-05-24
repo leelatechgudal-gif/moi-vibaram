@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
 import { useReactToPrint } from 'react-to-print'
+import ResponsiveTable from '../components/ResponsiveTable'
 import { Search as SearchIcon, Share2, Printer, MapPin } from 'lucide-react'
 
 export default function Search() {
@@ -98,66 +99,92 @@ export default function Search() {
                         <div>No results found for "{query || location}"</div>
                     </div>
                 ) : (
-                    <div ref={printRef} className="card table-wrap">
-                        <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-muted)' }}>
-                            Showing {results.length} of {totalResults} result(s) found
-                        </div>
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>{t('partyName')}</th>
-                                    <th>Spouse / Nickname</th>
-                                    <th>{t('mobile')}</th>
-                                    <th>{t('location')}</th>
-                                    <th>Event</th>
-                                    <th>{t('type')}</th>
-                                    <th>{t('amount')}</th>
-                                    <th>{t('date')}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {results.map((tx, i) => (
-                                    <tr key={tx._id}>
-                                        <td className="text-muted">{i + 1}</td>
-                                        <td>
-                                            <strong>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
-                                        </td>
-                                        <td style={{ fontSize: 13 }}>
-                                            {tx.spouseName && <div className="text-primary" style={{ fontWeight: 500 }}>{tx.spouseName} (S)</div>}
-                                            {tx.nickname && <div className="text-muted" style={{ fontStyle: 'italic' }}>"{tx.nickname}"</div>}
-                                            {!tx.spouseName && !tx.nickname && '—'}
-                                        </td>
-                                        <td>{tx.mobile || '—'}</td>
-                                        <td>
-                                            <div style={{ fontWeight: 500 }}>{tx.location || '—'}</div>
-                                            {tx.street && <div className="text-muted" style={{ fontSize: 11 }}>{tx.street}</div>}
-                                        </td>
-                                        <td>
-                                            {tx.eventId?.eventName || tx.eventName || '—'}
-                                            {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
-                                                <span style={{ marginLeft: 6 }} title="Gifts/Seer Varisai Included">🎁</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
-                                                {t(tx.type)}
-                                            </span>
-                                        </td>
-                                        <td style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</td>
-                                        <td className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                        {hasMore && (
-                            <div style={{ textAlign: 'center', marginTop: 16 }}>
-                                <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
-                                    {loadingMore ? <span className="spinner" /> : 'Load More'}
-                                </button>
+                    <>
+                    <ResponsiveTable
+                        ref={printRef}
+                        headers={[
+                            '#',
+                            t('partyName'),
+                            'Spouse / Nickname',
+                            t('mobile'),
+                            t('location'),
+                            'Event',
+                            t('type'),
+                            t('amount'),
+                            t('date')
+                        ]}
+                        rows={results}
+                        headerContent={
+                            <div style={{ marginBottom: 12, fontSize: 13, color: 'var(--text-muted)' }}>
+                                Showing {results.length} of {totalResults} result(s) found
+                            </div>
+                        }
+                        renderRow={(tx, i) => [
+                            <span className="text-muted">{i + 1}</span>,
+                            <strong>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>,
+                            <div style={{ fontSize: 13 }}>
+                                {tx.spouseName && <div className="text-primary" style={{ fontWeight: 500 }}>{tx.spouseName} (S)</div>}
+                                {tx.nickname && <div className="text-muted" style={{ fontStyle: 'italic' }}>"{tx.nickname}"</div>}
+                                {!tx.spouseName && !tx.nickname && '—'}
+                            </div>,
+                            tx.mobile || '—',
+                            <div>
+                                <div style={{ fontWeight: 500 }}>{tx.location || '—'}</div>
+                                {tx.street && <div className="text-muted" style={{ fontSize: 11 }}>{tx.street}</div>}
+                            </div>,
+                            <div>
+                                {tx.eventId?.eventName || tx.eventName || '—'}
+                                {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
+                                    <span style={{ marginLeft: 6 }} title="Gifts/Seer Varisai Included">🎁</span>
+                                )}
+                            </div>,
+                            <span className={`badge ${tx.type === 'received' ? 'badge-primary' : 'badge-success'}`}>
+                                {t(tx.type)}
+                            </span>,
+                            <span style={{ fontWeight: 600 }}>{fmt(tx.cashAmount)}</span>,
+                            <span className="text-muted">{new Date(tx.date).toLocaleDateString('en-IN')}</span>
+                        ]}
+                        renderMobileCard={(tx) => (
+                            <div key={tx._id} className="card" style={{ padding: 16, marginBottom: 12 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                    <div>
+                                        <strong style={{ fontSize: 16, color: 'var(--text)' }}>{tx.initial ? `${tx.initial} ` : ''}{tx.partyName}</strong>
+                                        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+                                            {tx.spouseName && <span className="text-primary" style={{ fontWeight: 500 }}>{tx.spouseName} (S) </span>}
+                                            {tx.nickname && <span style={{ fontStyle: 'italic' }}>"{tx.nickname}"</span>}
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontWeight: 700, fontSize: 16, color: tx.type === 'received' ? 'var(--primary)' : 'var(--success)' }}>
+                                            {tx.type === 'paid' ? '-' : '+'}₹{(tx.cashAmount || 0).toLocaleString('en-IN')}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(tx.date).toLocaleDateString('en-IN')}</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>
+                                    {tx.mobile && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📱 {tx.mobile}</div>}
+                                    {tx.location && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📍 {tx.location}</div>}
+                                </div>
+                                <div style={{ background: 'var(--bg)', padding: '8px 12px', borderRadius: 8, marginTop: 12 }}>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Event</div>
+                                    <div style={{ fontWeight: 500 }}>
+                                        {tx.eventId?.eventName || tx.eventName || '—'}
+                                        {tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks)) && (
+                                            <span style={{ marginLeft: 6 }} title="Gifts/Seer Varisai Included">🎁</span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         )}
-                    </div>
+                    />
+                    {hasMore && (
+                        <div style={{ textAlign: 'center', marginTop: 16 }}>
+                            <button className="btn btn-secondary" onClick={loadMore} disabled={loadingMore}>
+                                {loadingMore ? <span className="spinner" /> : 'Load More'}
+                            </button>
+                        </div>
+                    )}
+                </>
                 )
             )}
         </div>
