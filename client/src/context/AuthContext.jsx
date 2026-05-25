@@ -12,8 +12,9 @@ export function AuthProvider({ children }) {
 
     const logout = useCallback(() => {
         if (token) {
+            const refreshToken = localStorage.getItem('mv_refresh_token');
             import('../api/api').then(({ authAPI }) => {
-                authAPI.logout().catch(() => {});
+                authAPI.logout({ refreshToken }).catch(() => {});
             });
         }
         localStorage.removeItem('mv_token');

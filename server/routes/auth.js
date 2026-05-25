@@ -185,18 +185,35 @@ router.post('/verify-otp', async (req, res) => {
 // POST /api/auth/logout
 router.post('/logout', async (req, res) => {
     try {
-        const token = req.headers.authorization?.split(' ')[1];
-        if (token) {
+        const { refreshToken } = req.body;
+        if (refreshToken) {
             let decoded;
             try {
-                decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+                decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
             } catch (e) {}
             if (decoded) {
                 const user = await User.findById(decoded.userId);
-                if (user) {
-                    user.activeSessions = [];
+                if (user && user.activeSessions) {
+                    user.activeSessions = user.activeSessions.filter(t => t !== refreshToken);
                     await user.save();
-                    logger.info('[logout] User logged out — sessions cleared', { userId: decoded.userId });
+                    logger.info('[logout] Session cleared successfully', { userId: decoded.userId });
+                }
+            }
+        } else {
+            // Fallback: clear all sessions for the user if no refresh token is provided
+            const token = req.headers.authorization?.split(' ')[1];
+            if (token) {
+                let decoded;
+                try {
+                    decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+                } catch (e) {}
+                if (decoded) {
+                    const user = await User.findById(decoded.userId);
+                    if (user) {
+                        user.activeSessions = [];
+                        await user.save();
+                        logger.info('[logout] All user sessions cleared (fallback)', { userId: decoded.userId });
+                    }
                 }
             }
         }

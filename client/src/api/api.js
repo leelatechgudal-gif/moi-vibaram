@@ -105,7 +105,7 @@ export const authAPI = {
     login: data => api.post('/auth/login', data),
     forgotPassword: data => api.post('/auth/forgot-password', data),
     verifyOTP: data => api.post('/auth/verify-otp', data),
-    logout: () => api.post('/auth/logout'),
+    logout: data => api.post('/auth/logout', data),
     refresh: data => api.post('/auth/refresh', data),
 };
 
