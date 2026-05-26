@@ -92,7 +92,11 @@ export default function Login() {
         setLoading(true)
         setShowForceLogout(false)
         try {
-            const res = await authAPI.login({ ...form, forceLogout })
+            const trimmedForm = {
+                ...form,
+                email: form.email ? form.email.trim() : ''
+            };
+            const res = await authAPI.login({ ...trimmedForm, forceLogout })
             login(res.data.user, res.data.token, res.data.refreshToken)
             navigate('/')
         } catch (err) {
@@ -107,16 +111,17 @@ export default function Login() {
     }
 
     const onFingerprintLogin = async () => {
-        if (!form.email) {
+        const email = form.email ? form.email.trim() : '';
+        if (!email) {
             setError('Enter your email first to use fingerprint login');
             return;
         }
         setError('');
         setLoading(true);
         try {
-            const optsRes = await api.post('/webauthn/auth-options', { email: form.email });
+            const optsRes = await api.post('/webauthn/auth-options', { email });
             const authResp = await startAuthentication(optsRes.data);
-            const verifyRes = await api.post('/webauthn/auth-verify', { email: form.email, response: authResp });
+            const verifyRes = await api.post('/webauthn/auth-verify', { email, response: authResp });
             if (verifyRes.data.verified) {
                 login(verifyRes.data.user, verifyRes.data.token, verifyRes.data.refreshToken);
                 navigate('/');

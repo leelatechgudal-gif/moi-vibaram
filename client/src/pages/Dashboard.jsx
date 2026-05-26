@@ -22,8 +22,8 @@ function StatDrillDown({ type, onClose }) {
     }, [])
 
     const filteredUsers = sheet.filter(p => {
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase()
+        if (searchQuery.trim()) {
+            const query = searchQuery.trim().toLowerCase()
             return (
                 p.partyName?.toLowerCase().includes(query) ||
                 p.mobile?.includes(query) ||
@@ -380,11 +380,14 @@ export default function Dashboard() {
                                         const isExpanded = expandedEvent === event._id;
                                         const eventTx = eventTxMap[event._id] || [];
 
-                                        const filteredTx = eventTx.filter(t =>
-                                            (t.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                                t.mobile?.includes(searchQuery) ||
-                                                t.location?.toLowerCase().includes(searchQuery.toLowerCase()))
-                                        );
+                                        const filteredTx = eventTx.filter(t => {
+                                            const query = searchQuery.trim().toLowerCase();
+                                            return (
+                                                t.partyName?.toLowerCase().includes(query) ||
+                                                t.mobile?.includes(searchQuery.trim()) ||
+                                                t.location?.toLowerCase().includes(query)
+                                            );
+                                        });
 
                                         return (
                                             <div key={event._id} style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>

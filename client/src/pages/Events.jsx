@@ -34,7 +34,10 @@ function EventModal({ event, onClose, onSave }) {
         setError('')
         try {
             const fd = new FormData()
-            const submitForm = { ...form };
+            const trimmedForm = Object.fromEntries(
+                Object.entries(form).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])
+            );
+            const submitForm = { ...trimmedForm };
             if (submitForm.eventName === 'Other' && submitForm.customEventName) {
                 submitForm.eventName = submitForm.customEventName;
             }

@@ -26,7 +26,13 @@ export default function Register() {
         }
         setLoading(true)
         try {
-            const res = await authAPI.register(form)
+            const trimmedForm = Object.fromEntries(
+                Object.entries(form).map(([k, v]) => {
+                    if (k === 'password' || k === 'confirmPassword') return [k, v];
+                    return [k, typeof v === 'string' ? v.trim() : v];
+                })
+            );
+            const res = await authAPI.register(trimmedForm)
             login(res.data.user, res.data.token, res.data.refreshToken)
             navigate('/')
         } catch (err) {

@@ -37,7 +37,7 @@ export default function PartiesManagement() {
         if (reset) setLoading(true);
         else setLoadingMore(true);
 
-        partiesAPI.getAll({ page: pageNum, limit: 15, search: searchQuery })
+        partiesAPI.getAll({ page: pageNum, limit: 15, search: searchQuery.trim() })
             .then(res => {
                 const { data, hasMore: more } = res.data;
                 if (reset) {
@@ -98,11 +98,14 @@ export default function PartiesManagement() {
         setActionLoading(true);
         setError('');
         try {
+            const trimmedFormData = Object.fromEntries(
+                Object.entries(formData).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])
+            );
             if (modalMode === 'create') {
-                const res = await partiesAPI.create(formData);
+                const res = await partiesAPI.create(trimmedFormData);
                 setPersons([res.data, ...persons]);
             } else {
-                const res = await partiesAPI.update(formData._id, formData);
+                const res = await partiesAPI.update(formData._id, trimmedFormData);
                 setPersons(persons.map(p => p._id === formData._id ? res.data : p));
             }
             setShowModal(false);

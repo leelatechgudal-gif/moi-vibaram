@@ -36,7 +36,7 @@ export default function TenantManagement() {
         e.preventDefault()
         setInviting(true)
         try {
-            const res = await tenantAPI.invite({ email: inviteEmail })
+            const res = await tenantAPI.invite({ email: inviteEmail.trim() })
             toast.success(res.data.message)
             setInviteEmail('')
             setShowInvite(false)

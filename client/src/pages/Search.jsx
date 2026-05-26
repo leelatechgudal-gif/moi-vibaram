@@ -24,7 +24,7 @@ export default function Search() {
         else setLoadingMore(true)
         setSearched(true)
         try {
-            const res = await transactionsAPI.search({ q: query, location, page: pageNum, limit: 10 })
+            const res = await transactionsAPI.search({ q: query.trim(), location: location.trim(), page: pageNum, limit: 10 })
             const { data, hasMore: more, total } = res.data
             if (pageNum === 1) {
                 setResults(data)

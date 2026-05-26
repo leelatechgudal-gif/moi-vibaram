@@ -20,7 +20,8 @@ export default function ForgotPassword() {
         setError('')
         setLoading(true)
         try {
-            const res = await authAPI.forgotPassword({ email: form.email })
+            const email = form.email ? form.email.trim() : '';
+            const res = await authAPI.forgotPassword({ email })
             setMessage(res.data.message)
             setStep(2)
         } catch (err) {
@@ -35,7 +36,12 @@ export default function ForgotPassword() {
         setError('')
         setLoading(true)
         try {
-            const res = await authAPI.verifyOTP(form)
+            const trimmedForm = {
+                ...form,
+                email: form.email ? form.email.trim() : '',
+                otp: form.otp ? form.otp.trim() : ''
+            };
+            const res = await authAPI.verifyOTP(trimmedForm)
             setMessage(res.data.message)
             setStep(3)
         } catch (err) {

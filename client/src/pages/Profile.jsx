@@ -43,9 +43,12 @@ export default function Profile() {
         setSaving(true)
         setError('')
         try {
-            const res = await usersAPI.updateProfile(form)
+            const trimmedForm = Object.fromEntries(
+                Object.entries(form).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])
+            )
+            const res = await usersAPI.updateProfile(trimmedForm)
             setProfileData(res.data.user)
-            updateUser({ ...user, name: form.name })
+            updateUser({ ...user, name: trimmedForm.name })
             setSuccess('Profile updated successfully!')
             setTimeout(() => setSuccess(''), 3000)
         } catch (err) {

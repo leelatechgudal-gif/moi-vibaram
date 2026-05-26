@@ -49,7 +49,7 @@ export default function UpcomingEvents() {
             setSearchResults([])
             return
         }
-        const q = searchQuery.toLowerCase()
+        const q = searchQuery.trim().toLowerCase()
         const results = parties.filter(p => 
             (p.name && p.name.toLowerCase().includes(q)) ||
             (p.mobile && p.mobile.includes(q)) ||
@@ -109,11 +109,14 @@ export default function UpcomingEvents() {
         e.preventDefault()
         if (!window.confirm(t('confirmSaveReminder') || 'Confirm saving this reminder?')) return
         try {
+            const trimmedFormData = Object.fromEntries(
+                Object.entries(formData).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])
+            )
             if (isEditing) {
-                await remindersAPI.update(currentId, formData)
+                await remindersAPI.update(currentId, trimmedFormData)
                 toast.success('Reminder updated')
             } else {
-                await remindersAPI.create(formData)
+                await remindersAPI.create(trimmedFormData)
                 toast.success('Reminder created')
             }
             setShowModal(false)

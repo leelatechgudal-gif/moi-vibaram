@@ -82,7 +82,7 @@ export default function CreateMoi() {
       setSearchResults([]);
       return;
     }
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
     const results = persons.filter(
       (p) =>
         p.partyName?.toLowerCase().includes(q) ||
@@ -135,7 +135,7 @@ export default function CreateMoi() {
     setForm((f) => ({
       ...f,
       initial: "",
-      partyName: searchQuery || "",
+      partyName: searchQuery.trim() || "",
       mobile: "",
       spouseName: "",
       location: "",
@@ -200,10 +200,13 @@ export default function CreateMoi() {
     setLoading(true);
     setError("");
     try {
+      const trimmedForm = Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])
+      );
       const payload = {
-        ...form,
-        labels: form.labels ? form.labels.split(",").map((l) => l.trim()) : [],
-        cashAmount: parseFloat(form.cashAmount) || 0,
+        ...trimmedForm,
+        labels: trimmedForm.labels ? trimmedForm.labels.split(",").map((l) => l.trim()) : [],
+        cashAmount: parseFloat(trimmedForm.cashAmount) || 0,
         seerVarisai: showSeer
           ? Object.fromEntries(
               Object.entries(seerVarisai).map(([k, v]) => [
@@ -211,7 +214,7 @@ export default function CreateMoi() {
                 {
                   value: parseFloat(v.value) || 0,
                   quantity: parseFloat(v.quantity) || 0,
-                  remarks: v.remarks,
+                  remarks: typeof v.remarks === "string" ? v.remarks.trim() : v.remarks,
                 },
               ]),
             )
@@ -231,8 +234,11 @@ export default function CreateMoi() {
     e.preventDefault();
     setEventLoading(true);
     try {
+      const trimmedEventFormData = Object.fromEntries(
+        Object.entries(eventFormData).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])
+      );
       const fd = new FormData();
-      Object.entries(eventFormData).forEach(([k, v]) => v && fd.append(k, v));
+      Object.entries(trimmedEventFormData).forEach(([k, v]) => v && fd.append(k, v));
       const res = await eventsAPI.create(fd);
       setEvents([res.data, ...events]);
       setForm({ ...form, eventId: res.data._id });
@@ -614,14 +620,14 @@ export default function CreateMoi() {
                     }}
                   >
                     <div className="text-muted mb-8">
-                      No person found matching "{searchQuery}"
+                      No person found matching "{searchQuery.trim()}"
                     </div>
                     <button
                       type="button"
                       className="btn btn-primary btn-sm"
                       onClick={handleCreateNewPerson}
                     >
-                      <Plus size={14} style={{ marginRight: 4 }} /> Create New Person "{searchQuery}"
+                      <Plus size={14} style={{ marginRight: 4 }} /> Create New Person "{searchQuery.trim()}"
                     </button>
                   </div>
                 )}

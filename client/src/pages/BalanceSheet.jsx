@@ -54,11 +54,14 @@ export default function BalanceSheet() {
                     <div>{t('noData')}</div>
                 </div>
             ) : (() => {
-                const filteredSheet = sheet.filter(p =>
-                    p.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    p.mobile?.includes(searchQuery) ||
-                    p.location?.toLowerCase().includes(searchQuery.toLowerCase())
-                );
+                const filteredSheet = sheet.filter(p => {
+                    const query = searchQuery.trim().toLowerCase();
+                    return (
+                        p.partyName?.toLowerCase().includes(query) ||
+                        p.mobile?.includes(searchQuery.trim()) ||
+                        p.location?.toLowerCase().includes(query)
+                    );
+                });
 
                 if (filteredSheet.length === 0) {
                     return (

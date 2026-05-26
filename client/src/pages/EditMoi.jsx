@@ -119,15 +119,18 @@ export default function EditMoi() {
         setLoading(true)
         setError('')
         try {
+            const trimmedForm = Object.fromEntries(
+                Object.entries(form).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v])
+            )
             const payload = {
-                ...form,
-                labels: form.labels ? form.labels.split(',').map(l => l.trim()) : [],
-                cashAmount: parseFloat(form.cashAmount) || 0,
+                ...trimmedForm,
+                labels: trimmedForm.labels ? trimmedForm.labels.split(',').map(l => l.trim()) : [],
+                cashAmount: parseFloat(trimmedForm.cashAmount) || 0,
                 seerVarisai: showSeer ? Object.fromEntries(
                     Object.entries(seerVarisai).map(([k, v]) => [k, {
                         value: parseFloat(v.value) || 0,
                         quantity: parseFloat(v.quantity) || 0,
-                        remarks: v.remarks,
+                        remarks: typeof v.remarks === 'string' ? v.remarks.trim() : v.remarks,
                     }])
                 ) : undefined,
             }
