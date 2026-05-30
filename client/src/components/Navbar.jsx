@@ -109,7 +109,7 @@ export default function Navbar() {
             <nav className="sidebar-nav">
                 {navItems.filter(item => {
                     if (user?.role === 'clerk') {
-                        return item.key === 'dashboard' || item.key === 'ledger' || item.key === 'profile';
+                        return item.key === 'ledger' || item.key === 'profile';
                     }
                     return true;
                 }).map(item => (
