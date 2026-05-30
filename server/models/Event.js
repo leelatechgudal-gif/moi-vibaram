@@ -10,6 +10,7 @@ const eventSchema = new mongoose.Schema({
     location: String,
     city: String,
     invitationFile: String,
+    isLiveLedger: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Event', eventSchema);

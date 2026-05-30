@@ -24,7 +24,7 @@ router.get('/', auth, async (req, res) => {
             const transactions = await Transaction.find(filter)
                 .populate('eventId')
                 .populate('partyId')
-                .sort({ date: -1 })
+                .sort({ date: -1, createdAt: -1 })
                 .skip(skip)
                 .limit(limitNum);
             res.json({
@@ -39,7 +39,7 @@ router.get('/', auth, async (req, res) => {
             const transactions = await Transaction.find(filter)
                 .populate('eventId')
                 .populate('partyId')
-                .sort({ date: -1 });
+                .sort({ date: -1, createdAt: -1 });
             res.json(transactions.map(flattenTransaction));
         }
     } catch (err) {
@@ -429,7 +429,7 @@ router.get('/search', auth, async (req, res) => {
         if (pageNum) {
             const skip = (pageNum - 1) * limitNum;
             const total = await Transaction.countDocuments(filter);
-            const results = await Transaction.find(filter).populate('eventId').populate('partyId').sort({ date: -1 }).skip(skip).limit(limitNum);
+            const results = await Transaction.find(filter).populate('eventId').populate('partyId').sort({ date: -1, createdAt: -1 }).skip(skip).limit(limitNum);
             res.json({
                 data: results.map(flattenTransaction),
                 total,
@@ -438,7 +438,7 @@ router.get('/search', auth, async (req, res) => {
                 hasMore: pageNum * limitNum < total
             });
         } else {
-            const results = await Transaction.find(filter).populate('eventId').populate('partyId').sort({ date: -1 });
+            const results = await Transaction.find(filter).populate('eventId').populate('partyId').sort({ date: -1, createdAt: -1 });
             res.json(results.map(flattenTransaction));
         }
     } catch (err) {

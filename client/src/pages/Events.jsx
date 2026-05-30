@@ -20,7 +20,7 @@ const EVENT_NAMES = [
 
 function EventModal({ event, onClose, onSave }) {
     const { t } = useTranslation()
-    const [form, setForm] = useState(event || { eventName: '', customEventName: '', date: '', venue: '', location: '', city: '' })
+    const [form, setForm] = useState(event ? { isLiveLedger: false, ...event } : { eventName: '', customEventName: '', date: '', venue: '', location: '', city: '', isLiveLedger: false })
     const [file, setFile] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -43,7 +43,13 @@ function EventModal({ event, onClose, onSave }) {
             }
             delete submitForm.customEventName;
 
-            Object.entries(submitForm).forEach(([k, v]) => v && fd.append(k, v))
+            Object.entries(submitForm).forEach(([k, v]) => {
+                if (k === 'isLiveLedger') {
+                    fd.append(k, !!v)
+                } else if (v !== undefined && v !== null && v !== '') {
+                    fd.append(k, v)
+                }
+            })
             if (file) fd.append('invitation', file)
             const res = event?._id ? await eventsAPI.update(event._id, fd) : await eventsAPI.create(fd)
             onSave(res.data)
@@ -97,6 +103,19 @@ function EventModal({ event, onClose, onSave }) {
                     <div className="form-group">
                         <label className="form-label">Invitation Card (optional)</label>
                         <input type="file" accept="image/*,.pdf" className="form-control" onChange={e => setFile(e.target.files[0])} />
+                    </div>
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                        <input 
+                            type="checkbox" 
+                            id="isLiveLedger"
+                            name="isLiveLedger"
+                            checked={!!form.isLiveLedger}
+                            onChange={e => setForm(f => ({ ...f, isLiveLedger: e.target.checked }))}
+                            style={{ width: 18, height: 18, cursor: 'pointer' }}
+                        />
+                        <label htmlFor="isLiveLedger" style={{ cursor: 'pointer', fontWeight: 500, fontSize: 14, margin: 0 }}>
+                            Available for Live Ledger
+                        </label>
                     </div>
                     {error && <div className="error-msg">{error}</div>}
                     <div className="flex gap-8 mt-8">
@@ -200,6 +219,19 @@ export default function Events() {
         setEditing(null)
     }
 
+    const toggleLiveLedger = async (e, eventItem) => {
+        e.stopPropagation();
+        try {
+            const fd = new FormData();
+            fd.append('isLiveLedger', !eventItem.isLiveLedger);
+            const res = await eventsAPI.update(eventItem._id, fd);
+            setEvents(prev => prev.map(evt => evt._id === eventItem._id ? res.data : evt));
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update live ledger status');
+        }
+    }
+
     const handlePrint = useReactToPrint({ content: () => printRef.current })
     const handleShare = () => navigator.share?.({ title: 'My Events - MOI VIBARAM', text: `I have ${events.length} events` })
 
@@ -238,6 +270,7 @@ export default function Events() {
                                 <th>{t('date')}</th>
                                 <th>{t('venue')}</th>
                                 <th>{t('location')}</th>
+                                <th>Live Ledger</th>
                                 <th className="no-print">Actions</th>
                             </tr>
                         </thead>
@@ -257,6 +290,15 @@ export default function Events() {
                                         <td>{new Date(e.date).toLocaleDateString('en-IN')}</td>
                                         <td>{e.venue || '—'}</td>
                                         <td>{[e.location, e.city].filter(Boolean).join(', ') || '—'}</td>
+                                        <td>
+                                            <button 
+                                                className={`btn btn-sm ${e.isLiveLedger ? 'btn-primary' : 'btn-secondary'}`}
+                                                onClick={(ev) => toggleLiveLedger(ev, e)}
+                                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, width: '100%', justifyContent: 'center' }}
+                                            >
+                                                {e.isLiveLedger ? 'Available' : 'Make Available'}
+                                            </button>
+                                        </td>
                                         <td className="no-print" onClick={(ev) => ev.stopPropagation()}>
                                             <div className="flex gap-8">
                                                 <button className="btn btn-secondary btn-sm" onClick={() => {
@@ -276,7 +318,7 @@ export default function Events() {
                                     </tr>
                                     {expandedEvent === e._id && (
                                         <tr>
-                                            <td colSpan={6} style={{ padding: 0 }}>
+                                            <td colSpan={7} style={{ padding: 0 }}>
                                                 <div style={{ background: 'var(--glass)', padding: 20, borderBottom: '1px solid var(--border)' }}>
                                                     <div style={{ fontWeight: 600, marginBottom: 12, fontSize: 15, color: 'var(--primary)' }}>
                                                         {e.eventName} — Event Details
@@ -406,6 +448,16 @@ export default function Events() {
                                     <div style={{ display: 'flex', gap: 12, marginTop: 12, fontSize: 13, color: 'var(--text-muted)' }}>
                                         {e.location && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📍 {e.location}</div>}
                                         {e.city && <div>{e.city}</div>}
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>Live Ledger Access</span>
+                                        <button 
+                                            className={`btn btn-sm ${e.isLiveLedger ? 'btn-primary' : 'btn-secondary'}`}
+                                            onClick={(ev) => toggleLiveLedger(ev, e)}
+                                            style={{ padding: '4px 8px', fontSize: 12 }}
+                                        >
+                                            {e.isLiveLedger ? 'Available' : 'Make Available'}
+                                        </button>
                                     </div>
                                     <div style={{ display: 'flex', gap: 8, marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
                                         <button className="btn btn-secondary btn-sm w-full" onClick={() => { setEditing(e); setShowModal(true) }} style={{ justifyContent: 'center' }}><Edit2 size={14} style={{ marginRight: 6 }} /> Edit</button>

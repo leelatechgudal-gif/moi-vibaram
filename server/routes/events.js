@@ -28,14 +28,19 @@ const upload = multer({
 // GET /api/events - My events list
 router.get('/', auth, async (req, res) => {
     try {
-        const { page, limit } = req.query;
+        const { page, limit, isLiveLedger } = req.query;
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit) || 20;
 
+        const filter = { userId: req.userId };
+        if (isLiveLedger !== undefined) {
+            filter.isLiveLedger = isLiveLedger === 'true' || isLiveLedger === true;
+        }
+
         if (pageNum) {
             const skip = (pageNum - 1) * limitNum;
-            const total = await Event.countDocuments({ userId: req.userId });
-            const events = await Event.find({ userId: req.userId }).sort({ date: -1 }).skip(skip).limit(limitNum);
+            const total = await Event.countDocuments(filter);
+            const events = await Event.find(filter).sort({ date: -1 }).skip(skip).limit(limitNum);
             res.json({
                 data: events,
                 total,
@@ -44,7 +49,7 @@ router.get('/', auth, async (req, res) => {
                 hasMore: pageNum * limitNum < total
             });
         } else {
-            const events = await Event.find({ userId: req.userId }).sort({ date: -1 });
+            const events = await Event.find(filter).sort({ date: -1 });
             res.json(events);
         }
     } catch (err) {
@@ -126,7 +131,7 @@ router.get('/upcoming', auth, async (req, res) => {
 // POST /api/events - Create event
 router.post('/', auth, upload.single('invitation'), async (req, res) => {
     try {
-        const { eventName, date, venue, location, city } = req.body;
+        const { eventName, date, venue, location, city, isLiveLedger } = req.body;
         const event = new Event({
             userId: req.userId,
             eventName,
@@ -134,6 +139,7 @@ router.post('/', auth, upload.single('invitation'), async (req, res) => {
             venue,
             location,
             city,
+            isLiveLedger: isLiveLedger === 'true' || isLiveLedger === true,
             invitationFile: req.file ? `/uploads/${req.file.filename}` : undefined,
         });
         await event.save();
@@ -150,8 +156,15 @@ router.put('/:id', auth, upload.single('invitation'), async (req, res) => {
         const event = await Event.findOne({ _id: req.params.id, userId: req.userId });
         if (!event) return res.status(404).json({ message: 'Event not found' });
 
-        const { eventName, date, venue, location, city } = req.body;
-        Object.assign(event, { eventName, date, venue, location, city });
+        const { eventName, date, venue, location, city, isLiveLedger } = req.body;
+        if (eventName !== undefined) event.eventName = eventName;
+        if (date !== undefined) event.date = date;
+        if (venue !== undefined) event.venue = venue;
+        if (location !== undefined) event.location = location;
+        if (city !== undefined) event.city = city;
+        if (isLiveLedger !== undefined) {
+            event.isLiveLedger = isLiveLedger === 'true' || isLiveLedger === true;
+        }
         if (req.file) event.invitationFile = `/uploads/${req.file.filename}`;
         await event.save();
         res.json(event);

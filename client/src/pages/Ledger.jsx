@@ -18,7 +18,8 @@ import {
     CalendarPlus,
     ArrowLeft,
     Coins,
-    Gift
+    Gift,
+    Search
 } from 'lucide-react';
 
 export default function Ledger() {
@@ -30,9 +31,6 @@ export default function Ledger() {
     const [events, setEvents] = useState([]);
     const [selectedEventId, setSelectedEventId] = useState('');
     const [selectedEventDate, setSelectedEventDate] = useState(new Date().toISOString().slice(0, 10));
-    const [type, setType] = useState('received'); // 'received' or 'paid'
-    const [paidEventName, setPaidEventName] = useState('');
-    const [paidEventDate, setPaidEventDate] = useState(new Date().toISOString().slice(0, 10));
 
     // Autocomplete Cache
     const [partiesList, setPartiesList] = useState([]);
@@ -43,6 +41,7 @@ export default function Ledger() {
     const [rows, setRows] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [filterNameQuery, setFilterNameQuery] = useState('');
 
     // Event Modal
     const [showEventModal, setShowEventModal] = useState(false);
@@ -80,14 +79,12 @@ export default function Ledger() {
 
     // Load transactions on filter changes
     useEffect(() => {
-        if (type === 'received' && selectedEventId) {
-            loadTransactions();
-        } else if (type === 'paid') {
+        if (selectedEventId) {
             loadTransactions();
         } else {
             setRows([]);
         }
-    }, [selectedEventId, type]);
+    }, [selectedEventId]);
 
     // Setup outside click listener for autocomplete lists
     useEffect(() => {
@@ -102,7 +99,7 @@ export default function Ledger() {
 
     const loadEvents = async () => {
         try {
-            const res = await eventsAPI.getAll();
+            const res = await eventsAPI.getAll({ params: { isLiveLedger: true } });
             setEvents(res.data);
             if (res.data.length > 0) {
                 const firstEvent = res.data[0];
@@ -129,15 +126,12 @@ export default function Ledger() {
         setLoading(true);
         setError('');
         try {
-            const params = { type };
-            if (type === 'received') {
-                if (!selectedEventId) {
-                    setRows([]);
-                    setLoading(false);
-                    return;
-                }
-                params.eventId = selectedEventId;
+            if (!selectedEventId) {
+                setRows([]);
+                setLoading(false);
+                return;
             }
+            const params = { type: 'received', eventId: selectedEventId };
             const res = await transactionsAPI.getAll(params);
             const data = res.data.data || res.data || [];
             
@@ -174,7 +168,6 @@ export default function Ledger() {
 
     const handleAddRow = () => {
         setRows(prev => [
-            ...prev,
             {
                 tempId: Date.now() + Math.random(),
                 initial: '',
@@ -187,7 +180,8 @@ export default function Ledger() {
                 partyId: null,
                 isEditing: true,
                 isSaving: false
-            }
+            },
+            ...prev
         ]);
     };
 
@@ -242,12 +236,8 @@ export default function Ledger() {
             alert('Amount must be greater than 0');
             return;
         }
-        if (type === 'received' && !selectedEventId) {
+        if (!selectedEventId) {
             alert('Please select or create an event');
-            return;
-        }
-        if (type === 'paid' && !paidEventName.trim()) {
-            alert('Event Name is required for Paid transactions');
             return;
         }
 
@@ -256,8 +246,8 @@ export default function Ledger() {
 
         try {
             const payload = {
-                type,
-                date: type === 'received' ? selectedEventDate : paidEventDate,
+                type: 'received',
+                date: selectedEventDate,
                 initial: row.initial.trim(),
                 partyName: row.partyName.trim(),
                 spouseName: row.spouseName.trim(),
@@ -265,14 +255,9 @@ export default function Ledger() {
                 location: row.location.trim(),
                 cashAmount: parseFloat(row.cashAmount),
                 remarks: row.remarks.trim(),
-                partyId: row.partyId
+                partyId: row.partyId,
+                eventId: selectedEventId
             };
-
-            if (type === 'received') {
-                payload.eventId = selectedEventId;
-            } else {
-                payload.eventName = paidEventName.trim();
-            }
 
             let savedTx;
             if (row._id) {
@@ -347,14 +332,12 @@ export default function Ledger() {
 
     const handleTriggerPrint = (row) => {
         // Resolve event information for receipt
-        const resolvedEvent = type === 'received'
-            ? events.find(e => e._id === selectedEventId)
-            : { eventName: paidEventName };
+        const resolvedEvent = events.find(e => e._id === selectedEventId);
 
         setPrintData({
             ...row,
             eventId: resolvedEvent,
-            type
+            type: 'received'
         });
     };
 
@@ -366,6 +349,7 @@ export default function Ledger() {
             fd.append('eventName', eventFormData.eventName.trim());
             fd.append('date', eventFormData.date);
             fd.append('location', eventFormData.location.trim());
+            fd.append('isLiveLedger', true);
 
             const res = await eventsAPI.create(fd);
             const newEv = res.data;
@@ -391,14 +375,17 @@ export default function Ledger() {
     // Auto-filter parties
     const filteredParties = searchQuery.trim()
         ? partiesList.filter(p =>
-            p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.mobile?.includes(searchQuery) ||
-            p.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.spouseName?.toLowerCase().includes(searchQuery.toLowerCase())
+            p.name?.toLowerCase().includes(searchQuery.toLowerCase())
         )
         : [];
 
-    const totalAmount = rows.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0);
+    const filteredRows = rows.filter(r => 
+        r.isEditing ||
+        !filterNameQuery.trim() ||
+        r.partyName?.toLowerCase().includes(filterNameQuery.trim().toLowerCase())
+    );
+
+    const totalAmount = filteredRows.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0);
 
     return (
         <div className="container">
@@ -412,9 +399,19 @@ export default function Ledger() {
                     margin-top: 16px;
                     box-shadow: var(--shadow);
                 }
+                .ledger-table-wrap {
+                    max-height: calc(100vh - 360px);
+                    min-height: 250px;
+                    overflow-y: auto;
+                    overflow-x: auto;
+                    border: 1px solid var(--border);
+                    border-radius: var(--radius-sm);
+                    position: relative;
+                }
                 .ledger-table {
                     width: 100%;
-                    border-collapse: collapse;
+                    border-collapse: separate;
+                    border-spacing: 0;
                     font-size: 13px;
                 }
                 .ledger-table th {
@@ -422,18 +419,29 @@ export default function Ledger() {
                     font-weight: 600;
                     color: var(--text-muted);
                     text-transform: uppercase;
-                    background: var(--glass);
+                    background: var(--bg-card);
+                    border-top: 1px solid var(--border);
                     border-bottom: 2px solid var(--border);
                     border-right: 1px solid var(--border);
                     white-space: nowrap;
                     font-size: 11px;
+                    position: sticky;
+                    top: 0;
+                    z-index: 10;
+                }
+                .ledger-table th:first-child {
+                    border-left: 1px solid var(--border);
                 }
                 .ledger-table td {
                     padding: 0;
-                    border: 1px solid var(--border);
+                    border-bottom: 1px solid var(--border);
+                    border-right: 1px solid var(--border);
                     height: 42px;
                     vertical-align: middle;
                     position: relative;
+                }
+                .ledger-table td:first-child {
+                    border-left: 1px solid var(--border);
                 }
                 .ledger-input {
                     width: 100%;
@@ -551,71 +559,42 @@ export default function Ledger() {
 
             {/* Filter controls */}
             <div className="card no-print" style={{ marginBottom: 16 }}>
-                <div className="form-grid">
+                <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                     <div className="form-group">
-                        <label className="form-label">{t('type')}</label>
-                        <select 
-                            className="form-control"
-                            value={type} 
-                            onChange={(e) => setType(e.target.value)}
-                        >
-                            <option value="received">{t('received')} (They gave me)</option>
-                            <option value="paid">{t('paid')} (I gave them)</option>
-                        </select>
-                    </div>
-
-                    {type === 'received' ? (
-                        <div className="form-group">
-                            <label className="form-label">{t('eventName')}</label>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <select 
-                                    className="form-control"
-                                    value={selectedEventId}
-                                    onChange={handleEventChange}
-                                    style={{ flex: 1 }}
-                                >
-                                    <option value="">Select event...</option>
-                                    {events.map(ev => (
-                                        <option key={ev._id} value={ev._id}>
-                                            {ev.eventName} — {new Date(ev.date).toLocaleDateString('en-IN')}
-                                        </option>
-                                    ))}
-                                </select>
-                                <button 
-                                    className="btn btn-secondary"
-                                    onClick={() => setShowEventModal(true)}
-                                    title="Add New Event"
-                                    style={{ padding: '8px 12px' }}
-                                >
-                                    <Plus size={18} />
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="form-group">
-                            <label className="form-label">{t('eventName')} *</label>
-                            <input 
+                        <label className="form-label">{t('eventName')}</label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <select 
                                 className="form-control"
-                                value={paidEventName}
-                                onChange={(e) => setPaidEventName(e.target.value)}
-                                placeholder="Kumar's Wedding, etc."
-                            />
+                                value={selectedEventId}
+                                onChange={handleEventChange}
+                                style={{ flex: 1 }}
+                            >
+                                <option value="">Select event...</option>
+                                {events.map(ev => (
+                                    <option key={ev._id} value={ev._id}>
+                                        {ev.eventName} — {new Date(ev.date).toLocaleDateString('en-IN')}
+                                    </option>
+                                ))}
+                            </select>
+                            <button 
+                                className="btn btn-secondary"
+                                onClick={() => setShowEventModal(true)}
+                                title="Add New Event"
+                                style={{ padding: '8px 12px' }}
+                                type="button"
+                            >
+                                <Plus size={18} />
+                            </button>
                         </div>
-                    )}
+                    </div>
 
                     <div className="form-group">
                         <label className="form-label">{t('date')}</label>
                         <input 
                             type="date"
                             className="form-control"
-                            value={type === 'received' ? selectedEventDate : paidEventDate}
-                            onChange={(e) => {
-                                if (type === 'received') {
-                                    setSelectedEventDate(e.target.value);
-                                } else {
-                                    setPaidEventDate(e.target.value);
-                                }
-                            }}
+                            value={selectedEventDate}
+                            onChange={(e) => setSelectedEventDate(e.target.value)}
                             onClick={(e) => {
                                 e.stopPropagation();
                                 if (typeof e.target.showPicker === 'function') {
@@ -636,7 +615,7 @@ export default function Ledger() {
                     <div className="flex-center" style={{ padding: '40px 0' }}>
                         <span className="spinner" />
                     </div>
-                ) : type === 'received' && !selectedEventId ? (
+                ) : !selectedEventId ? (
                     <div className="empty-state">
                         <div className="empty-icon">📅</div>
                         <h3>Select an Event to Start</h3>
@@ -647,7 +626,24 @@ export default function Ledger() {
                     </div>
                 ) : (
                     <>
-                        <div className="table-wrap">
+                        <div className="no-print" style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', flex: 1, background: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '4px 10px' }}>
+                                <Search size={16} className="text-muted" style={{ marginRight: 8 }} />
+                                <input
+                                    value={filterNameQuery}
+                                    onChange={e => setFilterNameQuery(e.target.value)}
+                                    placeholder="Search entries by guest name..."
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', width: '100%', padding: '6px 0', fontSize: '13px' }}
+                                />
+                            </div>
+                            {filterNameQuery && (
+                                <button className="btn btn-secondary btn-sm" onClick={() => setFilterNameQuery('')} style={{ height: 36 }}>
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="ledger-table-wrap">
                             <table className="ledger-table">
                                 <thead>
                                     <tr>
@@ -663,11 +659,13 @@ export default function Ledger() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {rows.map((row, idx) => (
-                                        <tr key={row._id || row.tempId || idx}>
-                                            <td style={{ textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>
-                                                {idx + 1}
-                                            </td>
+                                    {filteredRows.map((row, filteredIdx) => {
+                                        const idx = rows.findIndex(r => (r._id && r._id === row._id) || (r.tempId && r.tempId === row.tempId));
+                                        return (
+                                            <tr key={row._id || row.tempId || filteredIdx}>
+                                                <td style={{ textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>
+                                                    {filteredIdx + 1}
+                                                </td>
                                             
                                             {/* Initial cell */}
                                             <td>
@@ -863,10 +861,11 @@ export default function Ledger() {
                                                     )}
                                                 </div>
                                             </td>
-                                        </tr>
-                                    ))}
+                                            </tr>
+                                        );
+                                    })}
                                     
-                                    {rows.length === 0 && (
+                                    {filteredRows.length === 0 && (
                                         <tr>
                                             <td colSpan={9} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                                                 {t('noData')}
@@ -883,7 +882,7 @@ export default function Ledger() {
                                 <Plus size={16} /> Add Row
                             </button>
                             <div className="ledger-total-bar">
-                                <span style={{ marginRight: 16, color: 'var(--text-muted)' }}>Total Count: {rows.length}</span>
+                                <span style={{ marginRight: 16, color: 'var(--text-muted)' }}>Total Count: {filteredRows.length}</span>
                                 <span>{t('total')}: ₹{totalAmount.toLocaleString('en-IN')}</span>
                             </div>
                         </div>
