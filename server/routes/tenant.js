@@ -11,7 +11,7 @@ router.get('/members', auth, async (req, res) => {
         const members = await User.find({ 
             tenantId: req.tenantId, 
             isDeleted: { $ne: true } 
-        }).select('name email mobile tenantRole createdAt').sort({ tenantRole: 1, name: 1 });
+        }).select('name email mobile tenantRole role isActive createdAt').sort({ tenantRole: 1, name: 1 });
 
         const currentUser = await User.findById(req.userId).select('tenantRole');
 
@@ -160,6 +160,145 @@ router.post('/transfer/:userId', auth, async (req, res) => {
     } catch (err) {
         console.error('[tenant transfer]', err);
         res.status(500).json({ message: 'Failed to transfer ownership.' });
+    }
+});
+
+const bcrypt = require('bcryptjs');
+const verifyPassword = require('../middleware/verifyPassword');
+
+// POST /api/tenant/users - Owner creates a user directly under their tenant
+router.post('/users', auth, async (req, res) => {
+    try {
+        const currentUser = await User.findById(req.userId);
+        if (currentUser.tenantRole !== 'owner') {
+            return res.status(403).json({ message: 'Only tenant owners can create users.' });
+        }
+
+        const { name, mobile, email, password, role } = req.body;
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Required fields missing (Name, Email, Password).' });
+        }
+
+        const existingEmail = await User.findOne({ email: email.toLowerCase(), isDeleted: { $ne: true } });
+        if (existingEmail) {
+            return res.status(409).json({ message: 'Email already registered.' });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 12);
+        
+        const newUser = new User({
+            name,
+            mobile,
+            email: email.toLowerCase(),
+            passwordHash,
+            tenantId: req.tenantId,
+            tenantRole: 'member',
+            role: role || 'clerk', 
+            isActive: true
+        });
+
+        await newUser.save();
+
+        res.status(201).json({
+            message: 'Tenant user created successfully.',
+            user: {
+                _id: newUser._id,
+                name: newUser.name,
+                email: newUser.email,
+                mobile: newUser.mobile,
+                role: newUser.role,
+                tenantRole: newUser.tenantRole,
+                isActive: newUser.isActive,
+                createdAt: newUser.createdAt
+            }
+        });
+    } catch (err) {
+        console.error('[tenant create user]', err);
+        res.status(500).json({ message: 'Failed to create tenant user.' });
+    }
+});
+
+// PUT /api/tenant/users/:userId - Owner updates a tenant user (including status, password)
+router.put('/users/:userId', auth, async (req, res) => {
+    try {
+        const currentUser = await User.findById(req.userId);
+        if (currentUser.tenantRole !== 'owner') {
+            return res.status(403).json({ message: 'Only tenant owners can update users.' });
+        }
+
+        const targetUser = await User.findOne({ _id: req.params.userId, tenantId: req.tenantId, isDeleted: { $ne: true } });
+        if (!targetUser) {
+            return res.status(404).json({ message: 'User not found in your tenant.' });
+        }
+
+        if (targetUser._id.toString() === req.userId) {
+            return res.status(400).json({ message: 'Use profile page to edit your own details.' });
+        }
+
+        const { name, mobile, email, password, role, isActive } = req.body;
+
+        if (email && email.toLowerCase() !== targetUser.email.toLowerCase()) {
+            const existingEmail = await User.findOne({ email: email.toLowerCase(), isDeleted: { $ne: true } });
+            if (existingEmail) {
+                return res.status(409).json({ message: 'Email already registered.' });
+            }
+            targetUser.email = email.toLowerCase();
+        }
+
+        if (name) targetUser.name = name;
+        if (mobile !== undefined) targetUser.mobile = mobile;
+        if (role) targetUser.role = role;
+        if (isActive !== undefined) targetUser.isActive = isActive;
+
+        if (password) {
+            targetUser.passwordHash = await bcrypt.hash(password, 12);
+        }
+
+        await targetUser.save();
+
+        res.json({
+            message: 'Tenant user updated successfully.',
+            user: {
+                _id: targetUser._id,
+                name: targetUser.name,
+                email: targetUser.email,
+                mobile: targetUser.mobile,
+                role: targetUser.role,
+                tenantRole: targetUser.tenantRole,
+                isActive: targetUser.isActive,
+                createdAt: targetUser.createdAt
+            }
+        });
+    } catch (err) {
+        console.error('[tenant update user]', err);
+        res.status(500).json({ message: 'Failed to update tenant user.' });
+    }
+});
+
+// DELETE /api/tenant/users/:userId - Owner deletes a tenant user
+router.delete('/users/:userId', auth, verifyPassword, async (req, res) => {
+    try {
+        const currentUser = await User.findById(req.userId);
+        if (currentUser.tenantRole !== 'owner') {
+            return res.status(403).json({ message: 'Only tenant owners can delete users.' });
+        }
+
+        if (req.params.userId === req.userId) {
+            return res.status(400).json({ message: 'You cannot delete yourself.' });
+        }
+
+        const targetUser = await User.findOne({ _id: req.params.userId, tenantId: req.tenantId });
+        if (!targetUser) {
+            return res.status(404).json({ message: 'User not found in your tenant.' });
+        }
+
+        targetUser.isDeleted = true;
+        await targetUser.save();
+
+        res.json({ message: 'Tenant user deleted successfully.' });
+    } catch (err) {
+        console.error('[tenant delete user]', err);
+        res.status(500).json({ message: 'Failed to delete tenant user.' });
     }
 });
 

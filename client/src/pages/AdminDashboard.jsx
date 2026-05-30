@@ -207,7 +207,7 @@ export default function AdminDashboard() {
                                     <td><strong>{u.name}</strong></td>
                                     <td>{u.mobile}</td>
                                     <td>{u.email}</td>
-                                    <td><span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-warning'}`}>{u.role}</span></td>
+                                    <td><span className={`badge ${u.role === 'admin' ? 'badge-primary' : u.role === 'clerk' ? 'badge-success' : 'badge-warning'}`}>{u.role}</span></td>
                                     <td style={{ fontWeight: 600, textAlign: 'center' }}>{u.transactionCount || 0}</td>
                                     <td style={{ fontWeight: 600, textAlign: 'center' }}>{u.partyCount || 0}</td>
                                     <td>{u.subscriptionExpiry ? new Date(u.subscriptionExpiry).toLocaleDateString() : '—'}</td>
@@ -273,7 +273,7 @@ export default function AdminDashboard() {
                                 <strong style={{ fontSize: 16, color: 'var(--text)' }}>{u.name}</strong>
                                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{u.email}</div>
                             </div>
-                            <span className={`badge ${u.role === 'admin' ? 'badge-primary' : 'badge-warning'}`}>{u.role}</span>
+                            <span className={`badge ${u.role === 'admin' ? 'badge-primary' : u.role === 'clerk' ? 'badge-success' : 'badge-warning'}`}>{u.role}</span>
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
                             {u.mobile && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📱 {u.mobile}</div>}
@@ -361,6 +361,7 @@ export default function AdminDashboard() {
                                 <label className="form-label">Role</label>
                                 <select className="form-control" name="role" value={formData.role} onChange={handleInputChange}>
                                     <option value="user">User</option>
+                                    <option value="clerk">Clerk</option>
                                     <option value="admin">Admin</option>
                                 </select>
                             </div>

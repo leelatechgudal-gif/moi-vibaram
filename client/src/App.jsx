@@ -22,10 +22,19 @@ import PersonDetail from './pages/PersonDetail'
 import PartiesManagement from './pages/PartiesManagement'
 import TenantManagement from './pages/TenantManagement'
 import ContactUs from './pages/ContactUs'
+import Ledger from './pages/Ledger'
 
 function Protected({ children }) {
     const { isAuthenticated } = useAuth()
     return isAuthenticated ? children : <Navigate to="/login" replace />
+}
+
+function ClerkRouteRestriction({ children, allowedRoles }) {
+    const { user } = useAuth()
+    if (user && allowedRoles && !allowedRoles.includes(user.role)) {
+        return <Navigate to="/" replace />
+    }
+    return children
 }
 
 function AppRoutes() {
@@ -57,21 +66,22 @@ function AppRoutes() {
                             <div className="main-content">
                                 <Routes>
                                     <Route path="/" element={<Dashboard />} />
-                                    <Route path="/events" element={<Events />} />
-                                    <Route path="/transactions/new" element={<CreateMoi />} />
-                                    <Route path="/transactions/edit/:id" element={<EditMoi />} />
-                                    <Route path="/upcoming" element={<UpcomingEvents />} />
-                                    <Route path="/balance-sheet" element={<BalanceSheet />} />
+                                    <Route path="/ledger" element={<Ledger />} />
+                                    <Route path="/events" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><Events /></ClerkRouteRestriction>} />
+                                    <Route path="/transactions/new" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><CreateMoi /></ClerkRouteRestriction>} />
+                                    <Route path="/transactions/edit/:id" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><EditMoi /></ClerkRouteRestriction>} />
+                                    <Route path="/upcoming" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><UpcomingEvents /></ClerkRouteRestriction>} />
+                                    <Route path="/balance-sheet" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><BalanceSheet /></ClerkRouteRestriction>} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/search" element={<Search />} />
                                     {user?.role === 'admin' && user?.isSuperAdmin && (
                                         <Route path="/admin" element={<AdminDashboard />} />
                                     )}
-                                    <Route path="/parties" element={<PartiesManagement />} />
-                                    <Route path="/bulk-upload" element={<BulkUpload />} />
-                                    <Route path="/person-detail" element={<PersonDetail />} />
-                                    <Route path="/contact-us" element={<ContactUs />} />
-                                    <Route path="/tenant" element={<TenantManagement />} />
+                                    <Route path="/parties" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><PartiesManagement /></ClerkRouteRestriction>} />
+                                    <Route path="/bulk-upload" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><BulkUpload /></ClerkRouteRestriction>} />
+                                    <Route path="/person-detail" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><PersonDetail /></ClerkRouteRestriction>} />
+                                    <Route path="/contact-us" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><ContactUs /></ClerkRouteRestriction>} />
+                                    <Route path="/tenant" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><TenantManagement /></ClerkRouteRestriction>} />
                                 </Routes>
                                 <Footer />
                             </div>

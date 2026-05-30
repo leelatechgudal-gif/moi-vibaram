@@ -9,6 +9,7 @@ import { remindersAPI } from '../api/api'
 
 function StatDrillDown({ type, onClose }) {
     const { t } = useTranslation()
+    const { user } = useAuth()
     const [sheet, setSheet] = useState([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
@@ -48,13 +49,15 @@ function StatDrillDown({ type, onClose }) {
                         {type === 'paid' ? 'Moi Invested (Paid)' : 'Moi Received'}
                     </h3>
                 </div>
-                <Link
-                    to="/transactions/new"
-                    state={{ type, fixedType: true }}
-                    className="btn btn-primary btn-sm"
-                >
-                    <Plus size={16} /> Create Moi ({type === 'paid' ? 'I paid' : 'I have received'})
-                </Link>
+                {user?.role !== 'clerk' && (
+                    <Link
+                        to="/transactions/new"
+                        state={{ type, fixedType: true }}
+                        className="btn btn-primary btn-sm"
+                    >
+                        <Plus size={16} /> Create Moi ({type === 'paid' ? 'I paid' : 'I have received'})
+                    </Link>
+                )}
             </div>
 
             <div className="mb-16">
@@ -107,17 +110,21 @@ function StatDrillDown({ type, onClose }) {
                                         <td>{p.location || '—'}</td>
                                         <td style={{ fontWeight: 600 }}>{fmt(type === 'paid' ? p.totalPaid : p.totalReceived)}</td>
                                         <td>
-                                            <Link 
-                                                to="/transactions/new" 
-                                                state={{ 
-                                                    type, 
-                                                    fixedType: true,
-                                                    party: p
-                                                }}
-                                                className="btn btn-secondary btn-sm"
-                                            >
-                                                <Plus size={12} style={{ marginRight: 4 }} /> Create Moi
-                                            </Link>
+                                            {user?.role !== 'clerk' ? (
+                                                <Link 
+                                                    to="/transactions/new" 
+                                                    state={{ 
+                                                        type, 
+                                                        fixedType: true,
+                                                        party: p
+                                                    }}
+                                                    className="btn btn-secondary btn-sm"
+                                                >
+                                                    <Plus size={12} style={{ marginRight: 4 }} /> Create Moi
+                                                </Link>
+                                            ) : (
+                                                <span className="text-muted">—</span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -154,18 +161,20 @@ function StatDrillDown({ type, onClose }) {
                                     {p.mobile && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📞 {p.mobile}</div>}
                                     {p.location && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>📍 {p.location}</div>}
                                 </div>
-                                <Link 
-                                    to="/transactions/new" 
-                                    state={{ 
-                                        type, 
-                                        fixedType: true,
-                                        party: p
-                                    }}
-                                    className="btn btn-secondary w-full"
-                                    style={{ justifyContent: 'center' }}
-                                >
-                                    <Plus size={16} style={{ marginRight: 6 }} /> Create Moi
-                                </Link>
+                                {user?.role !== 'clerk' && (
+                                    <Link 
+                                        to="/transactions/new" 
+                                        state={{ 
+                                            type, 
+                                            fixedType: true,
+                                            party: p
+                                        }}
+                                        className="btn btn-secondary w-full"
+                                        style={{ justifyContent: 'center' }}
+                                    >
+                                        <Plus size={16} style={{ marginRight: 6 }} /> Create Moi
+                                    </Link>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -372,7 +381,7 @@ export default function Dashboard() {
                             {!data?.events || data.events.length === 0 ? (
                                 <div className="empty-state">
                                     <div className="empty-icon" style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}><Inbox size={48} strokeWidth={1} /></div>
-                                    <div>No events found. <Link to="/transactions/new" className="auth-link">Create your first Moi</Link></div>
+                                    <div>No events found. {user?.role !== 'clerk' && <Link to="/transactions/new" className="auth-link">Create your first Moi</Link>}</div>
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

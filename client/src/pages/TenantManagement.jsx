@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { tenantAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
-import { Building2, UserPlus, UserMinus, LogOut, Crown, Users, Shield, ArrowRightLeft } from 'lucide-react'
+import { Building2, UserPlus, UserMinus, LogOut, Crown, Users, Shield, ArrowRightLeft, Edit2, Trash2, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
+import PasswordConfirmModal from '../components/PasswordConfirmModal'
 
 export default function TenantManagement() {
     const { user } = useAuth()
@@ -11,9 +12,22 @@ export default function TenantManagement() {
     const [tenantId, setTenantId] = useState('')
     const [loading, setLoading] = useState(true)
 
+    // Invite Modal State
     const [showInvite, setShowInvite] = useState(false)
     const [inviteEmail, setInviteEmail] = useState('')
     const [inviting, setInviting] = useState(false)
+
+    // Create / Edit Member Modal State
+    const [showCreateEditModal, setShowCreateEditModal] = useState(false)
+    const [modalMode, setModalMode] = useState('create')
+    const [formData, setFormData] = useState({
+        _id: '', name: '', email: '', mobile: '', password: '', role: 'clerk', isActive: true
+    })
+    const [actionLoading, setActionLoading] = useState(false)
+    const [error, setError] = useState('')
+
+    // Delete Modal State
+    const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: '' })
 
     useEffect(() => { fetchMembers() }, [])
 
@@ -81,6 +95,68 @@ export default function TenantManagement() {
         }
     }
 
+    const handleCreateClick = () => {
+        setModalMode('create')
+        setFormData({ _id: '', name: '', email: '', mobile: '', password: '', role: 'clerk', isActive: true })
+        setError('')
+        setShowCreateEditModal(true)
+    }
+
+    const handleEditClick = (member) => {
+        setModalMode('edit')
+        setFormData({
+            _id: member._id,
+            name: member.name || '',
+            email: member.email || '',
+            mobile: member.mobile || '',
+            password: '',
+            role: member.role || 'clerk',
+            isActive: member.isActive !== false
+        })
+        setError('')
+        setShowCreateEditModal(true)
+    }
+
+    const handleDeleteClick = (member) => {
+        setDeleteModal({ show: true, id: member._id, name: member.name })
+    }
+
+    const handleCreateEditSubmit = async (e) => {
+        e.preventDefault()
+        setActionLoading(true)
+        setError('')
+        try {
+            if (modalMode === 'create') {
+                await tenantAPI.createUser(formData)
+                toast.success('Member created successfully')
+            } else {
+                await tenantAPI.updateUser(formData._id, formData)
+                toast.success('Member updated successfully')
+            }
+            setShowCreateEditModal(false)
+            fetchMembers()
+        } catch (err) {
+            setError(err.response?.data?.message || 'Operation failed')
+            toast.error(err.response?.data?.message || 'Operation failed')
+        } finally {
+            setActionLoading(false)
+        }
+    }
+
+    const confirmDelete = async (password) => {
+        setActionLoading(true)
+        try {
+            await tenantAPI.deleteUser(deleteModal.id, password)
+            toast.success('Member deleted successfully')
+            setDeleteModal({ show: false, id: null, name: '' })
+            fetchMembers()
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete member')
+        } finally {
+            setActionLoading(false)
+        }
+    }
+
     return (
         <div>
             <div className="page-header" style={{ flexWrap: 'wrap', gap: 16 }}>
@@ -92,8 +168,11 @@ export default function TenantManagement() {
                 </div>
                 {myRole === 'owner' && (
                     <div className="flex gap-8 no-print" style={{ marginLeft: 'auto' }}>
-                        <button className="btn btn-primary" onClick={() => setShowInvite(true)}>
-                            <UserPlus size={16} style={{ marginRight: 4 }} /> Invite Member
+                        <button className="btn btn-secondary" onClick={handleCreateClick} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <UserPlus size={16} /> Create Member
+                        </button>
+                        <button className="btn btn-primary" onClick={() => setShowInvite(true)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <UserPlus size={16} /> Invite Member
                         </button>
                     </div>
                 )}
@@ -140,7 +219,9 @@ export default function TenantManagement() {
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Mobile</th>
-                                    <th>Role</th>
+                                    <th>Tenant Role</th>
+                                    <th>App Role</th>
+                                    <th>Status</th>
                                     {myRole === 'owner' && <th style={{ textAlign: 'center' }}>Actions</th>}
                                 </tr>
                             </thead>
@@ -160,10 +241,27 @@ export default function TenantManagement() {
                                                     {m.tenantRole === 'owner' ? <><Crown size={12} /> Owner</> : <><Users size={12} /> Member</>}
                                                 </span>
                                             </td>
+                                            <td>
+                                                <span className={`badge ${m.role === 'admin' ? 'badge-primary' : m.role === 'clerk' ? 'badge-success' : 'badge-warning'}`}>
+                                                    {m.role || 'user'}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`badge ${m.isActive !== false ? 'badge-success' : 'badge-danger'}`}>
+                                                    {m.isActive !== false ? 'Active' : 'Inactive'}
+                                                </span>
+                                            </td>
                                             {myRole === 'owner' && (
                                                 <td style={{ textAlign: 'center' }}>
                                                     {!isMe && m.tenantRole !== 'owner' && (
                                                         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                                                            <button
+                                                                className="btn btn-secondary btn-sm"
+                                                                onClick={() => handleEditClick(m)}
+                                                                title="Edit Member"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
                                                             <button
                                                                 className="btn btn-secondary btn-sm"
                                                                 onClick={() => handleTransfer(m._id, m.name)}
@@ -176,7 +274,14 @@ export default function TenantManagement() {
                                                                 onClick={() => handleRemove(m._id, m.name)}
                                                                 title="Remove Member"
                                                             >
-                                                                <UserMinus size={14} color="var(--danger)" />
+                                                                <UserMinus size={14} color="var(--warning)" />
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-danger btn-sm"
+                                                                onClick={() => handleDeleteClick(m)}
+                                                                title="Delete User completely"
+                                                            >
+                                                                <Trash2 size={14} />
                                                             </button>
                                                         </div>
                                                     )}
@@ -200,27 +305,53 @@ export default function TenantManagement() {
                                             {isMe && <span style={{ fontSize: 11, color: 'var(--primary)', marginLeft: 6 }}>(You)</span>}
                                             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{m.email}</div>
                                         </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                                         <span className={`badge ${m.tenantRole === 'owner' ? 'badge-warning' : 'badge-primary'}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                             {m.tenantRole === 'owner' ? <><Crown size={12} /> Owner</> : <><Users size={12} /> Member</>}
+                                        </span>
+                                        <span className={`badge ${m.role === 'admin' ? 'badge-primary' : m.role === 'clerk' ? 'badge-success' : 'badge-warning'}`}>
+                                            Role: {m.role || 'user'}
+                                        </span>
+                                        <span className={`badge ${m.isActive !== false ? 'badge-success' : 'badge-danger'}`}>
+                                            {m.isActive !== false ? 'Active' : 'Inactive'}
                                         </span>
                                     </div>
                                     {m.mobile && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>📱 {m.mobile}</div>}
                                     {myRole === 'owner' && !isMe && m.tenantRole !== 'owner' && (
-                                        <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                                            <button
-                                                className="btn btn-secondary btn-sm w-full"
-                                                onClick={() => handleTransfer(m._id, m.name)}
-                                                style={{ justifyContent: 'center' }}
-                                            >
-                                                <ArrowRightLeft size={14} style={{ marginRight: 6 }} /> Transfer
-                                            </button>
-                                            <button
-                                                className="btn btn-danger btn-sm w-full"
-                                                onClick={() => handleRemove(m._id, m.name)}
-                                                style={{ justifyContent: 'center' }}
-                                            >
-                                                <UserMinus size={14} style={{ marginRight: 6 }} /> Remove
-                                            </button>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                <button
+                                                    className="btn btn-secondary btn-sm w-full"
+                                                    onClick={() => handleEditClick(m)}
+                                                    style={{ justifyContent: 'center' }}
+                                                >
+                                                    <Edit2 size={14} style={{ marginRight: 6 }} /> Edit
+                                                </button>
+                                                <button
+                                                    className="btn btn-danger btn-sm w-full"
+                                                    onClick={() => handleDeleteClick(m)}
+                                                    style={{ justifyContent: 'center' }}
+                                                >
+                                                    <Trash2 size={14} style={{ marginRight: 6 }} /> Delete
+                                                </button>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                <button
+                                                    className="btn btn-secondary btn-sm w-full"
+                                                    onClick={() => handleTransfer(m._id, m.name)}
+                                                    style={{ justifyContent: 'center' }}
+                                                >
+                                                    <ArrowRightLeft size={14} style={{ marginRight: 6 }} /> Transfer
+                                                </button>
+                                                <button
+                                                    className="btn btn-danger btn-sm w-full"
+                                                    onClick={() => handleRemove(m._id, m.name)}
+                                                    style={{ justifyContent: 'center' }}
+                                                >
+                                                    <UserMinus size={14} style={{ marginRight: 6 }} /> Remove
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -275,6 +406,110 @@ export default function TenantManagement() {
                     </div>
                 </div>
             )}
+
+            {/* Create / Edit Modal */}
+            {showCreateEditModal && (
+                <div className="modal-overlay" onClick={() => setShowCreateEditModal(false)}>
+                    <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 450, width: '100%' }}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">{modalMode === 'create' ? 'Create Tenant User' : 'Edit Tenant User'}</h2>
+                            <button className="modal-close" onClick={() => setShowCreateEditModal(false)}>&times;</button>
+                        </div>
+                        <form onSubmit={handleCreateEditSubmit} className="form-grid" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div className="form-group">
+                                <label className="form-label">Name *</label>
+                                <input
+                                    className="form-control"
+                                    required
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Email *</label>
+                                <input
+                                    type="email"
+                                    className="form-control"
+                                    required
+                                    value={formData.email}
+                                    onChange={e => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Mobile</label>
+                                <input
+                                    className="form-control"
+                                    value={formData.mobile}
+                                    onChange={e => setFormData({ ...formData, mobile: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">
+                                    Password {modalMode === 'edit' && '(leave blank to keep current)'} {modalMode === 'create' && '*'}
+                                </label>
+                                <input
+                                    type="password"
+                                    className="form-control"
+                                    required={modalMode === 'create'}
+                                    minLength={8}
+                                    value={formData.password}
+                                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Role</label>
+                                <select
+                                    className="form-control"
+                                    value={formData.role}
+                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                >
+                                    <option value="clerk">Clerk (Dashboard & Ledger search only)</option>
+                                    <option value="user">User (Full Access)</option>
+                                </select>
+                            </div>
+                            {modalMode === 'edit' && (
+                                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                                    <input
+                                        type="checkbox"
+                                        id="user-isActive"
+                                        checked={formData.isActive}
+                                        onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
+                                    />
+                                    <label htmlFor="user-isActive" className="form-label" style={{ margin: 0, cursor: 'pointer' }}>
+                                        Active Account
+                                    </label>
+                                </div>
+                            )}
+
+                            {error && <div className="error-msg" style={{ marginTop: 10 }}>{error}</div>}
+
+                            <div className="flex gap-16" style={{ marginTop: 24 }}>
+                                <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowCreateEditModal(false)}>Cancel</button>
+                                <button type="submit" className="btn btn-primary flex-1" disabled={actionLoading}>
+                                    {actionLoading ? <span className="spinner" /> : <><Save size={16} style={{ marginRight: 6 }} /> Save Member</>}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Password Confirm Modal for Delete */}
+            <PasswordConfirmModal
+                show={deleteModal.show}
+                title="Confirm Deactivation"
+                message={
+                    <>
+                        <p>Are you sure you want to delete tenant member <strong>{deleteModal.name}</strong>?</p>
+                        <p style={{ marginTop: 12, padding: 12, background: 'rgba(231, 76, 60, 0.1)', borderLeft: '4px solid var(--danger)', fontSize: 14 }}>
+                            This will completely disable this user account and delete it from your workspace.
+                        </p>
+                    </>
+                }
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteModal({ show: false, id: null, name: '' })}
+                loading={actionLoading}
+            />
         </div>
     )
 }

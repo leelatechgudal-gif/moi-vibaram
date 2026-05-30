@@ -28,7 +28,10 @@ export default function Login() {
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
 
-    const [lang, setLang] = useState(i18n.language || 'ta')
+    const [lang, setLang] = useState(() => {
+        const current = i18n.language || localStorage.getItem('i18nextLng') || 'ta';
+        return current.startsWith('en') ? 'en' : 'ta';
+    })
     const [dark, setDark] = useState(() => {
         const saved = localStorage.getItem('mv_theme')
         if (saved) return saved === 'dark'

@@ -39,16 +39,19 @@ export function AuthProvider({ children }) {
         setToken(authToken);
         setUser(userData);
         
-        // Load theme from user preference
-        if (userData.themePreference) {
-            let isDark = false;
-            if (userData.themePreference === 'dark') isDark = true;
-            else if (userData.themePreference === 'light') isDark = false;
-            else if (userData.themePreference === 'system') {
-                isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            }
-            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-            localStorage.setItem('mv_theme', isDark ? 'dark' : 'light');
+        // Respect the theme that is currently selected/active on the login screen
+        const activeTheme = localStorage.getItem('mv_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', activeTheme);
+        
+        // If the server-side preference is different from the active theme, sync it to the server
+        if (userData.themePreference && userData.themePreference !== activeTheme) {
+            import('../api/api').then(({ usersAPI }) => {
+                usersAPI.updateThemePreference({ themePreference: activeTheme }).then(() => {
+                    const updatedUser = { ...userData, themePreference: activeTheme };
+                    localStorage.setItem('mv_user', JSON.stringify(updatedUser));
+                    setUser(updatedUser);
+                }).catch(err => console.error('Failed to sync theme preference on login', err));
+            });
         }
     };
 

@@ -164,6 +164,9 @@ export const tenantAPI = {
     remove: userId => api.post(`/tenant/remove/${userId}`),
     leave: () => api.post('/tenant/leave'),
     transfer: userId => api.post(`/tenant/transfer/${userId}`),
+    createUser: data => api.post('/tenant/users', data),
+    updateUser: (userId, data) => api.put(`/tenant/users/${userId}`, data),
+    deleteUser: (userId, password) => api.delete(`/tenant/users/${userId}`, { data: { password } }),
 };
 
 export default api;

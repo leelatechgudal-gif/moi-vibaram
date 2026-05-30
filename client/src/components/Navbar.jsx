@@ -29,6 +29,7 @@ import {
 
 const navItems = [
     { icon: <LayoutDashboard size={18} />, key: 'dashboard', path: '/' },
+    { icon: <BookMarked size={18} />, key: 'ledger', path: '/ledger' },
     { icon: <Tent size={18} />, key: 'myEvents', path: '/events' },
     // { icon: <PlusCircle size={18} />, key: 'createMoi', path: '/transactions/new' },
     { icon: <CalendarClock size={18} />, key: 'upcomingEvents', path: '/upcoming' },
@@ -44,7 +45,10 @@ export default function Navbar() {
     const { user, logout, updateUser } = useAuth()
     const navigate = useNavigate()
     const [open, setOpen] = useState(false)
-    const [lang, setLang] = useState(i18n.language || 'ta')
+    const [lang, setLang] = useState(() => {
+        const current = i18n.language || localStorage.getItem('i18nextLng') || 'ta';
+        return current.startsWith('en') ? 'en' : 'ta';
+    })
     const [dark, setDark] = useState(() => {
         const saved = localStorage.getItem('mv_theme')
         if (saved) return saved === 'dark'
@@ -87,6 +91,7 @@ export default function Navbar() {
     const toggleLang = () => {
         const next = lang === 'en' ? 'ta' : 'en'
         i18n.changeLanguage(next)
+        localStorage.setItem('i18nextLng', next)
         setLang(next)
     }
 
@@ -102,7 +107,12 @@ export default function Navbar() {
                 <div className="brand-tag">{t('tagline')}</div>
             </div>
             <nav className="sidebar-nav">
-                {navItems.map(item => (
+                {navItems.filter(item => {
+                    if (user?.role === 'clerk') {
+                        return item.key === 'dashboard' || item.key === 'ledger' || item.key === 'profile';
+                    }
+                    return true;
+                }).map(item => (
                     <NavLink
                         key={item.key}
                         to={item.path}
@@ -114,12 +124,16 @@ export default function Navbar() {
                         {t(item.key)}
                     </NavLink>
                 ))}
-                <NavLink to="/parties" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> {t('partyManagement')}
-                </NavLink>
-                <NavLink to="/tenant" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
-                    <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={18} /></span> {t('familyMembers')}
-                </NavLink>
+                {user?.role !== 'clerk' && (
+                    <>
+                        <NavLink to="/parties" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
+                            <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Users size={18} /></span> {t('partyManagement')}
+                        </NavLink>
+                        <NavLink to="/tenant" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
+                            <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={18} /></span> {t('familyMembers')}
+                        </NavLink>
+                    </>
+                )}
                 {user?.role === 'admin' && user?.isSuperAdmin && (
                     <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} onClick={() => setOpen(false)}>
                         <span className="nav-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ShieldCheck size={18} /></span> {t('appUsers')}

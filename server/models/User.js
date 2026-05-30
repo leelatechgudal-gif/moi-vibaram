@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     location: String,
     street: String,
-    role: { type: String, enum: ["admin", "user"], default: "user" },
+    role: { type: String, enum: ["admin", "user", "clerk"], default: "user" },
     subscriptionExpiry: { type: Date },
     activeSessions: [{ type: String }],
     profilePhoto: String,
@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
     otpExpiry: Date,
     themePreference: { type: String, enum: ["light", "dark", "system"], default: "dark" },
     isDeleted: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
     webAuthnCredentials: [
       {
         credentialID: Buffer,

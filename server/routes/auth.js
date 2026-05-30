@@ -61,6 +61,11 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
+        if (user.isActive === false) {
+            logger.warn('[login] Login blocked — account deactivated', { email, ip: req.ip });
+            return res.status(403).json({ message: 'Your account has been deactivated. Please contact your tenant owner.' });
+        }
+
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {
             logger.warn('[login] Invalid credentials — wrong password', { email, ip: req.ip });
