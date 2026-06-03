@@ -5,7 +5,7 @@ module.exports = async (req, res, next) => {
     try {
         const { password } = req.body;
         if (!password) {
-            return res.status(400).json({ message: 'Password is required to confirm deletion.' });
+            return res.status(400).json({ message: 'Password is required to confirm action.' });
         }
         
         const user = await User.findById(req.userId);
@@ -15,7 +15,7 @@ module.exports = async (req, res, next) => {
         
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {
-            return res.status(401).json({ message: 'Invalid password. Deletion canceled.' });
+            return res.status(401).json({ message: 'Invalid password. Action canceled.' });
         }
         
         next();

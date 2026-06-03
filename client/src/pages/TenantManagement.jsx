@@ -29,6 +29,9 @@ export default function TenantManagement() {
     // Delete Modal State
     const [deleteModal, setDeleteModal] = useState({ show: false, id: null, name: '' })
 
+    // Transfer Modal State
+    const [transferModal, setTransferModal] = useState({ show: false, id: null, name: '' })
+
     useEffect(() => { fetchMembers() }, [])
 
     const fetchMembers = async () => {
@@ -84,14 +87,21 @@ export default function TenantManagement() {
         }
     }
 
-    const handleTransfer = async (memberId, memberName) => {
-        if (!window.confirm(`Transfer ownership to ${memberName}? You will become a regular member.`)) return
+    const handleTransfer = (memberId, memberName) => {
+        setTransferModal({ show: true, id: memberId, name: memberName })
+    }
+
+    const confirmTransfer = async (password) => {
+        setActionLoading(true)
         try {
-            const res = await tenantAPI.transfer(memberId)
+            const res = await tenantAPI.transfer(transferModal.id, password)
             toast.success(res.data.message)
+            setTransferModal({ show: false, id: null, name: '' })
             fetchMembers()
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to transfer ownership')
+        } finally {
+            setActionLoading(false)
         }
     }
 
@@ -171,9 +181,6 @@ export default function TenantManagement() {
                         <button className="btn btn-secondary" onClick={handleCreateClick} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <UserPlus size={16} /> Create Member
                         </button>
-                        <button className="btn btn-primary" onClick={() => setShowInvite(true)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <UserPlus size={16} /> Invite Member
-                        </button>
                     </div>
                 )}
             </div>
@@ -243,7 +250,7 @@ export default function TenantManagement() {
                                             </td>
                                             <td>
                                                 <span className={`badge ${m.role === 'admin' ? 'badge-primary' : m.role === 'clerk' ? 'badge-success' : 'badge-warning'}`}>
-                                                    {m.role || 'user'}
+                                                    {m.role || 'member'}
                                                 </span>
                                             </td>
                                             <td>
@@ -311,7 +318,7 @@ export default function TenantManagement() {
                                             {m.tenantRole === 'owner' ? <><Crown size={12} /> Owner</> : <><Users size={12} /> Member</>}
                                         </span>
                                         <span className={`badge ${m.role === 'admin' ? 'badge-primary' : m.role === 'clerk' ? 'badge-success' : 'badge-warning'}`}>
-                                            Role: {m.role || 'user'}
+                                            Role: {m.role || 'member'}
                                         </span>
                                         <span className={`badge ${m.isActive !== false ? 'badge-success' : 'badge-danger'}`}>
                                             {m.isActive !== false ? 'Active' : 'Inactive'}
@@ -436,9 +443,10 @@ export default function TenantManagement() {
                                 />
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Mobile</label>
+                                <label className="form-label">Mobile *</label>
                                 <input
                                     className="form-control"
+                                    required
                                     value={formData.mobile}
                                     onChange={e => setFormData({ ...formData, mobile: e.target.value })}
                                 />
@@ -464,7 +472,8 @@ export default function TenantManagement() {
                                     onChange={e => setFormData({ ...formData, role: e.target.value })}
                                 >
                                     <option value="clerk">Clerk (Dashboard & Ledger search only)</option>
-                                    <option value="user">User (Full Access)</option>
+                                    <option value="member">Member (Full Access)</option>
+                                    <option value="admin">Admin (Full Access + Manage Members)</option>
                                 </select>
                             </div>
                             {modalMode === 'edit' && (
@@ -508,6 +517,22 @@ export default function TenantManagement() {
                 }
                 onConfirm={confirmDelete}
                 onCancel={() => setDeleteModal({ show: false, id: null, name: '' })}
+                loading={actionLoading}
+            />
+
+            <PasswordConfirmModal
+                show={transferModal.show}
+                title="Confirm Ownership Transfer"
+                message={
+                    <>
+                        <p>Are you sure you want to transfer ownership to <strong>{transferModal.name}</strong>?</p>
+                        <p style={{ marginTop: 12, padding: 12, background: 'rgba(230, 126, 34, 0.1)', borderLeft: '4px solid var(--warning)', fontSize: 14 }}>
+                            <strong>Warning:</strong> You will become a regular member and lose owner permissions.
+                        </p>
+                    </>
+                }
+                onConfirm={confirmTransfer}
+                onCancel={() => setTransferModal({ show: false, id: null, name: '' })}
                 loading={actionLoading}
             />
         </div>

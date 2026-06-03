@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { transactionsAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { useReactToPrint } from 'react-to-print'
@@ -187,6 +187,10 @@ function StatDrillDown({ type, onClose }) {
 export default function Dashboard() {
     const { t } = useTranslation()
     const { user } = useAuth()
+
+    if (user?.role === 'clerk') {
+        return <Navigate to="/ledger" replace />
+    }
     const [data, setData] = useState(null)
     const [expandedEvent, setExpandedEvent] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')

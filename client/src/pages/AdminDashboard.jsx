@@ -17,7 +17,7 @@ export default function AdminDashboard() {
     const [showModal, setShowModal] = useState(false);
     const [modalMode, setModalMode] = useState('create');
     const [formData, setFormData] = useState({
-        _id: '', name: '', mobile: '', email: '', password: '', role: 'user', location: '', subscriptionExpiry: ''
+        _id: '', name: '', mobile: '', email: '', password: '', role: 'member', location: '', subscriptionExpiry: ''
     });
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState('');
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
 
     const handleCreate = () => {
         setModalMode('create');
-        setFormData({ _id: '', name: '', mobile: '', email: '', password: '', role: 'user', location: '', subscriptionExpiry: '' });
+        setFormData({ _id: '', name: '', mobile: '', email: '', password: '', role: 'member', location: '', subscriptionExpiry: '' });
         setError('');
         setShowModal(true);
     };
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
             mobile: u.mobile || '',
             email: u.email || '',
             password: '',
-            role: u.role || 'user',
+            role: u.role || 'member',
             location: u.location || '',
             subscriptionExpiry: u.subscriptionExpiry ? new Date(u.subscriptionExpiry).toISOString().split('T')[0] : ''
         });
@@ -360,7 +360,7 @@ export default function AdminDashboard() {
                             <div className="form-group">
                                 <label className="form-label">Role</label>
                                 <select className="form-control" name="role" value={formData.role} onChange={handleInputChange}>
-                                    <option value="user">User</option>
+                                    <option value="member">Member</option>
                                     <option value="clerk">Clerk</option>
                                     <option value="admin">Admin</option>
                                 </select>

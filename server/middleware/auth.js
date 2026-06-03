@@ -20,7 +20,21 @@ module.exports = async (req, res, next) => {
             return res.status(401).json({ message: 'User not found' });
         }
         req.tenantId = user.tenantId;
-        logger.debug('Auth middleware: token valid', { userId: req.userId, tenantId: req.tenantId, url: req.originalUrl });
+
+        // Lazy-load helper to fetch tenant user IDs on demand and cache them
+        req.getTenantUserIds = async () => {
+            if (!req._tenantUserIds) {
+                const tenantUsers = await User.find({ tenantId: user.tenantId }).select('_id').lean();
+                req._tenantUserIds = tenantUsers.map(u => u._id);
+            }
+            return req._tenantUserIds;
+        };
+
+        logger.debug('Auth middleware: token valid', { 
+            userId: req.userId, 
+            tenantId: req.tenantId, 
+            url: req.originalUrl 
+        });
 
         next();
     } catch (err) {

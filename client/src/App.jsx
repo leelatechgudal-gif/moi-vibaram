@@ -67,21 +67,21 @@ function AppRoutes() {
                                 <Routes>
                                     <Route path="/" element={<Dashboard />} />
                                     <Route path="/ledger" element={<Ledger />} />
-                                    <Route path="/events" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><Events /></ClerkRouteRestriction>} />
-                                    <Route path="/transactions/new" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><CreateMoi /></ClerkRouteRestriction>} />
-                                    <Route path="/transactions/edit/:id" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><EditMoi /></ClerkRouteRestriction>} />
-                                    <Route path="/upcoming" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><UpcomingEvents /></ClerkRouteRestriction>} />
-                                    <Route path="/balance-sheet" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><BalanceSheet /></ClerkRouteRestriction>} />
+                                     <Route path="/events" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><Events /></ClerkRouteRestriction>} />
+                                    <Route path="/transactions/new" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><CreateMoi /></ClerkRouteRestriction>} />
+                                    <Route path="/transactions/edit/:id" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><EditMoi /></ClerkRouteRestriction>} />
+                                    <Route path="/upcoming" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><UpcomingEvents /></ClerkRouteRestriction>} />
+                                    <Route path="/balance-sheet" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><BalanceSheet /></ClerkRouteRestriction>} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/search" element={<Search />} />
                                     {user?.role === 'admin' && user?.isSuperAdmin && (
                                         <Route path="/admin" element={<AdminDashboard />} />
                                     )}
-                                    <Route path="/parties" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><PartiesManagement /></ClerkRouteRestriction>} />
-                                    <Route path="/bulk-upload" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><BulkUpload /></ClerkRouteRestriction>} />
-                                    <Route path="/person-detail" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><PersonDetail /></ClerkRouteRestriction>} />
-                                    <Route path="/contact-us" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><ContactUs /></ClerkRouteRestriction>} />
-                                    <Route path="/tenant" element={<ClerkRouteRestriction allowedRoles={['admin', 'user']}><TenantManagement /></ClerkRouteRestriction>} />
+                                    <Route path="/parties" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><PartiesManagement /></ClerkRouteRestriction>} />
+                                    <Route path="/bulk-upload" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><BulkUpload /></ClerkRouteRestriction>} />
+                                    <Route path="/person-detail" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><PersonDetail /></ClerkRouteRestriction>} />
+                                    <Route path="/contact-us" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><ContactUs /></ClerkRouteRestriction>} />
+                                    <Route path="/tenant" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><TenantManagement /></ClerkRouteRestriction>} />
                                 </Routes>
                                 <Footer />
                             </div>

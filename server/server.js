@@ -156,8 +156,20 @@ app.use((err, req, res, next) => {
 
 // Connect DB and start server
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => {
+    .then(async () => {
         logger.info('MongoDB connected', { uri: process.env.MONGO_URI?.replace(/\/\/.*@/, '//***@') });
+        
+        // Auto-migrate role 'user' to 'member' to prevent breaks
+        try {
+            const User = require('./models/User');
+            const result = await User.updateMany({ role: 'user' }, { $set: { role: 'member' } });
+            if (result.modifiedCount > 0) {
+                logger.info(`Migrated ${result.modifiedCount} users role from 'user' to 'member'.`);
+            }
+        } catch (migErr) {
+            logger.error('Failed to run user role migration', { error: migErr.message });
+        }
+
         const port = process.env.PORT || 5001;
         app.listen(port, () => {
             logger.info(`MOI VIBARAM Server started`, { port, env: process.env.NODE_ENV || 'development' });

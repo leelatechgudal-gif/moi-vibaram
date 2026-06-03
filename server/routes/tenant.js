@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const User = require('../models/User');
 const Party = require('../models/Party');
 const auth = require('../middleware/auth');
+const verifyPassword = require('../middleware/verifyPassword');
 
 // GET /api/tenant/members - List all members of my tenant
 router.get('/members', auth, async (req, res) => {
@@ -139,7 +140,7 @@ router.post('/leave', auth, async (req, res) => {
 });
 
 // POST /api/tenant/transfer/:userId - Transfer ownership to another member
-router.post('/transfer/:userId', auth, async (req, res) => {
+router.post('/transfer/:userId', auth, verifyPassword, async (req, res) => {
     try {
         const currentUser = await User.findById(req.userId);
         if (currentUser.tenantRole !== 'owner') {
@@ -164,7 +165,6 @@ router.post('/transfer/:userId', auth, async (req, res) => {
 });
 
 const bcrypt = require('bcryptjs');
-const verifyPassword = require('../middleware/verifyPassword');
 
 // POST /api/tenant/users - Owner creates a user directly under their tenant
 router.post('/users', auth, async (req, res) => {
@@ -175,8 +175,8 @@ router.post('/users', auth, async (req, res) => {
         }
 
         const { name, mobile, email, password, role } = req.body;
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: 'Required fields missing (Name, Email, Password).' });
+        if (!name || !mobile || !email || !password) {
+            return res.status(400).json({ message: 'Required fields missing (Name, Mobile, Email, Password).' });
         }
 
         const existingEmail = await User.findOne({ email: email.toLowerCase(), isDeleted: { $ne: true } });
@@ -246,7 +246,12 @@ router.put('/users/:userId', auth, async (req, res) => {
         }
 
         if (name) targetUser.name = name;
-        if (mobile !== undefined) targetUser.mobile = mobile;
+        if (mobile !== undefined) {
+            if (!mobile || !mobile.toString().trim()) {
+                return res.status(400).json({ message: 'Mobile number is required.' });
+            }
+            targetUser.mobile = mobile.toString().trim();
+        }
         if (role) targetUser.role = role;
         if (isActive !== undefined) targetUser.isActive = isActive;
 

@@ -174,7 +174,7 @@ router.post('/admin', auth, async (req, res) => {
             mobile, 
             email, 
             passwordHash, 
-            role: role || 'user', 
+            role: role || 'member', 
             subscriptionExpiry 
         });
         await user.save();

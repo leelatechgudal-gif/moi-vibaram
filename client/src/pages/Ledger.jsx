@@ -15,11 +15,12 @@ import {
     X, 
     Check, 
     Trash2, 
-    CalendarPlus,
     ArrowLeft,
     Coins,
     Gift,
-    Search
+    Search,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 
 export default function Ledger() {
@@ -43,14 +44,15 @@ export default function Ledger() {
     const [error, setError] = useState('');
     const [filterNameQuery, setFilterNameQuery] = useState('');
 
-    // Event Modal
-    const [showEventModal, setShowEventModal] = useState(false);
-    const [eventFormData, setEventFormData] = useState({
-        eventName: '',
-        date: new Date().toISOString().slice(0, 10),
-        location: '',
+    // Total visibility state
+    const [showTotalAmount, setShowTotalAmount] = useState(() => {
+        const stored = localStorage.getItem('ledger_show_total');
+        return stored === 'true';
     });
-    const [eventLoading, setEventLoading] = useState(false);
+
+    useEffect(() => {
+        localStorage.setItem('ledger_show_total', showTotalAmount);
+    }, [showTotalAmount]);
 
     // Delete Modal
     const [deleteModal, setDeleteModal] = useState({ show: false, id: null, idx: null });
@@ -341,36 +343,7 @@ export default function Ledger() {
         });
     };
 
-    const handleEventModalSubmit = async (e) => {
-        e.preventDefault();
-        setEventLoading(true);
-        try {
-            const fd = new FormData();
-            fd.append('eventName', eventFormData.eventName.trim());
-            fd.append('date', eventFormData.date);
-            fd.append('location', eventFormData.location.trim());
-            fd.append('isLiveLedger', true);
 
-            const res = await eventsAPI.create(fd);
-            const newEv = res.data;
-            setEvents(prev => [newEv, ...prev]);
-            setSelectedEventId(newEv._id);
-            if (newEv.date) {
-                setSelectedEventDate(new Date(newEv.date).toISOString().slice(0, 10));
-            }
-            setShowEventModal(false);
-            setEventFormData({
-                eventName: '',
-                date: new Date().toISOString().slice(0, 10),
-                location: '',
-            });
-        } catch (err) {
-            console.error('[ledger createEvent]', err);
-            alert(err.response?.data?.message || 'Failed to create event');
-        } finally {
-            setEventLoading(false);
-        }
-    };
 
     // Auto-filter parties
     const filteredParties = searchQuery.trim()
@@ -562,30 +535,18 @@ export default function Ledger() {
                 <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                     <div className="form-group">
                         <label className="form-label">{t('eventName')}</label>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <select 
-                                className="form-control"
-                                value={selectedEventId}
-                                onChange={handleEventChange}
-                                style={{ flex: 1 }}
-                            >
-                                <option value="">Select event...</option>
-                                {events.map(ev => (
-                                    <option key={ev._id} value={ev._id}>
-                                        {ev.eventName} — {new Date(ev.date).toLocaleDateString('en-IN')}
-                                    </option>
-                                ))}
-                            </select>
-                            <button 
-                                className="btn btn-secondary"
-                                onClick={() => setShowEventModal(true)}
-                                title="Add New Event"
-                                style={{ padding: '8px 12px' }}
-                                type="button"
-                            >
-                                <Plus size={18} />
-                            </button>
-                        </div>
+                        <select 
+                            className="form-control"
+                            value={selectedEventId}
+                            onChange={handleEventChange}
+                        >
+                            <option value="">Select event...</option>
+                            {events.map(ev => (
+                                <option key={ev._id} value={ev._id}>
+                                    {ev.eventName} — {new Date(ev.date).toLocaleDateString('en-IN')}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     <div className="form-group">
@@ -594,13 +555,7 @@ export default function Ledger() {
                             type="date"
                             className="form-control"
                             value={selectedEventDate}
-                            onChange={(e) => setSelectedEventDate(e.target.value)}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (typeof e.target.showPicker === 'function') {
-                                    try { e.target.showPicker(); } catch (err) {}
-                                }
-                            }}
+                            disabled={true}
                         />
                     </div>
                 </div>
@@ -619,14 +574,14 @@ export default function Ledger() {
                     <div className="empty-state">
                         <div className="empty-icon">📅</div>
                         <h3>Select an Event to Start</h3>
-                        <p className="text-muted">Please select or create an event in the filter section above to view and enter live transactions.</p>
-                        <button className="btn btn-primary mt-8" onClick={() => setShowEventModal(true)}>
-                            <Plus size={16} /> Create Event
-                        </button>
+                        <p className="text-muted">Please select an event in the filter section above to view and enter live transactions.</p>
                     </div>
                 ) : (
                     <>
-                        <div className="no-print" style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <div className="no-print" style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+                            <button className="btn btn-primary" onClick={handleAddRow} style={{ height: 38, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Plus size={16} /> Add Row
+                            </button>
                             <div style={{ display: 'flex', alignItems: 'center', flex: 1, background: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '4px 10px' }}>
                                 <Search size={16} className="text-muted" style={{ marginRight: 8 }} />
                                 <input
@@ -637,7 +592,7 @@ export default function Ledger() {
                                 />
                             </div>
                             {filterNameQuery && (
-                                <button className="btn btn-secondary btn-sm" onClick={() => setFilterNameQuery('')} style={{ height: 36 }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => setFilterNameQuery('')} style={{ height: 38 }}>
                                     Clear
                                 </button>
                             )}
@@ -877,74 +832,32 @@ export default function Ledger() {
                         </div>
 
                         {/* Add Row and Totals bar */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, flexWrap: 'wrap', gap: 12 }}>
-                            <button className="btn btn-secondary btn-sm no-print" onClick={handleAddRow}>
-                                <Plus size={16} /> Add Row
-                            </button>
-                            <div className="ledger-total-bar">
-                                <span style={{ marginRight: 16, color: 'var(--text-muted)' }}>Total Count: {filteredRows.length}</span>
-                                <span>{t('total')}: ₹{totalAmount.toLocaleString('en-IN')}</span>
+                        {/* Totals bar */}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                            <div className="ledger-total-bar" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Total Count: {filteredRows.length}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <span>{t('total')}:</span>
+                                    <span style={{ fontFamily: 'monospace', fontSize: '16px', fontWeight: 'bold' }}>
+                                        {showTotalAmount ? `₹${totalAmount.toLocaleString('en-IN')}` : '₹ ••••••'}
+                                    </span>
+                                    <button 
+                                        type="button"
+                                        className="ledger-btn-icon"
+                                        style={{ padding: '2px', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center' }}
+                                        onClick={() => setShowTotalAmount(!showTotalAmount)}
+                                        title={showTotalAmount ? "Hide Total Amount" : "Show Total Amount"}
+                                    >
+                                        {showTotalAmount ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </>
                 )}
             </div>
 
-            {/* Create Event Modal */}
-            {showEventModal && (
-                <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowEventModal(false)}>
-                    <div className="modal" style={{ maxWidth: 450 }}>
-                        <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <CalendarPlus size={20} /> Create New Event
-                        </div>
-                        <form onSubmit={handleEventModalSubmit} className="form-grid">
-                            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                                <label className="form-label">Event Name *</label>
-                                <input 
-                                    className="form-control"
-                                    value={eventFormData.eventName}
-                                    onChange={(e) => setEventFormData({ ...eventFormData, eventName: e.target.value })}
-                                    placeholder="e.g. My Son's Wedding"
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Event Date *</label>
-                                <input 
-                                    type="date"
-                                    className="form-control"
-                                    value={eventFormData.date}
-                                    onChange={(e) => setEventFormData({ ...eventFormData, date: e.target.value })}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (typeof e.target.showPicker === 'function') {
-                                            try { e.target.showPicker(); } catch (err) {}
-                                        }
-                                    }}
-                                    required
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Location</label>
-                                <input 
-                                    className="form-control"
-                                    value={eventFormData.location}
-                                    onChange={(e) => setEventFormData({ ...eventFormData, location: e.target.value })}
-                                    placeholder="Venue or City"
-                                />
-                            </div>
-                            <div className="flex gap-8" style={{ gridColumn: '1 / -1', marginTop: 16 }}>
-                                <button type="submit" className="btn btn-primary" disabled={eventLoading}>
-                                    {eventLoading ? <span className="spinner" /> : 'Create Event'}
-                                </button>
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowEventModal(false)}>
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+
 
             {/* Password Confirm Modal for Delete */}
             <PasswordConfirmModal 

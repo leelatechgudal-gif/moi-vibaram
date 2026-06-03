@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     location: String,
     street: String,
-    role: { type: String, enum: ["admin", "user", "clerk"], default: "user" },
+    role: { type: String, enum: ["admin", "member", "clerk"], default: "member" },
     subscriptionExpiry: { type: Date },
     activeSessions: [{ type: String }],
     profilePhoto: String,

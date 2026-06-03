@@ -11,7 +11,8 @@ const auth = require('../middleware/auth');
 router.get('/', auth, async (req, res) => {
     try {
         const { eventId, type, page, limit } = req.query;
-        const filter = { userId: req.userId, isDeleted: { $ne: true } };
+        const tenantUserIds = await req.getTenantUserIds();
+        const filter = { userId: { $in: tenantUserIds }, isDeleted: { $ne: true } };
         if (eventId) filter.eventId = eventId;
         if (type) filter.type = type;
 
@@ -174,7 +175,8 @@ router.post('/', auth, async (req, res) => {
         }
 
         if (eventId) {
-            const event = await Event.findOne({ _id: eventId, userId: req.userId });
+            const tenantUserIds = await req.getTenantUserIds();
+            const event = await Event.findOne({ _id: eventId, userId: { $in: tenantUserIds } });
             if (!event) return res.status(404).json({ message: 'Event not found' });
         }
 
@@ -225,7 +227,8 @@ router.post('/bulk', auth, async (req, res) => {
             // Auto-create Event if not provided but eventName is given
             let finalEventId = t.eventId;
             if (!finalEventId && t.eventName) {
-                let event = await Event.findOne({ eventName: t.eventName, userId: req.userId });
+                const tenantUserIds = await req.getTenantUserIds();
+                let event = await Event.findOne({ eventName: t.eventName, userId: { $in: tenantUserIds } });
                 if (!event) {
                     event = new Event({
                         eventName: t.eventName,
@@ -258,7 +261,8 @@ router.post('/bulk', auth, async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
     try {
-        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.userId, isDeleted: { $ne: true } });
+        const tenantUserIds = await req.getTenantUserIds();
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId: { $in: tenantUserIds }, isDeleted: { $ne: true } });
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
         const fields = ['eventId', 'eventName', 'type', 'cashAmount', 'date', 'seerVarisai', 'remarks', 'thaiMama', 'labels'];
@@ -294,8 +298,9 @@ const verifyPassword = require('../middleware/verifyPassword');
 
 router.delete('/:id', auth, verifyPassword, async (req, res) => {
     try {
+        const tenantUserIds = await req.getTenantUserIds();
         const transaction = await Transaction.findOneAndUpdate(
-            { _id: req.params.id, userId: req.userId },
+            { _id: req.params.id, userId: { $in: tenantUserIds } },
             { isDeleted: true },
             { new: true }
         );
@@ -310,7 +315,8 @@ router.delete('/:id', auth, verifyPassword, async (req, res) => {
 // GET /api/transactions/balance-sheet - Person-wise aggregation
 router.get('/balance-sheet', auth, async (req, res) => {
     try {
-        const transactions = await Transaction.find({ userId: req.userId, isDeleted: { $ne: true } }).populate('eventId').populate('partyId');
+        const tenantUserIds = await req.getTenantUserIds();
+        const transactions = await Transaction.find({ userId: { $in: tenantUserIds }, isDeleted: { $ne: true } }).populate('eventId').populate('partyId');
 
         const partyMap = {};
         transactions.forEach(t => {
@@ -345,8 +351,9 @@ router.get('/balance-sheet', auth, async (req, res) => {
 // GET /api/transactions/master-sheet - Event-wise summary
 router.get('/master-sheet', auth, async (req, res) => {
     try {
-        const events = await Event.find({ userId: req.userId }).sort({ date: -1 });
-        const transactions = await Transaction.find({ userId: req.userId, isDeleted: { $ne: true } });
+        const tenantUserIds = await req.getTenantUserIds();
+        const events = await Event.find({ userId: { $in: tenantUserIds } }).sort({ date: -1 });
+        const transactions = await Transaction.find({ userId: { $in: tenantUserIds }, isDeleted: { $ne: true } });
 
         let grandTotalPaid = 0;
         let grandTotalReceived = 0;
@@ -390,7 +397,8 @@ const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 router.get('/search', auth, async (req, res) => {
     try {
         const { q, location, eventId, page, limit } = req.query;
-        const filter = { userId: req.userId, isDeleted: { $ne: true } };
+        const tenantUserIds = await req.getTenantUserIds();
+        const filter = { userId: { $in: tenantUserIds }, isDeleted: { $ne: true } };
         if (eventId) filter.eventId = eventId;
         
         // If searching by location or query, we first need to find matching parties
@@ -450,7 +458,8 @@ router.get('/search', auth, async (req, res) => {
 // GET /api/transactions/:id
 router.get('/:id', auth, async (req, res) => {
     try {
-        const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.userId, isDeleted: { $ne: true } }).populate('eventId').populate('partyId');
+        const tenantUserIds = await req.getTenantUserIds();
+        const transaction = await Transaction.findOne({ _id: req.params.id, userId: { $in: tenantUserIds }, isDeleted: { $ne: true } }).populate('eventId').populate('partyId');
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
         res.json(flattenTransaction(transaction));
     } catch (err) {

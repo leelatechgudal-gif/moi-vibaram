@@ -15,6 +15,7 @@ client/build/
 # Uploaded user files
 /uploads/
 server/uploads/
+graphify-out/
 
 # Logs
 *.log
@@ -24,3 +25,4 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 *.pem
+graphify*

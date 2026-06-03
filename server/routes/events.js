@@ -32,7 +32,8 @@ router.get('/', auth, async (req, res) => {
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit) || 20;
 
-        const filter = { userId: req.userId };
+        const tenantUserIds = await req.getTenantUserIds();
+        const filter = { userId: { $in: tenantUserIds } };
         if (isLiveLedger !== undefined) {
             filter.isLiveLedger = isLiveLedger === 'true' || isLiveLedger === true;
         }
@@ -66,10 +67,12 @@ router.get('/upcoming', auth, async (req, res) => {
         const limitNum = parseInt(limit) || 20;
 
         // Find all parties that I received Moi from, and check if I have paid them back
-        const received = await Transaction.find({ userId: req.userId, type: 'received' })
+        const tenantUserIds = await req.getTenantUserIds();
+        // Find all parties that I received Moi from, and check if I have paid them back
+        const received = await Transaction.find({ userId: { $in: tenantUserIds }, type: 'received' })
             .populate('eventId')
             .populate('partyId');
-        const paid = await Transaction.find({ userId: req.userId, type: 'paid' })
+        const paid = await Transaction.find({ userId: { $in: tenantUserIds }, type: 'paid' })
             .populate('partyId');
 
         // Helper to flatten transaction and party data
@@ -153,7 +156,8 @@ router.post('/', auth, upload.single('invitation'), async (req, res) => {
 // PUT /api/events/:id - Edit event
 router.put('/:id', auth, upload.single('invitation'), async (req, res) => {
     try {
-        const event = await Event.findOne({ _id: req.params.id, userId: req.userId });
+        const tenantUserIds = await req.getTenantUserIds();
+        const event = await Event.findOne({ _id: req.params.id, userId: { $in: tenantUserIds } });
         if (!event) return res.status(404).json({ message: 'Event not found' });
 
         const { eventName, date, venue, location, city, isLiveLedger } = req.body;
@@ -179,7 +183,8 @@ const verifyPassword = require('../middleware/verifyPassword');
 
 router.delete('/:id', auth, verifyPassword, async (req, res) => {
     try {
-        const event = await Event.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+        const tenantUserIds = await req.getTenantUserIds();
+        const event = await Event.findOneAndDelete({ _id: req.params.id, userId: { $in: tenantUserIds } });
         if (!event) return res.status(404).json({ message: 'Event not found' });
         // Also delete associated transactions
         await Transaction.deleteMany({ eventId: req.params.id });
