@@ -6,15 +6,17 @@ import { useAuth } from '../context/AuthContext';
 import { eventsAPI, partiesAPI, transactionsAPI } from '../api/api';
 import PasswordConfirmModal from '../components/PasswordConfirmModal';
 import { numberToWords } from '../utils/numberToWords';
-import { 
-    BookMarked, 
-    Plus, 
-    Save, 
-    Edit3, 
-    Printer, 
-    X, 
-    Check, 
-    Trash2, 
+import logoImg from '../../assets/logo.jpeg';
+import iconImg from '../../assets/icon.png';
+import {
+    BookMarked,
+    Plus,
+    Save,
+    Edit3,
+    Printer,
+    X,
+    Check,
+    Trash2,
     ArrowLeft,
     Coins,
     Gift,
@@ -64,6 +66,37 @@ export default function Ledger() {
     const handlePrint = useReactToPrint({
         content: () => printRef.current,
         onAfterPrint: () => setPrintData(null),
+    });
+
+    // Sign-off / Clerk Declaration Modal State
+    const [isSignOffOpen, setIsSignOffOpen] = useState(false);
+    const [denominations, setDenominations] = useState({
+        500: '',
+        200: '',
+        100: '',
+        50: '',
+        20: '',
+        10: '',
+        coins: ''
+    });
+    const [gpayAmount, setGpayAmount] = useState('0');
+    const [gpayMobNo, setGpayMobNo] = useState('');
+    const [clerkPhone, setClerkPhone] = useState('');
+    const [witness1, setWitness1] = useState({ name: '', mobile: '' });
+    const [witness2, setWitness2] = useState({ name: '', mobile: '' });
+    const [isClosingEvent, setIsClosingEvent] = useState(false);
+    const [activePreviewPage, setActivePreviewPage] = useState(1);
+
+    // Set clerk mobile initially if auth user is loaded
+    useEffect(() => {
+        if (user && user.mobile) {
+            setClerkPhone(user.mobile);
+        }
+    }, [user]);
+
+    const declarationPrintRef = useRef();
+    const handlePrintDeclaration = useReactToPrint({
+        content: () => declarationPrintRef.current,
     });
 
     // Auto-trigger printing when printData is populated
@@ -136,7 +169,7 @@ export default function Ledger() {
             const params = { type: 'received', eventId: selectedEventId };
             const res = await transactionsAPI.getAll(params);
             const data = res.data.data || res.data || [];
-            
+
             const mapped = data.map(t => ({
                 _id: t._id,
                 partyId: t.partyId?._id || t.partyId,
@@ -343,6 +376,46 @@ export default function Ledger() {
         });
     };
 
+    const handleCloseLedger = async () => {
+        if (!selectedEventId) return;
+        const confirmClose = window.confirm("Are you sure you want to close this live ledger? This will lock the event and it will no longer be available for live entry.");
+        if (!confirmClose) return;
+
+        setIsClosingEvent(true);
+        try {
+            const fd = new FormData();
+            fd.append('isLiveLedger', 'false');
+            await eventsAPI.update(selectedEventId, fd);
+            alert("Ledger closed successfully.");
+            setIsSignOffOpen(false);
+
+            // Reset modal states
+            setDenominations({
+                500: '',
+                200: '',
+                100: '',
+                50: '',
+                20: '',
+                10: '',
+                coins: ''
+            });
+            setGpayAmount('0');
+            setGpayMobNo('');
+            setWitness1({ name: '', mobile: '' });
+            setWitness2({ name: '', mobile: '' });
+
+            // Reload events to refresh the dropdown (removes closed event)
+            await loadEvents();
+            setSelectedEventId('');
+            setRows([]);
+        } catch (err) {
+            console.error('[ledger closeLedger]', err);
+            alert(err.response?.data?.message || 'Failed to close ledger');
+        } finally {
+            setIsClosingEvent(false);
+        }
+    };
+
 
 
     // Auto-filter parties
@@ -352,13 +425,26 @@ export default function Ledger() {
         )
         : [];
 
-    const filteredRows = rows.filter(r => 
+    const filteredRows = rows.filter(r =>
         r.isEditing ||
         !filterNameQuery.trim() ||
         r.partyName?.toLowerCase().includes(filterNameQuery.trim().toLowerCase())
     );
 
     const totalAmount = filteredRows.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0);
+
+    const selectedEvent = events.find(ev => ev._id === selectedEventId);
+    const noOfPersonsPaid = rows.length;
+    const totalMoiReceived = rows.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0);
+    const denom500 = parseInt(denominations[500]) || 0;
+    const denom200 = parseInt(denominations[200]) || 0;
+    const denom100 = parseInt(denominations[100]) || 0;
+    const denom50 = parseInt(denominations[50]) || 0;
+    const denom20 = parseInt(denominations[20]) || 0;
+    const denom10 = parseInt(denominations[10]) || 0;
+    const denomCoins = parseFloat(denominations.coins) || 0;
+    const totalDenomValue = (denom500 * 500) + (denom200 * 200) + (denom100 * 100) + (denom50 * 50) + (denom20 * 20) + (denom10 * 10) + denomCoins;
+    const differenceAmount = (totalDenomValue + (parseFloat(gpayAmount) || 0)) - totalMoiReceived;
 
     return (
         <div className="container">
@@ -528,6 +614,15 @@ export default function Ledger() {
                         <div className="page-subtitle">Day-of-event Live Transaction Entry & Bills</div>
                     </div>
                 </div>
+                {selectedEventId && (
+                    <button
+                        className="btn btn-success"
+                        onClick={() => setIsSignOffOpen(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                        <Printer size={16} /> Sign-off & Close Ledger
+                    </button>
+                )}
             </div>
 
             {/* Filter controls */}
@@ -535,7 +630,7 @@ export default function Ledger() {
                 <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                     <div className="form-group">
                         <label className="form-label">{t('eventName')}</label>
-                        <select 
+                        <select
                             className="form-control"
                             value={selectedEventId}
                             onChange={handleEventChange}
@@ -551,7 +646,7 @@ export default function Ledger() {
 
                     <div className="form-group">
                         <label className="form-label">{t('date')}</label>
-                        <input 
+                        <input
                             type="date"
                             className="form-control"
                             value={selectedEventDate}
@@ -621,205 +716,205 @@ export default function Ledger() {
                                                 <td style={{ textAlign: 'center', fontWeight: '500', color: 'var(--text-muted)' }}>
                                                     {filteredIdx + 1}
                                                 </td>
-                                            
-                                            {/* Initial cell */}
-                                            <td>
-                                                {row.isEditing ? (
-                                                    <input 
-                                                        className="ledger-input"
-                                                        value={row.initial}
-                                                        onChange={(e) => handleFieldChange(idx, 'initial', e.target.value)}
-                                                        placeholder="A."
-                                                        disabled={row.isSaving}
-                                                    />
-                                                ) : (
-                                                    <div className="ledger-text-cell">{row.initial || '—'}</div>
-                                                )}
-                                            </td>
 
-                                            {/* Name cell with Autocomplete */}
-                                            <td>
-                                                {row.isEditing ? (
-                                                    <div className="ledger-autocomplete-container" style={{ height: '100%' }}>
-                                                        <input 
+                                                {/* Initial cell */}
+                                                <td>
+                                                    {row.isEditing ? (
+                                                        <input
                                                             className="ledger-input"
-                                                            value={row.partyName}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value;
-                                                                handleFieldChange(idx, 'partyName', val);
-                                                                handleFieldChange(idx, 'partyId', null); // Clear ID since they typed
-                                                                setSearchQuery(val);
-                                                                setActiveRowIndex(idx);
-                                                            }}
-                                                            onFocus={() => {
-                                                                setSearchQuery(row.partyName);
-                                                                setActiveRowIndex(idx);
-                                                            }}
-                                                            placeholder="Type guest name..."
+                                                            value={row.initial}
+                                                            onChange={(e) => handleFieldChange(idx, 'initial', e.target.value)}
+                                                            placeholder="A."
                                                             disabled={row.isSaving}
                                                         />
-                                                        {activeRowIndex === idx && searchQuery.trim() && (
-                                                            <ul className="ledger-autocomplete-list">
-                                                                {filteredParties.slice(0, 5).map((p, pIdx) => (
-                                                                    <li 
-                                                                        key={pIdx}
-                                                                        onMouseDown={() => handleSelectParty(idx, p)}
-                                                                    >
-                                                                        <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
-                                                                            {p.initial ? `${p.initial} ` : ''}{p.name}
-                                                                        </div>
-                                                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                                                            {p.location || 'Unknown Location'} {p.mobile && `• 📞 ${p.mobile}`} {p.spouseName && `• 💍 ${p.spouseName}`}
-                                                                        </div>
-                                                                    </li>
-                                                                ))}
-                                                                {filteredParties.length === 0 && (
-                                                                    <li style={{ color: 'var(--text-muted)', fontSize: '12px', pointerEvents: 'none' }}>
-                                                                        No existing person found (will create)
-                                                                    </li>
-                                                                )}
-                                                            </ul>
+                                                    ) : (
+                                                        <div className="ledger-text-cell">{row.initial || '—'}</div>
+                                                    )}
+                                                </td>
+
+                                                {/* Name cell with Autocomplete */}
+                                                <td>
+                                                    {row.isEditing ? (
+                                                        <div className="ledger-autocomplete-container" style={{ height: '100%' }}>
+                                                            <input
+                                                                className="ledger-input"
+                                                                value={row.partyName}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    handleFieldChange(idx, 'partyName', val);
+                                                                    handleFieldChange(idx, 'partyId', null); // Clear ID since they typed
+                                                                    setSearchQuery(val);
+                                                                    setActiveRowIndex(idx);
+                                                                }}
+                                                                onFocus={() => {
+                                                                    setSearchQuery(row.partyName);
+                                                                    setActiveRowIndex(idx);
+                                                                }}
+                                                                placeholder="Type guest name..."
+                                                                disabled={row.isSaving}
+                                                            />
+                                                            {activeRowIndex === idx && searchQuery.trim() && (
+                                                                <ul className="ledger-autocomplete-list">
+                                                                    {filteredParties.slice(0, 5).map((p, pIdx) => (
+                                                                        <li
+                                                                            key={pIdx}
+                                                                            onMouseDown={() => handleSelectParty(idx, p)}
+                                                                        >
+                                                                            <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
+                                                                                {p.initial ? `${p.initial} ` : ''}{p.name}
+                                                                            </div>
+                                                                            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                                                                {p.location || 'Unknown Location'} {p.mobile && `• 📞 ${p.mobile}`} {p.spouseName && `• 💍 ${p.spouseName}`}
+                                                                            </div>
+                                                                        </li>
+                                                                    ))}
+                                                                    {filteredParties.length === 0 && (
+                                                                        <li style={{ color: 'var(--text-muted)', fontSize: '12px', pointerEvents: 'none' }}>
+                                                                            No existing person found (will create)
+                                                                        </li>
+                                                                    )}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="ledger-text-cell" style={{ fontWeight: '600', color: 'var(--primary)' }}>
+                                                            {row.partyName}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* Spouse Name cell */}
+                                                <td>
+                                                    {row.isEditing ? (
+                                                        <input
+                                                            className="ledger-input"
+                                                            value={row.spouseName}
+                                                            onChange={(e) => handleFieldChange(idx, 'spouseName', e.target.value)}
+                                                            placeholder="Spouse name"
+                                                            disabled={row.isSaving}
+                                                        />
+                                                    ) : (
+                                                        <div className="ledger-text-cell">{row.spouseName || '—'}</div>
+                                                    )}
+                                                </td>
+
+                                                {/* Mobile cell */}
+                                                <td>
+                                                    {row.isEditing ? (
+                                                        <input
+                                                            className="ledger-input"
+                                                            value={row.mobile}
+                                                            onChange={(e) => handleFieldChange(idx, 'mobile', e.target.value)}
+                                                            placeholder="Mobile"
+                                                            disabled={row.isSaving}
+                                                        />
+                                                    ) : (
+                                                        <div className="ledger-text-cell">{row.mobile || '—'}</div>
+                                                    )}
+                                                </td>
+
+                                                {/* Location cell */}
+                                                <td>
+                                                    {row.isEditing ? (
+                                                        <input
+                                                            className="ledger-input"
+                                                            value={row.location}
+                                                            onChange={(e) => handleFieldChange(idx, 'location', e.target.value)}
+                                                            placeholder="Location"
+                                                            disabled={row.isSaving}
+                                                        />
+                                                    ) : (
+                                                        <div className="ledger-text-cell">{row.location || '—'}</div>
+                                                    )}
+                                                </td>
+
+                                                {/* Amount cell */}
+                                                <td>
+                                                    {row.isEditing ? (
+                                                        <input
+                                                            type="number"
+                                                            className="ledger-input"
+                                                            min="0"
+                                                            value={row.cashAmount}
+                                                            onChange={(e) => handleFieldChange(idx, 'cashAmount', e.target.value)}
+                                                            placeholder="0"
+                                                            disabled={row.isSaving}
+                                                        />
+                                                    ) : (
+                                                        <div className="ledger-text-cell" style={{ fontWeight: 'bold' }}>
+                                                            ₹{row.cashAmount}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* Remarks cell */}
+                                                <td>
+                                                    {row.isEditing ? (
+                                                        <input
+                                                            className="ledger-input"
+                                                            value={row.remarks}
+                                                            onChange={(e) => handleFieldChange(idx, 'remarks', e.target.value)}
+                                                            placeholder="Remarks"
+                                                            disabled={row.isSaving}
+                                                        />
+                                                    ) : (
+                                                        <div className="ledger-text-cell">{row.remarks || '—'}</div>
+                                                    )}
+                                                </td>
+
+                                                {/* Action cell */}
+                                                <td>
+                                                    <div className="ledger-action-cell">
+                                                        {row.isEditing ? (
+                                                            <>
+                                                                <button
+                                                                    className="ledger-btn-icon success"
+                                                                    onClick={() => handleSaveRow(idx)}
+                                                                    disabled={row.isSaving}
+                                                                    title="Save Entry"
+                                                                >
+                                                                    {row.isSaving ? <span className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={16} />}
+                                                                </button>
+                                                                <button
+                                                                    className="ledger-btn-icon danger"
+                                                                    onClick={() => handleCancelRow(idx)}
+                                                                    disabled={row.isSaving}
+                                                                    title="Cancel Changes"
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <button
+                                                                    className="ledger-btn-icon"
+                                                                    onClick={() => handleEditRow(idx)}
+                                                                    title="Edit Row"
+                                                                >
+                                                                    <Edit3 size={16} />
+                                                                </button>
+                                                                <button
+                                                                    className="ledger-btn-icon"
+                                                                    onClick={() => handleTriggerPrint(row)}
+                                                                    title="Print Receipt"
+                                                                >
+                                                                    <Printer size={16} />
+                                                                </button>
+                                                                <button
+                                                                    className="ledger-btn-icon danger"
+                                                                    onClick={() => handleDeleteClick(row._id, idx)}
+                                                                    title="Delete Row"
+                                                                >
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </>
                                                         )}
                                                     </div>
-                                                ) : (
-                                                    <div className="ledger-text-cell" style={{ fontWeight: '600', color: 'var(--primary)' }}>
-                                                        {row.partyName}
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            {/* Spouse Name cell */}
-                                            <td>
-                                                {row.isEditing ? (
-                                                    <input 
-                                                        className="ledger-input"
-                                                        value={row.spouseName}
-                                                        onChange={(e) => handleFieldChange(idx, 'spouseName', e.target.value)}
-                                                        placeholder="Spouse name"
-                                                        disabled={row.isSaving}
-                                                    />
-                                                ) : (
-                                                    <div className="ledger-text-cell">{row.spouseName || '—'}</div>
-                                                )}
-                                            </td>
-
-                                            {/* Mobile cell */}
-                                            <td>
-                                                {row.isEditing ? (
-                                                    <input 
-                                                        className="ledger-input"
-                                                        value={row.mobile}
-                                                        onChange={(e) => handleFieldChange(idx, 'mobile', e.target.value)}
-                                                        placeholder="Mobile"
-                                                        disabled={row.isSaving}
-                                                    />
-                                                ) : (
-                                                    <div className="ledger-text-cell">{row.mobile || '—'}</div>
-                                                )}
-                                            </td>
-
-                                            {/* Location cell */}
-                                            <td>
-                                                {row.isEditing ? (
-                                                    <input 
-                                                        className="ledger-input"
-                                                        value={row.location}
-                                                        onChange={(e) => handleFieldChange(idx, 'location', e.target.value)}
-                                                        placeholder="Location"
-                                                        disabled={row.isSaving}
-                                                    />
-                                                ) : (
-                                                    <div className="ledger-text-cell">{row.location || '—'}</div>
-                                                )}
-                                            </td>
-
-                                            {/* Amount cell */}
-                                            <td>
-                                                {row.isEditing ? (
-                                                    <input 
-                                                        type="number"
-                                                        className="ledger-input"
-                                                        min="0"
-                                                        value={row.cashAmount}
-                                                        onChange={(e) => handleFieldChange(idx, 'cashAmount', e.target.value)}
-                                                        placeholder="0"
-                                                        disabled={row.isSaving}
-                                                    />
-                                                ) : (
-                                                    <div className="ledger-text-cell" style={{ fontWeight: 'bold' }}>
-                                                        ₹{row.cashAmount}
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            {/* Remarks cell */}
-                                            <td>
-                                                {row.isEditing ? (
-                                                    <input 
-                                                        className="ledger-input"
-                                                        value={row.remarks}
-                                                        onChange={(e) => handleFieldChange(idx, 'remarks', e.target.value)}
-                                                        placeholder="Remarks"
-                                                        disabled={row.isSaving}
-                                                    />
-                                                ) : (
-                                                    <div className="ledger-text-cell">{row.remarks || '—'}</div>
-                                                )}
-                                            </td>
-
-                                            {/* Action cell */}
-                                            <td>
-                                                <div className="ledger-action-cell">
-                                                    {row.isEditing ? (
-                                                        <>
-                                                            <button 
-                                                                className="ledger-btn-icon success"
-                                                                onClick={() => handleSaveRow(idx)}
-                                                                disabled={row.isSaving}
-                                                                title="Save Entry"
-                                                            >
-                                                                {row.isSaving ? <span className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={16} />}
-                                                            </button>
-                                                            <button 
-                                                                className="ledger-btn-icon danger"
-                                                                onClick={() => handleCancelRow(idx)}
-                                                                disabled={row.isSaving}
-                                                                title="Cancel Changes"
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <button 
-                                                                className="ledger-btn-icon"
-                                                                onClick={() => handleEditRow(idx)}
-                                                                title="Edit Row"
-                                                            >
-                                                                <Edit3 size={16} />
-                                                            </button>
-                                                            <button 
-                                                                className="ledger-btn-icon"
-                                                                onClick={() => handleTriggerPrint(row)}
-                                                                title="Print Receipt"
-                                                            >
-                                                                <Printer size={16} />
-                                                            </button>
-                                                            <button 
-                                                                className="ledger-btn-icon danger"
-                                                                onClick={() => handleDeleteClick(row._id, idx)}
-                                                                title="Delete Row"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </td>
+                                                </td>
                                             </tr>
                                         );
                                     })}
-                                    
+
                                     {filteredRows.length === 0 && (
                                         <tr>
                                             <td colSpan={9} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
@@ -841,7 +936,7 @@ export default function Ledger() {
                                     <span style={{ fontFamily: 'monospace', fontSize: '16px', fontWeight: 'bold' }}>
                                         {showTotalAmount ? `₹${totalAmount.toLocaleString('en-IN')}` : '₹ ••••••'}
                                     </span>
-                                    <button 
+                                    <button
                                         type="button"
                                         className="ledger-btn-icon"
                                         style={{ padding: '2px', color: 'var(--primary)', display: 'inline-flex', alignItems: 'center' }}
@@ -860,7 +955,7 @@ export default function Ledger() {
 
 
             {/* Password Confirm Modal for Delete */}
-            <PasswordConfirmModal 
+            <PasswordConfirmModal
                 show={deleteModal.show}
                 title="Delete Transaction"
                 message="Are you sure you want to delete this transaction record? This cannot be undone."
@@ -868,6 +963,451 @@ export default function Ledger() {
                 onCancel={() => setDeleteModal({ show: false, id: null, idx: null })}
                 loading={deleteLoading}
             />
+
+            {/* Clerk Declaration & Sign-off Modal */}
+            {isSignOffOpen && (
+                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsSignOffOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="modal" style={{ maxWidth: '950px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
+                        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '12px', marginBottom: '20px' }}>
+                            <h2 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--primary)' }}>
+                                <Coins size={24} /> Clerk Declaration & Sign-off
+                            </h2>
+                            <button className="ledger-btn-icon" onClick={() => setIsSignOffOpen(false)} style={{ padding: '6px' }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body: Flex row wrapper */}
+                        <div style={{ display: 'flex', gap: '24px', flexDirection: 'row', flexWrap: 'wrap' }}>
+
+                            {/* Left column: Inputs */}
+                            <div style={{ flex: '1 1 500px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+                                {/* Section 1: Denominations */}
+                                <div style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '16px' }}>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary)' }}>
+                                        Denominations Count
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                                        {[500, 200, 100, 50, 20, 10].map(denom => (
+                                            <div key={denom} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span style={{ width: '45px', fontWeight: '600', fontSize: '13px' }}>₹{denom} x</span>
+                                                <input
+                                                    type="number"
+                                                    className="form-control"
+                                                    style={{ padding: '6px 10px', height: '34px' }}
+                                                    placeholder="0"
+                                                    min="0"
+                                                    value={denominations[denom]}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        const cleanVal = val === '' ? '' : Math.max(0, parseInt(val) || 0);
+                                                        setDenominations(prev => ({ ...prev, [denom]: cleanVal }));
+                                                    }}
+                                                />
+                                            </div>
+                                        ))}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', gridColumn: 'span 2' }}>
+                                            <span style={{ width: '90px', fontWeight: '600', fontSize: '13px' }}>Coins (Total ₹)</span>
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                style={{ padding: '6px 10px', height: '34px' }}
+                                                placeholder="0.00"
+                                                min="0"
+                                                value={denominations.coins}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    const cleanVal = val === '' ? '' : Math.max(0, parseFloat(val) || 0);
+                                                    setDenominations(prev => ({ ...prev, coins: cleanVal }));
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right', marginTop: '12px', fontWeight: '700', fontSize: '14px', borderTop: '1px dashed var(--border)', paddingTop: '8px' }}>
+                                        Counted Cash: <span style={{ color: 'var(--primary)' }}>₹{totalDenomValue.toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+
+                                {/* Section 2: Cash Report & GPay */}
+                                <div style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '16px' }}>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary)' }}>
+                                        Moi Cash & GPay Report
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>Total Ledger Entries</label>
+                                            <div className="form-control" style={{ background: 'var(--bg)', height: '38px', display: 'flex', alignItems: 'center' }}>
+                                                {noOfPersonsPaid} guests
+                                            </div>
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>Total Ledger Sum</label>
+                                            <div className="form-control" style={{ background: 'var(--bg)', height: '38px', display: 'flex', alignItems: 'center', fontWeight: '700' }}>
+                                                ₹{totalMoiReceived.toLocaleString('en-IN')}
+                                            </div>
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>GPay Amount (₹)</label>
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                style={{ height: '38px' }}
+                                                value={gpayAmount}
+                                                onChange={e => setGpayAmount(Math.max(0, parseFloat(e.target.value) || 0).toString())}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>GPay Mobile No</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                style={{ height: '38px' }}
+                                                placeholder="GPay mobile number"
+                                                value={gpayMobNo}
+                                                onChange={e => setGpayMobNo(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Reconciliation Status */}
+                                    <div style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginTop: '16px',
+                                        padding: '12px',
+                                        borderRadius: 'var(--radius-sm)',
+                                        background: differenceAmount === 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                        border: `1px solid ${differenceAmount === 0 ? 'var(--success)' : 'var(--danger)'}`,
+                                        fontSize: '13px'
+                                    }}>
+                                        <div>
+                                            <span style={{ color: 'var(--text-muted)' }}>Total Counted:</span> <strong>₹{(totalDenomValue + (parseFloat(gpayAmount) || 0)).toLocaleString('en-IN')}</strong>
+                                        </div>
+                                        <div>
+                                            <span style={{ color: 'var(--text-muted)' }}>Difference:</span> <strong style={{ color: differenceAmount === 0 ? 'var(--success)' : 'var(--danger)' }}>
+                                                {differenceAmount > 0 ? `+₹${differenceAmount.toLocaleString('en-IN')}` : `₹${differenceAmount.toLocaleString('en-IN')}`}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section 3: Witnesses & Clerk Details */}
+                                <div style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '16px' }}>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary)' }}>
+                                        Witnesses & Clerk Contact
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>Witness-1 Name</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Name"
+                                                style={{ height: '34px', padding: '6px 10px' }}
+                                                value={witness1.name}
+                                                onChange={e => setWitness1({ ...witness1, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>Witness-1 Mobile</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Mobile"
+                                                style={{ height: '34px', padding: '6px 10px' }}
+                                                value={witness1.mobile}
+                                                onChange={e => setWitness1({ ...witness1, mobile: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>Witness-2 Name</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Name"
+                                                style={{ height: '34px', padding: '6px 10px' }}
+                                                value={witness2.name}
+                                                onChange={e => setWitness2({ ...witness2, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0 }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>Witness-2 Mobile</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Mobile"
+                                                style={{ height: '34px', padding: '6px 10px' }}
+                                                value={witness2.mobile}
+                                                onChange={e => setWitness2({ ...witness2, mobile: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="form-group" style={{ margin: 0, gridColumn: 'span 2' }}>
+                                            <label className="form-label" style={{ fontSize: '10px' }}>Clerk Contact Mobile (Print Format)</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Your mobile number"
+                                                style={{ height: '34px', padding: '6px 10px' }}
+                                                value={clerkPhone}
+                                                onChange={e => setClerkPhone(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right column: Document Preview */}
+                            <div style={{ flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <h3 style={{ fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', margin: 0 }}>
+                                        Document Live Preview
+                                    </h3>
+                                    <div style={{ display: 'flex', gap: '4px', background: 'var(--glass-bg)', padding: '2px', borderRadius: '4px', border: '1px solid var(--glass-border)' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActivePreviewPage(1)}
+                                            style={{
+                                                padding: '4px 8px',
+                                                fontSize: '10px',
+                                                fontWeight: '600',
+                                                borderRadius: '3px',
+                                                border: 'none',
+                                                background: activePreviewPage === 1 ? 'var(--primary)' : 'transparent',
+                                                color: activePreviewPage === 1 ? '#fff' : 'var(--text-muted)',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Page 1 (Blank Form)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActivePreviewPage(2)}
+                                            style={{
+                                                padding: '4px 8px',
+                                                fontSize: '10px',
+                                                fontWeight: '600',
+                                                borderRadius: '3px',
+                                                border: 'none',
+                                                background: activePreviewPage === 2 ? 'var(--primary)' : 'transparent',
+                                                color: activePreviewPage === 2 ? '#fff' : 'var(--text-muted)',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Page 2 (Declaration)
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {activePreviewPage === 1 ? (
+                                    <div style={{
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        background: '#ffffff',
+                                        color: '#000000',
+                                        padding: '20px',
+                                        fontSize: '10px',
+                                        lineHeight: '1.4',
+                                        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                                        fontFamily: "'Outfit', sans-serif"
+                                    }}>
+                                        {/* Header */}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ccc', paddingBottom: '8px', marginBottom: '8px' }}>
+                                            <div>
+                                                <div style={{ fontWeight: '800', fontSize: '12px', color: '#1a1a2e' }}>LEELA TECH</div>
+                                                <div style={{ fontSize: '7px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#555' }}>Trust Begins</div>
+                                            </div>
+                                            <div style={{ width: '30px', height: '30px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5px', fontWeight: 'bold' }}>
+                                                QR CODE
+                                            </div>
+                                        </div>
+
+                                        <div style={{ fontSize: '8px', color: '#666', borderBottom: '1px dashed #eee', paddingBottom: '4px', marginBottom: '8px', fontStyle: 'italic', textAlign: 'center' }}>
+                                            (This QR Code will be displayed in Cash counter customers can capture this easily from their Moi app scanner)
+                                        </div>
+
+                                        <div style={{ marginBottom: '10px', fontSize: '10px' }}>
+                                            <div>Welcome, <strong>{user?.name || 'Anand'}</strong></div>
+                                            <div style={{ fontSize: '9px', color: '#666' }}>Your Moi Ledger at a glance</div>
+                                        </div>
+
+                                        <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                                            <div style={{ fontWeight: '800', fontSize: '13px', color: '#000' }}>MOI VIBARAM</div>
+                                            <div style={{ fontSize: '7px', textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>Trust Begins</div>
+                                        </div>
+
+                                        {/* Event Details */}
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <div style={{ fontWeight: '700', fontSize: '10px', color: '#e74c3c', borderBottom: '1px solid #eee', paddingBottom: '2px', marginBottom: '6px', textTransform: 'uppercase' }}>Event Details</div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '9px' }}>
+                                                <div>Event Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '50px', height: '10px' }}></span></div>
+                                                <div>Type: [ ] Recv [ ] Sent</div>
+                                                <div>Date: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '60px', height: '10px' }}></span></div>
+                                                <div>Venue: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '55px', height: '10px' }}></span></div>
+                                                <div>Location: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '50px', height: '10px' }}></span></div>
+                                                <div>City: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '60px', height: '10px' }}></span></div>
+                                                <div style={{ gridColumn: 'span 2' }}>Gpay Mob No: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '120px', height: '10px' }}></span></div>
+                                                <div style={{ gridColumn: 'span 2' }}>Moi Entry Person: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '120px', height: '10px' }}></span></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Transaction Details */}
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <div style={{ fontWeight: '700', fontSize: '10px', color: '#e74c3c', borderBottom: '1px solid #eee', paddingBottom: '2px', marginBottom: '6px', textTransform: 'uppercase' }}>Transaction Details</div>
+                                            <div style={{ fontSize: '9px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <div>Paid By: [ ] Cash &nbsp; [ ] Gpay</div>
+                                                    <div>Cash Amount (₹): <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '60px', height: '10px' }}></span></div>
+                                                </div>
+                                                <div>Amount in words: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
+                                                <div>If Gpay: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '80px', height: '10px' }}></span> <span style={{ fontSize: '7px', color: '#777' }}>(Number auto fill)</span></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Personal Details */}
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <div style={{ fontWeight: '700', fontSize: '10px', color: '#e74c3c', borderBottom: '1px solid #eee', paddingBottom: '2px', marginBottom: '6px', textTransform: 'uppercase' }}>Personal Detail</div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '5px', fontSize: '9px' }}>
+                                                <div>Initial: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '40px', height: '10px' }}></span></div>
+                                                <div>Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '100px', height: '10px' }}></span></div>
+                                                <div style={{ gridColumn: 'span 2' }}>Father Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
+                                                <div style={{ gridColumn: 'span 2' }}>Mother Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
+                                                <div style={{ gridColumn: 'span 2' }}>Spouse Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
+                                                <div style={{ gridColumn: 'span 2' }}>Mobile: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
+                                                <div style={{ gridColumn: 'span 2' }}>Location: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
+                                                <div style={{ gridColumn: 'span 2' }}>Remarks: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
+                                            </div>
+
+                                            {/* <div style={{ display: 'flex', gap: '15px', marginTop: '10px', fontSize: '9px' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <strong>Thai Mama (தாய் மாமன்)</strong>
+                                                    <div style={{ borderBottom: '1px solid #ccc', height: '12px' }}></div>
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <strong>Seer Varisai (Gifts)</strong>
+                                                    <div style={{ borderBottom: '1px solid #ccc', height: '12px' }}></div>
+                                                </div>
+                                            </div> */}
+                                        </div>
+
+                                        {/* Footer */}
+                                        <div style={{ marginTop: '12px', borderTop: '1px solid #eee', paddingTop: '6px', fontSize: '7px', color: '#777', display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>Address: Leela Tech, Melagudalu</span>
+                                            <span>Mob: 8006880050</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div style={{
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        background: '#ffffff',
+                                        color: '#000000',
+                                        padding: '20px',
+                                        fontSize: '11px',
+                                        lineHeight: '1.4',
+                                        boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+                                    }}>
+                                        {/* Mini printable preview structure */}
+                                        <div style={{ textAlign: 'center', borderBottom: '1px solid #ccc', paddingBottom: '10px', marginBottom: '10px' }}>
+                                            <div style={{ fontWeight: '800', fontSize: '14px' }}>LEELA TECH</div>
+                                            <div style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>Trust Begins</div>
+                                            <div style={{ fontWeight: '700', color: '#e74c3c', textDecoration: 'underline', marginTop: '6px', fontSize: '12px' }}>DECLARATION FORM</div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginBottom: '10px', borderBottom: '1px solid #000', paddingBottom: '6px' }}>
+                                            <div><strong>Event:</strong> {selectedEvent?.eventName}</div>
+                                            <div><strong>Location:</strong> {selectedEvent?.location}</div>
+                                            <div><strong>Venue:</strong> {selectedEvent?.venue}</div>
+                                            <div><strong>Mobile:</strong> {clerkPhone}</div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '2px', marginBottom: '4px', fontSize: '9px', textTransform: 'uppercase', color: '#e74c3c' }}>Cash Report</div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Paid count:</span><strong>{noOfPersonsPaid}</strong></div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Ledger Sum:</span><strong>₹{totalMoiReceived}</strong></div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cash count:</span><strong>₹{totalDenomValue}</strong></div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gpay Sum:</span><strong>₹{gpayAmount}</strong></div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Diff:</span><strong style={{ color: differenceAmount !== 0 ? '#e74c3c' : '#000' }}>₹{differenceAmount}</strong></div>
+                                            </div>
+                                            <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '8px' }}>
+                                                <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '2px', marginBottom: '4px', fontSize: '9px', textTransform: 'uppercase', color: '#e74c3c' }}>Denominations</div>
+                                                {[500, 200, 100, 50, 20, 10].map(d => (
+                                                    <div key={d} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                        <span>{d} x</span>
+                                                        <span>{denominations[d] || 0}</span>
+                                                    </div>
+                                                ))}
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', marginTop: '2px', fontWeight: 'bold' }}>
+                                                    <span>Total:</span>
+                                                    <span>₹{totalDenomValue}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '4px 0', marginBottom: '10px', fontSize: '9px' }}>
+                                            <strong>Amount in words:</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic' }}>
+                                                {totalDenomValue > 0 ? `${numberToWords(totalDenomValue, 'en')} Only` : 'Zero rupees only'}
+                                            </span>
+                                        </div>
+
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', border: '1px solid #000', marginBottom: '10px' }}>
+                                            <thead>
+                                                <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
+                                                    <th style={{ padding: '3px', borderRight: '1px solid #000' }}>Witnesses</th>
+                                                    <th style={{ padding: '3px', borderRight: '1px solid #000' }}>Witness 1</th>
+                                                    <th style={{ padding: '3px' }}>Witness 2</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr style={{ borderBottom: '1px solid #000' }}>
+                                                    <td style={{ padding: '3px', borderRight: '1px solid #000' }}><strong>Name</strong></td>
+                                                    <td style={{ padding: '3px', borderRight: '1px solid #000' }}>{witness1.name}</td>
+                                                    <td style={{ padding: '3px' }}>{witness2.name}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td style={{ padding: '3px', borderRight: '1px solid #000' }}><strong>Mobile</strong></td>
+                                                    <td style={{ padding: '3px', borderRight: '1px solid #000' }}>{witness1.mobile}</td>
+                                                    <td style={{ padding: '3px' }}>{witness2.mobile}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
+                                            <div style={{ fontSize: '9px' }}>
+                                                Clerk: <strong>{user?.name}</strong>
+                                            </div>
+                                            <div style={{ borderTop: '1px solid #000', width: '90px', textAlign: 'center', fontSize: '8px', paddingTop: '2px', fontWeight: 'bold' }}>
+                                                Clerk Signature
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Modal Action Footer */}
+                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                            <button className="btn btn-secondary" onClick={() => setIsSignOffOpen(false)}>
+                                Cancel
+                            </button>
+                            <button className="btn btn-secondary" onClick={handlePrintDeclaration} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Printer size={16} /> Print Declaration Form
+                            </button>
+                            <button
+                                className="btn btn-primary"
+                                onClick={handleCloseLedger}
+                                disabled={isClosingEvent}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                            >
+                                {isClosingEvent ? <span className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={16} />}
+                                Confirm & Close Ledger
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Printable Receipt Container - Hidden on screen, visible during print */}
             <div style={{ display: 'none' }}>
@@ -886,9 +1426,9 @@ export default function Ledger() {
                         <h2 style={{ margin: '0 0 5px 0', fontSize: '24px', fontWeight: '800', letterSpacing: '1px', color: '#000' }}>MOI VIBARAM</h2>
                         <div style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600 }}>Traditional Digital Ledger</div>
                     </div>
-                    
+
                     <div style={{ borderBottom: '1px solid #ccc', margin: '15px 0' }} />
-                    
+
                     <div style={{ fontSize: '13px', lineHeight: '1.6', color: '#000' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <strong>Date:</strong> <span>{printData ? new Date(printData.date).toLocaleDateString('en-IN').replace(/\//g, '-') : ''}</span>
@@ -899,9 +1439,9 @@ export default function Ledger() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <strong>Transaction Type:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{printData ? (printData.type === 'received' ? 'Moi Received' : 'Moi Paid') : ''}</span>
                         </div>
-                        
+
                         <div style={{ borderBottom: '1px dashed #ccc', margin: '15px 0' }} />
-                        
+
                         <div style={{ marginBottom: '15px' }}>
                             <h4 style={{ margin: '0 0 8px 0', textTransform: 'uppercase', fontSize: '12px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '4px' }}>Guest Details</h4>
                             <div style={{ paddingLeft: '5px' }}>
@@ -911,17 +1451,17 @@ export default function Ledger() {
                                 {printData?.location && <div><strong>Location:</strong> {printData.location}</div>}
                             </div>
                         </div>
-                        
+
                         <div style={{ borderBottom: '1px dashed #ccc', margin: '15px 0' }} />
-                        
+
                         <div style={{ marginBottom: '15px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                 <strong>Event Name:</strong> <span>{printData ? (printData.eventId?.eventName || printData.eventName || '') : ''}</span>
                             </div>
                         </div>
-                        
+
                         <div style={{ borderBottom: '2px solid #000', margin: '15px 0' }} />
-                        
+
                         <div style={{ textAlign: 'center', padding: '15px', background: '#f9f9f9', border: '1px solid #ccc', margin: '10px 0' }}>
                             <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Amount</div>
                             <div style={{ fontSize: '26px', fontWeight: '800', color: '#000' }}>₹{printData ? printData.cashAmount : '0'}</div>
@@ -929,18 +1469,397 @@ export default function Ledger() {
                                 {printData ? `${numberToWords(printData.cashAmount, 'en')} Only` : ''}
                             </div>
                         </div>
-                        
+
                         {printData?.remarks && (
                             <div style={{ fontSize: '12px', color: '#333', marginTop: '12px', borderTop: '1px solid #eee', paddingTop: '8px' }}>
                                 <strong>Remarks:</strong> {printData.remarks}
                             </div>
                         )}
                     </div>
-                    
+
                     <div style={{ marginTop: '30px', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: '15px' }}>
                         <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '4px' }}>Powered by Leela Tech</div>
                         <div style={{ fontSize: '10px', color: '#666' }}>&copy; {new Date().getFullYear()} Leela Tech. All rights reserved.</div>
                         <div style={{ fontSize: '9px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>Moi Vibaram - Modern Ledger for Traditional Celebrations</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Printable Declaration Sheet Container - Hidden on screen, visible during print */}
+            <div style={{ display: 'none' }}>
+                <div ref={declarationPrintRef} className="print-declaration-sheet" style={{
+                    padding: '20px 30px',
+                    background: '#fff',
+                    color: '#000',
+                    fontFamily: "'Outfit', sans-serif",
+                    width: '100%',
+                    maxWidth: '800px',
+                    margin: '0 auto',
+                    boxSizing: 'border-box'
+                }}>
+                    <style>{`
+                        @page {
+                            size: A4;
+                            margin: 10mm 12mm;
+                        }
+                        @media print {
+                            html, body {
+                                height: auto !important;
+                                min-height: auto !important;
+                                overflow: visible !important;
+                                background: #fff !important;
+                            }
+                            .print-declaration-sheet {
+                                display: block !important;
+                                padding: 0 !important;
+                                margin: 0 !important;
+                                width: 100% !important;
+                                max-width: 100% !important;
+                            }
+                            .print-page-break {
+                                page-break-after: always !important;
+                                break-after: page !important;
+                                display: block !important;
+                                box-sizing: border-box !important;
+                                height: 100% !important;
+                                page-break-inside: avoid !important;
+                                break-inside: avoid !important;
+                            }
+                        }
+                    `}</style>
+                    {/* PAGE 1: Blank Manual Entry Form */}
+                    <div className="print-page-break" style={{
+                        pageBreakAfter: 'always',
+                        breakAfter: 'page',
+                        boxSizing: 'border-box',
+                        display: 'block',
+                        paddingBottom: '20px'
+                    }}>
+                        <div style={{ display: 'block' }}>
+                            {/* Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <div>
+                                    <img src={logoImg} alt="Leela Tech Logo" style={{ height: '42px', objectFit: 'contain' }} />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <img src={iconImg} alt="Leela Tech Icon" style={{ height: '35px', width: '35px', objectFit: 'contain' }} />
+                                    {/* QR Code SVG */}
+                                    <svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#000' }}>
+                                        <rect width="5" height="5" x="3" y="3" rx="1" />
+                                        <rect width="5" height="5" x="16" y="3" rx="1" />
+                                        <rect width="5" height="5" x="3" y="16" rx="1" />
+                                        <path d="M21 16V21H16" />
+                                        <path d="M21 12H16" />
+                                        <path d="M12 21v-5" />
+                                        <path d="M12 12H9" />
+                                        <path d="M12 3v6" />
+                                        <path d="M3 12h3" />
+                                        <path d="M16 8h2" />
+                                        <path d="M8 16h2" />
+                                        <path d="M16 16h2" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic', marginBottom: '12px', borderBottom: '1px dashed #ccc', paddingBottom: '6px' }}>
+                                (This QR Code will be displayed in Cash counter customers can capture this easily from their Moi app scanner)
+                            </div>
+
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ fontSize: '12px', color: '#333' }}>Welcome, <strong>{user?.name || 'Anand'}</strong></div>
+                                <div style={{ fontSize: '12px', color: '#666', marginTop: '1px' }}>Your Moi Ledger at a glance</div>
+                            </div>
+
+                            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                <h2 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '1px', margin: '0 0 2px 0', color: '#000' }}>MOI VIBARAM</h2>
+                                <div style={{ fontSize: '10px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600 }}>Trust Begins</div>
+                            </div>
+
+                            {/* Event Details Section */}
+                            <div style={{ marginBottom: '22px' }}>
+                                <h4 style={{ fontSize: '12px', fontWeight: '800', color: '#000000', textTransform: 'uppercase', borderBottom: '1.5px solid #000', paddingBottom: '3px', marginBottom: '12px' }}>Event Details</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px', fontSize: '11px' }}>
+                                    <div>Event Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div>Type: <span style={{ display: 'inline-block', border: '1px solid #000', width: '10px', height: '10px', verticalAlign: 'middle', marginRight: '3px' }}></span> Received &nbsp;&nbsp;&nbsp;&nbsp; <span style={{ display: 'inline-block', border: '1px solid #000', width: '10px', height: '10px', verticalAlign: 'middle', marginRight: '3px' }}></span> Sent</div>
+                                    <div>Date: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '75%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div>Venue: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div>Location: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div>City: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '75%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div>Gpay Mobile Number: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '45%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div>Mobile No: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div style={{ gridColumn: 'span 2' }}>Moi Entry Person Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                </div>
+                            </div>
+
+                            {/* Transaction Details Section */}
+                            <div style={{ marginBottom: '22px' }}>
+                                <h4 style={{ fontSize: '12px', fontWeight: '800', color: '#000000', textTransform: 'uppercase', borderBottom: '1.5px solid #000', paddingBottom: '3px', marginBottom: '12px' }}>Transaction Details</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11px' }}>
+                                    <div style={{ display: 'flex', gap: '20px' }}>
+                                        <div>Paid By: <span style={{ display: 'inline-block', border: '1px solid #000', width: '10px', height: '10px', verticalAlign: 'middle', marginRight: '3px' }}></span> Cash &nbsp;&nbsp;&nbsp;&nbsp; <span style={{ display: 'inline-block', border: '1px solid #000', width: '10px', height: '10px', verticalAlign: 'middle', marginRight: '3px' }}></span> Gpay</div>
+                                        <div style={{ flex: 1 }}>if Cash Amount (₹): <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '55%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    </div>
+                                    <div>(Amount in words): <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '80%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div>If Gpay: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '35%', height: '13px', verticalAlign: 'bottom' }}></span> <span style={{ fontSize: '9px', color: '#555', marginLeft: '8px' }}>(Number auto fill as mentioned in event create)</span></div>
+                                </div>
+                            </div>
+
+                            {/* Personal Detail Section */}
+                            <div style={{ marginBottom: '22px' }}>
+                                <h4 style={{ fontSize: '12px', fontWeight: '800', color: '#000000', textTransform: 'uppercase', borderBottom: '1.5px solid #000', paddingBottom: '3px', marginBottom: '12px' }}>Personal Detail</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px 20px', fontSize: '11px' }}>
+                                    <div>Initial: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div style={{ gridColumn: 'span 2' }}>Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '80%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+
+                                    <div style={{ gridColumn: 'span 3', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+                                        <div>Father Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                        <div>Mother Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+
+                                        <div>Spouse Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                        <div>Nickname: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    </div>
+
+                                    <div style={{ gridColumn: 'span 3', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+                                        <div>Occupation: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                        <div>Mobile: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+
+                                        <div>Location: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                        <div>Street: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    </div>
+
+                                    <div style={{ gridColumn: 'span 3' }}>Remarks: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '85%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                    <div style={{ gridColumn: 'span 3' }}>Labels (comma separated): <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '40px', marginTop: '20px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        Thai Mama (தாய் மாமன்)
+                                        <div style={{ borderBottom: '1px solid #000', height: '24px', marginTop: '8px' }}></div>
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        Seer Varisai (Gifts)
+                                        <div style={{ borderBottom: '1px solid #000', height: '24px', marginTop: '8px' }}></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#555', marginTop: '16px' }}>
+                            <div>
+                                <strong>Address:</strong> Leela Tech, No -3m, 1st Ward, Pasumpon Nagar, Melagudalu, Theni -DT, Gudalur - 625518
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                                <strong>Contact Details:</strong> Mob: 8006880050 | Email: anand@leelatech.co.in
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* PAGE 2: Declaration Summary */}
+                    <div style={{
+                        boxSizing: 'border-box',
+                        display: 'block',
+                        paddingTop: '10px'
+                    }}>
+                        <div style={{ display: 'block' }}>
+                            {/* Header */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <div>
+                                    <img src={logoImg} alt="Leela Tech Logo" style={{ height: '40px', objectFit: 'contain' }} />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <img src={iconImg} alt="Leela Tech Icon" style={{ height: '32px', width: '32px', objectFit: 'contain' }} />
+                                    <div style={{ fontSize: '11px', fontWeight: '600', textAlign: 'right' }}>
+                                        Date : {new Date(selectedEvent?.date || new Date()).toLocaleDateString('en-IN').replace(/\//g, '/')}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '8px' }}>
+                                <div style={{ fontSize: '11px', color: '#333' }}>Welcome, <strong>{user?.name || 'Anand'}</strong></div>
+                                <div style={{ fontSize: '11px', color: '#666', marginTop: '1px' }}>Your Moi Ledger at a glance</div>
+                            </div>
+
+                            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                                <h2 style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '1px', margin: '0 0 2px 0', color: '#000' }}>MOI VIBARAM</h2>
+                                <div style={{ fontSize: '9px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600 }}>Trust Begins</div>
+                                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#000000', textDecoration: 'underline', marginTop: '4px', textTransform: 'uppercase' }}>Declaration Form</h3>
+                            </div>
+
+                            {/* Event Details Grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px', marginBottom: '12px', borderBottom: '1.5px solid #000', paddingBottom: '8px' }}>
+                                <div style={{ fontSize: '11px' }}><strong>Event Name:</strong> {selectedEvent?.eventName || '—'}</div>
+                                <div style={{ fontSize: '11px' }}><strong>Location:</strong> {selectedEvent?.location || '—'}</div>
+                                <div style={{ fontSize: '11px' }}><strong>Venue:</strong> {selectedEvent?.venue || '—'}</div>
+                                <div style={{ fontSize: '11px' }}><strong>Mobile No:</strong> {clerkPhone || '—'}</div>
+                            </div>
+
+                            {/* Cash Report & Denominations columns */}
+                            <div style={{ display: 'flex', gap: '24px', marginBottom: '12px' }}>
+                                {/* Left Side: Moi Cash Report */}
+                                <div style={{ flex: 1.2 }}>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                        Moi Cash Report
+                                    </h4>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '10px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                            <span>No Of Persons paid</span>
+                                            <strong>{noOfPersonsPaid}</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                            <span>Total Moi Received</span>
+                                            <strong>₹{totalMoiReceived.toLocaleString('en-IN')}</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                            <span>Cash amount</span>
+                                            <strong>₹{totalDenomValue.toLocaleString('en-IN')}</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                            <span>Gpay Amount</span>
+                                            <strong>₹{(parseFloat(gpayAmount) || 0).toLocaleString('en-IN')}</strong>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                            <span>Difference Amount</span>
+                                            <strong style={{ color: '#000000' }}>
+                                                ₹{differenceAmount.toLocaleString('en-IN')}
+                                            </strong>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '3px', marginTop: '4px' }}>
+                                            <span>Gpay Mob No</span>
+                                            <strong>{gpayMobNo || '—'}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Side: Denominations */}
+                                <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
+                                    <h4 style={{ fontSize: '11px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                        Denominations
+                                    </h4>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                                        <tbody>
+                                            {[500, 200, 100, 50, 20, 10].map(denom => (
+                                                <tr key={denom} style={{ borderBottom: '1px dashed #f0f0f0' }}>
+                                                    <td style={{ padding: '3px 0' }}>{denom} *</td>
+                                                    <td style={{ padding: '3px 0', textAlign: 'center' }}>
+                                                        {denominations[denom] || '0'}
+                                                    </td>
+                                                    <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '600' }}>
+                                                        ₹{((parseInt(denominations[denom]) || 0) * denom).toLocaleString('en-IN')}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            <tr style={{ borderBottom: '1px dashed #f0f0f0' }}>
+                                                <td style={{ padding: '3px 0' }}>Coins *</td>
+                                                <td style={{ padding: '3px 0', textAlign: 'center' }}>
+                                                    {denominations.coins ? '—' : '0'}
+                                                </td>
+                                                <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '600' }}>
+                                                    ₹{(parseFloat(denominations.coins) || 0).toLocaleString('en-IN')}
+                                                </td>
+                                            </tr>
+                                            <tr style={{ fontWeight: '800', borderTop: '1.5px solid #000', fontSize: '11px' }}>
+                                                <td style={{ padding: '5px 0' }} colSpan={2}>Total Value</td>
+                                                <td style={{ padding: '5px 0', textAlign: 'right' }}>
+                                                    ₹{totalDenomValue.toLocaleString('en-IN')}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            {/* Cash Amount Words */}
+                            <div style={{ fontSize: '10px', borderTop: '1.5px solid #000', borderBottom: '1.5px solid #000', padding: '8px 0', marginBottom: '12px' }}>
+                                <strong>Cash Amount Words (₹):</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic', marginLeft: '6px' }}>
+                                    {totalDenomValue > 0 ? `${numberToWords(totalDenomValue, 'en')} Only` : 'Zero rupees only'}
+                                </span>
+                            </div>
+
+                            {/* Witness Table and Stamp / Customer Signature Section */}
+                            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '15px' }}>
+                                {/* Witnesses Table */}
+                                <div style={{ flex: 1.5 }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', border: '1px solid #000' }}>
+                                        <thead>
+                                            <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
+                                                <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>Particulars</th>
+                                                <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>Witness -1</th>
+                                                <th style={{ padding: '5px', textAlign: 'left' }}>Witness -2</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr style={{ borderBottom: '1px solid #000' }}>
+                                                <td style={{ padding: '5px', fontWeight: '600', borderRight: '1px solid #000' }}>Name</td>
+                                                <td style={{ padding: '5px', borderRight: '1px solid #000' }}>{witness1.name || ' '}</td>
+                                                <td style={{ padding: '5px' }}>{witness2.name || ' '}</td>
+                                            </tr>
+                                            <tr style={{ borderBottom: '1px solid #000' }}>
+                                                <td style={{ padding: '5px', fontWeight: '600', borderRight: '1px solid #000' }}>Mobile No</td>
+                                                <td style={{ padding: '5px', borderRight: '1px solid #000' }}>{witness1.mobile || ' '}</td>
+                                                <td style={{ padding: '5px' }}>{witness2.mobile || ' '}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '15px 5px 5px 5px', fontWeight: '600', borderRight: '1px solid #000', verticalAlign: 'bottom' }}>Signature</td>
+                                                <td style={{ padding: '15px 5px 5px 5px', borderRight: '1px solid #000', verticalAlign: 'bottom' }}>
+                                                    <div style={{ borderTop: '1px dashed #aaa', width: '100%', marginTop: '10px' }}></div>
+                                                </td>
+                                                <td style={{ padding: '15px 5px 5px 5px', verticalAlign: 'bottom' }}>
+                                                    <div style={{ borderTop: '1px dashed #aaa', width: '100%', marginTop: '10px' }}></div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Revenue Stamp & Customer Signature */}
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{
+                                        width: '80px',
+                                        height: '95px',
+                                        border: '1px dashed #888',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '9px',
+                                        color: '#555',
+                                        textAlign: 'center',
+                                        padding: '6px',
+                                        background: '#fafafa'
+                                    }}>
+                                        Revenue Stamp
+                                    </div>
+                                    <div style={{ textAlign: 'center', marginTop: '5px' }}>
+                                        <div style={{ borderTop: '1px solid #000', width: '120px', margin: '0 auto 3px' }}></div>
+                                        <div style={{ fontSize: '10px', fontWeight: '600' }}>Customer Signature</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Clerk Info & Signature Footer */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #000', paddingTop: '10px', marginTop: '12px' }}>
+                                <div style={{ fontSize: '10px' }}>
+                                    Moi Entry person Name: <strong>{user?.name || 'Anand'}</strong>
+                                    <span style={{ margin: '0 10px', color: '#ccc' }}>|</span>
+                                    Mob No: <strong>{clerkPhone || '—'}</strong>
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ borderTop: '1px solid #000', width: '150px', margin: '0 auto 3px' }}></div>
+                                    <div style={{ fontSize: '10px', fontWeight: '600' }}>Employee Signature</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Branding footer */}
+                        <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '8px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '9px', fontWeight: '600', color: '#1a1a2e' }}>Address: Leela Tech</div>
+                            <div style={{ fontSize: '8px', color: '#555', marginTop: '2px' }}>
+                                No -3m, 1st Ward, Pasumpon Nagar, Melagudalu, Theni -DT, Gudalur - 625518
+                            </div>
+                            <div style={{ fontSize: '8px', color: '#555', marginTop: '1px' }}>
+                                Mob: 8006880050 | Email: anand@leelatech.co.in
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
