@@ -651,19 +651,6 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
 
             <div className="page-header no-print">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <button
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => {
-                            const next = !sidebarCollapsed;
-                            setSidebarCollapsed(next);
-                            localStorage.setItem('mv_sidebar_collapsed', String(next));
-                        }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                        title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-                    >
-                        <ArrowLeft size={16} style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }} />
-                        {sidebarCollapsed ? 'Show Menu' : 'Hide Menu'}
-                    </button>
                     <div>
                         <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <BookMarked size={28} /> {t('ledger')}
