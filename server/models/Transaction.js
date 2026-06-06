@@ -18,6 +18,7 @@ const transactionSchema = new mongoose.Schema({
     partyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Party', required: true },
     type: { type: String, enum: ['received', 'paid'], required: true },
     cashAmount: { type: Number, default: 0 },
+    paymentType: { type: String, enum: ['cash', 'gpay'], default: 'cash', required: true },
     date: { type: Date, default: Date.now },
     thaiMama: { type: Boolean, default: false },
     labels: [{ type: String }], // For user-defined labels/groups

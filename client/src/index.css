@@ -108,6 +108,19 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   min-width: 0;
 }
 
+@media (min-width: 769px) {
+  .sidebar-collapsed .sidebar {
+    transform: translateX(-100%);
+    visibility: hidden;
+  }
+  .sidebar-collapsed .main-content {
+    margin-left: 0;
+  }
+  .sidebar-collapsed .main-content::before {
+    left: 0;
+  }
+}
+
 /* Subtle banana leaf border pattern via CSS */
 .main-content::before {
   content: '';

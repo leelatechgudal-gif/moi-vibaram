@@ -24,7 +24,8 @@ import {
     Menu,
     Download,
     ShieldCheck,
-    Building2
+    Building2,
+    ArrowLeft
 } from 'lucide-react'
 
 const navItems = [
@@ -40,7 +41,7 @@ const navItems = [
     { icon: <Phone size={18} />, key: 'contactUs', path: '/contact-us' },
 ]
 
-export default function Navbar() {
+export default function Navbar({ sidebarCollapsed, setSidebarCollapsed }) {
     const { t } = useTranslation()
     const { user, logout, updateUser } = useAuth()
     const navigate = useNavigate()
@@ -102,9 +103,25 @@ export default function Navbar() {
 
     const SidebarContent = () => (
         <>
-            <div className="sidebar-brand">
-                <div className="brand-name">{t('appName')}</div>
-                <div className="brand-tag">{t('tagline')}</div>
+            <div className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: '15px' }}>
+                <div style={{ flex: 1, textAlign: 'left', paddingLeft: '10px' }}>
+                    <div className="brand-name" style={{ fontSize: '18px' }}>{t('appName')}</div>
+                    <div className="brand-tag">{t('tagline')}</div>
+                </div>
+                {setSidebarCollapsed && (
+                    <button
+                        onClick={() => {
+                            const next = !sidebarCollapsed;
+                            setSidebarCollapsed(next);
+                            localStorage.setItem('mv_sidebar_collapsed', String(next));
+                        }}
+                        className="ledger-btn-icon hide-mobile"
+                        title="Collapse Sidebar"
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px' }}
+                    >
+                        <ArrowLeft size={16} />
+                    </button>
+                )}
             </div>
             <nav className="sidebar-nav">
                 {navItems.filter(item => {
@@ -195,6 +212,38 @@ export default function Navbar() {
             <div className={`sidebar ${open ? 'open' : ''}`}>
                 <SidebarContent />
             </div>
+
+            {/* Global Expand Button on Desktop when collapsed */}
+            {sidebarCollapsed && setSidebarCollapsed && (
+                <button
+                    onClick={() => {
+                        setSidebarCollapsed(false);
+                        localStorage.setItem('mv_sidebar_collapsed', 'false');
+                    }}
+                    className="hide-mobile"
+                    style={{
+                        position: 'fixed',
+                        top: '15px',
+                        left: '15px',
+                        zIndex: 150,
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '8px',
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--glass-border)',
+                        color: 'var(--text)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        boxShadow: 'var(--shadow)',
+                        transition: 'all 0.2s'
+                    }}
+                    title="Expand Sidebar"
+                >
+                    <Menu size={18} />
+                </button>
+            )}
 
             {/* Overlay for mobile */}
             {open && (

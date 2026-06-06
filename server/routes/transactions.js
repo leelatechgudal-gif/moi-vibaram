@@ -97,10 +97,12 @@ router.get('/person-detail', auth, async (req, res) => {
 // Helper to flatten transaction and party data
 function flattenTransaction(t) {
     const obj = t.toObject ? t.toObject() : t;
+    obj.paymentType = obj.paymentType || 'cash';
     if (obj.partyId && typeof obj.partyId === 'object') {
         const party = obj.partyId;
         return {
             ...obj,
+            paymentType: obj.paymentType || 'cash',
             partyId: party._id,
             partyName: party.name,
             initial: party.initial,
@@ -157,6 +159,31 @@ async function findOrCreateParty(data, tenantId, userId) {
             createdBy: userId
         });
         await party.save();
+    } else {
+        let changed = false;
+        if (occupation !== undefined && party.occupation !== occupation) {
+            party.occupation = occupation;
+            changed = true;
+        }
+        if (fatherName !== undefined && party.fatherName !== fatherName) {
+            party.fatherName = fatherName;
+            changed = true;
+        }
+        if (motherName !== undefined && party.motherName !== motherName) {
+            party.motherName = motherName;
+            changed = true;
+        }
+        if (nickname !== undefined && party.nickname !== nickname) {
+            party.nickname = nickname;
+            changed = true;
+        }
+        if (street !== undefined && party.street !== street) {
+            party.street = street;
+            changed = true;
+        }
+        if (changed) {
+            await party.save();
+        }
     }
     return party;
 }
@@ -167,11 +194,40 @@ router.post('/', auth, async (req, res) => {
         const {
             eventId, eventName, type, cashAmount, date,
             seerVarisai, remarks, thaiMama, labels,
-            partyId, ...partyData
+            partyId, paymentType, ...partyData
         } = req.body;
 
         if (type === 'received' && !eventId) {
             return res.status(400).json({ message: 'Event is required for received Moi' });
+        }
+
+        if (type === 'received') {
+            let finalInitial = partyData.initial;
+            let finalName = partyData.partyName || partyData.name;
+            let finalSpouseName = partyData.spouseName;
+            let finalMobile = partyData.mobile;
+            let finalLocation = partyData.location;
+            let finalOccupation = partyData.occupation;
+
+            if (partyId) {
+                const party = await Party.findOne({ _id: partyId, tenantId: req.tenantId, isDeleted: { $ne: true } });
+                if (!party) return res.status(404).json({ message: 'Party not found' });
+                finalInitial = finalInitial || party.initial;
+                finalName = finalName || party.name;
+                finalSpouseName = finalSpouseName || party.spouseName;
+                finalMobile = finalMobile || party.mobile;
+                finalLocation = finalLocation || party.location;
+                finalOccupation = finalOccupation || party.occupation;
+            }
+
+            if (!finalInitial || !finalInitial.trim()) return res.status(400).json({ message: 'Initial is required' });
+            if (!finalName || !finalName.trim()) return res.status(400).json({ message: 'Name is required' });
+            if (!finalSpouseName || !finalSpouseName.trim()) return res.status(400).json({ message: 'Spouse Name is required' });
+            if (!finalMobile || !finalMobile.trim()) return res.status(400).json({ message: 'Mobile number is required' });
+            if (!finalLocation || !finalLocation.trim()) return res.status(400).json({ message: 'Location is required' });
+            if (!finalOccupation || !finalOccupation.trim()) return res.status(400).json({ message: 'Occupation is required' });
+            if (!paymentType || !['cash', 'gpay'].includes(paymentType)) return res.status(400).json({ message: 'Valid payment type (cash or gpay) is required' });
+            if (cashAmount === undefined || parseFloat(cashAmount) <= 0) return res.status(400).json({ message: 'Amount must be greater than 0' });
         }
 
         if (eventId) {
@@ -184,6 +240,29 @@ router.post('/', auth, async (req, res) => {
         if (!finalPartyId) {
             const party = await findOrCreateParty(partyData, req.tenantId, req.userId);
             finalPartyId = party._id;
+        } else {
+            // Update the existing party with updated fields if any are provided
+            const party = await Party.findOne({ _id: finalPartyId, tenantId: req.tenantId, isDeleted: { $ne: true } });
+            if (party) {
+                let changed = false;
+                const fields = {
+                    initial: partyData.initial,
+                    name: partyData.partyName || partyData.name,
+                    spouseName: partyData.spouseName,
+                    mobile: partyData.mobile,
+                    location: partyData.location,
+                    occupation: partyData.occupation
+                };
+                for (const [key, val] of Object.entries(fields)) {
+                    if (val !== undefined && party[key] !== val) {
+                        party[key] = val;
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    await party.save();
+                }
+            }
         }
 
         const transaction = new Transaction({
@@ -193,6 +272,7 @@ router.post('/', auth, async (req, res) => {
             eventName,
             type,
             cashAmount: cashAmount || 0,
+            paymentType: paymentType || 'cash',
             date: date || Date.now(),
             seerVarisai,
             remarks,
@@ -265,7 +345,7 @@ router.put('/:id', auth, async (req, res) => {
         const transaction = await Transaction.findOne({ _id: req.params.id, userId: { $in: tenantUserIds }, isDeleted: { $ne: true } });
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
-        const fields = ['eventId', 'eventName', 'type', 'cashAmount', 'date', 'seerVarisai', 'remarks', 'thaiMama', 'labels'];
+        const fields = ['eventId', 'eventName', 'type', 'cashAmount', 'date', 'seerVarisai', 'remarks', 'thaiMama', 'labels', 'paymentType'];
         fields.forEach(f => { 
             if (req.body[f] !== undefined) {
                 if (f === 'eventId' && req.body[f] === '') {
@@ -276,9 +356,72 @@ router.put('/:id', auth, async (req, res) => {
             }
         });
 
+        // Validation for received transactions
+        if (transaction.type === 'received') {
+            const initial = req.body.initial !== undefined ? req.body.initial : transaction.initial;
+            const partyName = req.body.partyName || req.body.name || transaction.partyName;
+            const spouseName = req.body.spouseName !== undefined ? req.body.spouseName : transaction.spouseName;
+            const mobile = req.body.mobile !== undefined ? req.body.mobile : transaction.mobile;
+            const location = req.body.location !== undefined ? req.body.location : transaction.location;
+            const occupation = req.body.occupation !== undefined ? req.body.occupation : transaction.occupation;
+            const paymentType = req.body.paymentType !== undefined ? req.body.paymentType : transaction.paymentType;
+            const cashAmount = req.body.cashAmount !== undefined ? req.body.cashAmount : transaction.cashAmount;
+
+            let finalInitial = initial;
+            let finalName = partyName;
+            let finalSpouseName = spouseName;
+            let finalMobile = mobile;
+            let finalLocation = location;
+            let finalOccupation = occupation;
+
+            let finalPartyId = req.body.partyId || transaction.partyId;
+            if (finalPartyId) {
+                const party = await Party.findOne({ _id: finalPartyId, tenantId: req.tenantId, isDeleted: { $ne: true } });
+                if (party) {
+                    finalInitial = finalInitial || party.initial;
+                    finalName = finalName || party.name;
+                    finalSpouseName = finalSpouseName || party.spouseName;
+                    finalMobile = finalMobile || party.mobile;
+                    finalLocation = finalLocation || party.location;
+                    finalOccupation = finalOccupation || party.occupation;
+                }
+            }
+
+            if (!finalInitial || !finalInitial.trim()) return res.status(400).json({ message: 'Initial is required' });
+            if (!finalName || !finalName.trim()) return res.status(400).json({ message: 'Name is required' });
+            if (!finalSpouseName || !finalSpouseName.trim()) return res.status(400).json({ message: 'Spouse Name is required' });
+            if (!finalMobile || !finalMobile.trim()) return res.status(400).json({ message: 'Mobile number is required' });
+            if (!finalLocation || !finalLocation.trim()) return res.status(400).json({ message: 'Location is required' });
+            if (!finalOccupation || !finalOccupation.trim()) return res.status(400).json({ message: 'Occupation is required' });
+            if (!paymentType || !['cash', 'gpay'].includes(paymentType)) return res.status(400).json({ message: 'Valid payment type (cash or gpay) is required' });
+            if (cashAmount === undefined || parseFloat(cashAmount) <= 0) return res.status(400).json({ message: 'Amount must be greater than 0' });
+        }
+
         // Handle party change if needed
         if (req.body.partyId) {
             transaction.partyId = req.body.partyId;
+            // Also update the party details if they differ and are provided
+            const party = await Party.findOne({ _id: req.body.partyId, tenantId: req.tenantId, isDeleted: { $ne: true } });
+            if (party) {
+                let changed = false;
+                const fieldsToUpdate = {
+                    initial: req.body.initial,
+                    name: req.body.partyName || req.body.name,
+                    spouseName: req.body.spouseName,
+                    mobile: req.body.mobile,
+                    location: req.body.location,
+                    occupation: req.body.occupation
+                };
+                for (const [key, val] of Object.entries(fieldsToUpdate)) {
+                    if (val !== undefined && party[key] !== val) {
+                        party[key] = val;
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    await party.save();
+                }
+            }
         } else if (req.body.partyName || req.body.name) {
             const party = await findOrCreateParty(req.body, req.tenantId);
             transaction.partyId = party._id;

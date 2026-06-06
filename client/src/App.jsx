@@ -39,6 +39,10 @@ function ClerkRouteRestriction({ children, allowedRoles }) {
 
 function AppRoutes() {
     const { isAuthenticated, user } = useAuth()
+    const [sidebarCollapsed, setSidebarCollapsed] = React.useState(() => {
+        return localStorage.getItem('mv_sidebar_collapsed') === 'true';
+    });
+
     React.useEffect(() => {
         const backHandler = CapApp.addListener('backButton', ({ canGoBack }) => {
             if (canGoBack) {
@@ -61,12 +65,12 @@ function AppRoutes() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/*" element={
                     <Protected>
-                        <div className="app-layout">
-                            <Navbar />
+                         <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+                            <Navbar sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />
                             <div className="main-content">
                                 <Routes>
                                     <Route path="/" element={<Dashboard />} />
-                                    <Route path="/ledger" element={<Ledger />} />
+                                    <Route path="/ledger" element={<Ledger sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />} />
                                      <Route path="/events" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><Events /></ClerkRouteRestriction>} />
                                     <Route path="/transactions/new" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><CreateMoi /></ClerkRouteRestriction>} />
                                     <Route path="/transactions/edit/:id" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><EditMoi /></ClerkRouteRestriction>} />

@@ -25,10 +25,18 @@ import {
     EyeOff
 } from 'lucide-react';
 
-export default function Ledger() {
+export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     const { t } = useTranslation();
     const { user } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        return () => {
+            if (setSidebarCollapsed) {
+                setSidebarCollapsed(false);
+            }
+        };
+    }, [setSidebarCollapsed]);
 
     // Filters
     const [events, setEvents] = useState([]);
@@ -179,7 +187,8 @@ export default function Ledger() {
                 mobile: t.mobile || '',
                 location: t.location || '',
                 cashAmount: t.cashAmount || '',
-                remarks: t.remarks || '',
+                paymentType: t.paymentType || 'cash',
+                occupation: t.occupation || t.partyId?.occupation || '',
                 isEditing: false,
                 isSaving: false
             }));
@@ -211,7 +220,8 @@ export default function Ledger() {
                 mobile: '',
                 location: '',
                 cashAmount: '',
-                remarks: '',
+                occupation: '',
+                paymentType: 'cash',
                 partyId: null,
                 isEditing: true,
                 isSaving: false
@@ -254,6 +264,7 @@ export default function Ledger() {
         updated[idx].spouseName = party.spouseName || '';
         updated[idx].mobile = party.mobile || '';
         updated[idx].location = party.location || '';
+        updated[idx].occupation = party.occupation || '';
         updated[idx].partyId = party._id;
         setRows(updated);
         setActiveRowIndex(null);
@@ -263,12 +274,42 @@ export default function Ledger() {
         const updated = [...rows];
         const row = updated[idx];
 
-        if (!row.partyName.trim()) {
+        // Mandatory fields check
+        if (!row.initial || !row.initial.trim()) {
+            alert('Initial is required');
+            return;
+        }
+        if (!row.partyName || !row.partyName.trim()) {
             alert('Name is required');
+            return;
+        }
+        if (!row.spouseName || !row.spouseName.trim()) {
+            alert('Spouse Name is required');
+            return;
+        }
+        if (!row.mobile || !row.mobile.trim()) {
+            alert('Mobile is required');
+            return;
+        }
+        const mobileRegex = /^[6-9]\d{9}$/;
+        if (!mobileRegex.test(row.mobile.trim())) {
+            alert('Please enter a valid 10-digit mobile number starting with 6-9');
+            return;
+        }
+        if (!row.location || !row.location.trim()) {
+            alert('Location is required');
             return;
         }
         if (!row.cashAmount || parseFloat(row.cashAmount) <= 0) {
             alert('Amount must be greater than 0');
+            return;
+        }
+        if (!row.occupation || !row.occupation.trim()) {
+            alert('Occupation is required');
+            return;
+        }
+        if (!row.paymentType) {
+            alert('Payment Type is required');
             return;
         }
         if (!selectedEventId) {
@@ -289,7 +330,8 @@ export default function Ledger() {
                 mobile: row.mobile.trim(),
                 location: row.location.trim(),
                 cashAmount: parseFloat(row.cashAmount),
-                remarks: row.remarks.trim(),
+                paymentType: row.paymentType,
+                occupation: row.occupation.trim(),
                 partyId: row.partyId,
                 eventId: selectedEventId
             };
@@ -316,7 +358,8 @@ export default function Ledger() {
                         initial: pop.initial,
                         spouseName: pop.spouseName,
                         mobile: pop.mobile,
-                        location: pop.location
+                        location: pop.location,
+                        occupation: pop.occupation || pop.partyId?.occupation || ''
                     }]);
                 }
             }
@@ -331,7 +374,8 @@ export default function Ledger() {
                 mobile: pop.mobile || pop.partyId?.mobile || '',
                 location: pop.location || pop.partyId?.location || '',
                 cashAmount: pop.cashAmount || 0,
-                remarks: pop.remarks || '',
+                paymentType: pop.paymentType || 'cash',
+                occupation: pop.occupation || pop.partyId?.occupation || '',
                 isEditing: false,
                 isSaving: false
             };
@@ -374,6 +418,12 @@ export default function Ledger() {
             eventId: resolvedEvent,
             type: 'received'
         });
+    };
+
+    const handleOpenSignOff = () => {
+        const calculatedGpay = rows.filter(r => r.paymentType === 'gpay').reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0);
+        setGpayAmount(calculatedGpay.toString());
+        setIsSignOffOpen(true);
     };
 
     const handleCloseLedger = async () => {
@@ -603,9 +653,16 @@ export default function Ledger() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <button
                         className="btn btn-secondary btn-sm"
-                        onClick={() => navigate('/')}
+                        onClick={() => {
+                            const next = !sidebarCollapsed;
+                            setSidebarCollapsed(next);
+                            localStorage.setItem('mv_sidebar_collapsed', String(next));
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                        title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                     >
-                        <ArrowLeft size={16} style={{ marginRight: 4 }} /> {t('back')}
+                        <ArrowLeft size={16} style={{ transform: sidebarCollapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s ease' }} />
+                        {sidebarCollapsed ? 'Show Menu' : 'Hide Menu'}
                     </button>
                     <div>
                         <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -617,7 +674,7 @@ export default function Ledger() {
                 {selectedEventId && (
                     <button
                         className="btn btn-success"
-                        onClick={() => setIsSignOffOpen(true)}
+                        onClick={handleOpenSignOff}
                         style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                     >
                         <Printer size={16} /> Sign-off & Close Ledger
@@ -698,13 +755,14 @@ export default function Ledger() {
                                 <thead>
                                     <tr>
                                         <th style={{ width: 50, textAlign: 'center' }}>S.No</th>
-                                        <th style={{ width: 70 }}>Initial</th>
+                                        <th style={{ width: 70 }}>Initial *</th>
                                         <th style={{ minWidth: 160 }}>{t('partyName')} *</th>
-                                        <th style={{ minWidth: 150 }}>{t('spouseName')}</th>
-                                        <th style={{ minWidth: 130 }}>{t('mobile')}</th>
-                                        <th style={{ minWidth: 130 }}>{t('location')}</th>
+                                        <th style={{ minWidth: 150 }}>{t('spouseName')} *</th>
+                                        <th style={{ minWidth: 130 }}>{t('mobile')} *</th>
+                                        <th style={{ minWidth: 130 }}>{t('location')} *</th>
                                         <th style={{ width: 110 }}>{t('amount')} (₹) *</th>
-                                        <th style={{ minWidth: 160 }}>{t('remarks')}</th>
+                                        <th style={{ width: 120 }}>{t('paymentType')} *</th>
+                                        <th style={{ minWidth: 160 }}>{t('occupation')} *</th>
                                         <th style={{ width: 120, textAlign: 'center' }}>Actions</th>
                                     </tr>
                                 </thead>
@@ -847,18 +905,40 @@ export default function Ledger() {
                                                     )}
                                                 </td>
 
-                                                {/* Remarks cell */}
+                                                {/* Payment Type cell */}
+                                                <td>
+                                                    {row.isEditing ? (
+                                                        <select
+                                                            className="ledger-input"
+                                                            value={row.paymentType || 'cash'}
+                                                            onChange={(e) => handleFieldChange(idx, 'paymentType', e.target.value)}
+                                                            disabled={row.isSaving}
+                                                            style={{ background: 'var(--surface)', color: 'var(--text)', border: 'none', padding: '0 8px' }}
+                                                        >
+                                                            <option value="cash">Cash</option>
+                                                            <option value="gpay">GPay</option>
+                                                        </select>
+                                                    ) : (
+                                                        <div className="ledger-text-cell">
+                                                            <span className={`badge ${row.paymentType === 'gpay' ? 'badge-primary' : 'badge-success'}`}>
+                                                                {row.paymentType === 'gpay' ? t('gpay') : t('cash')}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* Occupation cell */}
                                                 <td>
                                                     {row.isEditing ? (
                                                         <input
                                                             className="ledger-input"
-                                                            value={row.remarks}
-                                                            onChange={(e) => handleFieldChange(idx, 'remarks', e.target.value)}
-                                                            placeholder="Remarks"
+                                                            value={row.occupation || ''}
+                                                            onChange={(e) => handleFieldChange(idx, 'occupation', e.target.value)}
+                                                            placeholder="Occupation"
                                                             disabled={row.isSaving}
                                                         />
                                                     ) : (
-                                                        <div className="ledger-text-cell">{row.remarks || '—'}</div>
+                                                        <div className="ledger-text-cell">{row.occupation || '—'}</div>
                                                     )}
                                                 </td>
 
@@ -917,7 +997,7 @@ export default function Ledger() {
 
                                     {filteredRows.length === 0 && (
                                         <tr>
-                                            <td colSpan={9} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                                            <td colSpan={10} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                                                 {t('noData')}
                                             </td>
                                         </tr>
@@ -1439,6 +1519,9 @@ export default function Ledger() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <strong>Transaction Type:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{printData ? (printData.type === 'received' ? 'Moi Received' : 'Moi Paid') : ''}</span>
                         </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <strong>Payment Method:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{printData?.paymentType || 'CASH'}</span>
+                        </div>
 
                         <div style={{ borderBottom: '1px dashed #ccc', margin: '15px 0' }} />
 
@@ -1449,6 +1532,7 @@ export default function Ledger() {
                                 {printData?.spouseName && <div><strong>Spouse:</strong> {printData.spouseName}</div>}
                                 {printData?.mobile && <div><strong>Mobile:</strong> {printData.mobile}</div>}
                                 {printData?.location && <div><strong>Location:</strong> {printData.location}</div>}
+                                {printData?.occupation && <div><strong>Occupation:</strong> {printData.occupation}</div>}
                             </div>
                         </div>
 
@@ -1469,12 +1553,6 @@ export default function Ledger() {
                                 {printData ? `${numberToWords(printData.cashAmount, 'en')} Only` : ''}
                             </div>
                         </div>
-
-                        {printData?.remarks && (
-                            <div style={{ fontSize: '12px', color: '#333', marginTop: '12px', borderTop: '1px solid #eee', paddingTop: '8px' }}>
-                                <strong>Remarks:</strong> {printData.remarks}
-                            </div>
-                        )}
                     </div>
 
                     <div style={{ marginTop: '30px', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: '15px' }}>
