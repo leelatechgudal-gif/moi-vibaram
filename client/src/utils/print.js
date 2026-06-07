@@ -36,9 +36,26 @@ export const printElement = (element, onAfterPrint) => {
   // 5. Activate the printing state on body
   document.body.classList.add('printing-active');
 
+  // 5.1 Adjust viewport dynamically for mobile/tablet print scaling in desktop mode
+  const viewportMeta = document.querySelector('meta[name="viewport"]');
+  const originalViewportContent = viewportMeta ? viewportMeta.getAttribute('content') : null;
+
+  if (viewportMeta) {
+    // Check if printing a narrow receipt or a full-size declaration sheet
+    const isReceipt = element.classList.contains('print-receipt') || element.querySelector('.print-receipt');
+    const targetWidth = isReceipt ? '380' : '800';
+    viewportMeta.setAttribute('content', `width=${targetWidth}, initial-scale=1.0, maximum-scale=1.0, user-scalable=0`);
+  }
+
   // 6. Define cleanup handler
   const cleanup = () => {
     document.body.classList.remove('printing-active');
+
+    // Restore original viewport settings
+    if (viewportMeta && originalViewportContent) {
+      viewportMeta.setAttribute('content', originalViewportContent);
+    }
+
     if (clone.parentNode) {
       clone.parentNode.removeChild(clone);
     }
@@ -51,8 +68,8 @@ export const printElement = (element, onAfterPrint) => {
   // 7. Register cleanup for after-print event
   window.addEventListener('afterprint', cleanup);
 
-  // 8. Trigger printing with a minor timeout to allow DOM changes to settle
+  // 8. Trigger printing with a minor timeout to allow DOM changes and viewport update to settle
   setTimeout(() => {
     window.print();
-  }, 50);
+  }, 150);
 };
