@@ -184,6 +184,15 @@ router.post('/send-login-otp', async (req, res) => {
         if (email.includes('@')) {
             await sendOTPEmail(user.email, otp);
             logger.info('[send-login-otp] Email OTP sent', { email: user.email });
+            if (user.mobile) {
+                try {
+                    const { sendSMS } = require('../utils/sms');
+                    await sendSMS(user.mobile, otp);
+                    logger.info('[send-login-otp] Mobile OTP dual-sent', { mobile: user.mobile });
+                } catch (smsErr) {
+                    logger.error('[send-login-otp] SMS dual-delivery failed', { message: smsErr.message });
+                }
+            }
         } else {
             const { sendSMS } = require('../utils/sms');
             await sendSMS(user.mobile, otp);
@@ -259,6 +268,15 @@ router.post('/forgot-password', async (req, res) => {
 
             if (email.includes('@')) {
                 await sendOTPEmail(user.email, otp);
+                if (user.mobile) {
+                    try {
+                        const { sendSMS } = require('../utils/sms');
+                        await sendSMS(user.mobile, otp);
+                        logger.info('[forgot-password] OTP dual-sent via SMS', { mobile: user.mobile });
+                    } catch (smsErr) {
+                        logger.error('[forgot-password] SMS dual-delivery failed', { message: smsErr.message });
+                    }
+                }
             } else {
                 const { sendSMS } = require('../utils/sms');
                 await sendSMS(user.mobile, otp);

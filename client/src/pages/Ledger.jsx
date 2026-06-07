@@ -1387,42 +1387,158 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
             {/* Printable Receipt Container - Hidden on screen, visible during print */}
             <div style={{ display: 'none' }}>
                 <div ref={printRef} className="print-receipt" style={{
-                    padding: '40px',
+                    padding: '20px 15px',
                     background: '#fff',
                     color: '#000',
-                    fontFamily: 'Outfit, sans-serif',
+                    fontFamily: "'Outfit', sans-serif",
                     width: '100%',
-                    maxWidth: '450px',
+                    maxWidth: '380px',
                     margin: '0 auto',
-                    border: '2px dashed #000',
+                    border: '1px dashed #000',
                     boxSizing: 'border-box'
                 }}>
+                    <style>{`
+                        @page {
+                            size: auto;
+                            margin: 2mm 3mm 2mm 3mm !important;
+                        }
+                        @media print {
+                            html, body {
+                                height: auto !important;
+                                min-height: auto !important;
+                                overflow: visible !important;
+                                background: #fff !important;
+                                color: #000 !important;
+                            }
+                            .print-receipt {
+                                display: block !important;
+                                padding: 8px 4px !important;
+                                margin: 0 !important;
+                                width: 100% !important;
+                                max-width: 100% !important;
+                                border: 1px dashed #000 !important;
+                                font-size: 11px !important;
+                                line-height: 1.4 !important;
+                                box-sizing: border-box !important;
+                            }
+                            .print-receipt h2 {
+                                font-size: 18px !important;
+                                margin: 0 0 2px 0 !important;
+                                font-weight: 800 !important;
+                                letter-spacing: 0.5px !important;
+                                color: #000 !important;
+                            }
+                            .print-receipt .sub-title {
+                                font-size: 8px !important;
+                                color: #000 !important;
+                                letter-spacing: 1px !important;
+                                font-weight: 600 !important;
+                            }
+                            .print-receipt .divider {
+                                border-bottom: 1px solid #000 !important;
+                                margin: 8px 0 !important;
+                            }
+                            .print-receipt .dashed-divider {
+                                border-bottom: 1px dashed #000 !important;
+                                margin: 8px 0 !important;
+                            }
+                            .print-receipt .double-divider {
+                                border-bottom: 2px solid #000 !important;
+                                margin: 8px 0 !important;
+                            }
+                            .print-receipt .info-row {
+                                margin-bottom: 4px !important;
+                                font-size: 11px !important;
+                            }
+                            .print-receipt .section-title {
+                                font-size: 10px !important;
+                                margin: 0 0 4px 0 !important;
+                                border-bottom: 1px solid #000 !important;
+                                padding-bottom: 2px !important;
+                                text-transform: uppercase !important;
+                                color: #000 !important;
+                                font-weight: bold !important;
+                            }
+                            .print-receipt .details-block {
+                                padding-left: 2px !important;
+                                font-size: 11px !important;
+                            }
+                            .print-receipt .amount-container {
+                                padding: 8px !important;
+                                background: #fff !important;
+                                border: 1px solid #000 !important;
+                                margin: 6px 0 !important;
+                                text-align: center !important;
+                            }
+                            .print-receipt .amount-title {
+                                font-size: 9px !important;
+                                text-transform: uppercase !important;
+                                margin-bottom: 2px !important;
+                                font-weight: 600 !important;
+                                color: #000 !important;
+                            }
+                            .print-receipt .amount-value {
+                                font-size: 20px !important;
+                                font-weight: 800 !important;
+                                color: #000 !important;
+                            }
+                            .print-receipt .amount-words {
+                                font-size: 10px !important;
+                                font-style: italic !important;
+                                margin-top: 2px !important;
+                                text-transform: capitalize !important;
+                                color: #000 !important;
+                            }
+                            .print-receipt .footer-container {
+                                margin-top: 15px !important;
+                                border-top: 1px solid #000 !important;
+                                padding-top: 8px !important;
+                                text-align: center !important;
+                            }
+                            .print-receipt .footer-powered {
+                                font-size: 10px !important;
+                                font-weight: bold !important;
+                                color: #000 !important;
+                                margin-bottom: 2px !important;
+                            }
+                            .print-receipt .footer-copyright {
+                                font-size: 8px !important;
+                                color: #000 !important;
+                            }
+                            .print-receipt .footer-tagline {
+                                font-size: 8px !important;
+                                color: #000 !important;
+                                margin-top: 2px !important;
+                                font-style: italic !important;
+                            }
+                        }
+                    `}</style>
                     <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                         <h2 style={{ margin: '0 0 5px 0', fontSize: '24px', fontWeight: '800', letterSpacing: '1px', color: '#000' }}>MOI VIBARAM</h2>
-                        <div style={{ fontSize: '10px', color: '#555', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600 }}>Traditional Digital Ledger</div>
+                        <div className="sub-title" style={{ fontSize: '10px', color: '#000', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600 }}>Traditional Digital Ledger</div>
                     </div>
 
-                    <div style={{ borderBottom: '1px solid #ccc', margin: '15px 0' }} />
+                    <div className="divider" style={{ borderBottom: '1px solid #000', margin: '15px 0' }} />
 
                     <div style={{ fontSize: '13px', lineHeight: '1.6', color: '#000' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <strong>Date:</strong> <span>{printData ? new Date(printData.date).toLocaleDateString('en-IN').replace(/\//g, '-') : ''}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <strong>Receipt No:</strong> <span>{printData ? printData._id?.substring(18).toUpperCase() : 'TEMP'}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <strong>Transaction Type:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{printData ? (printData.type === 'received' ? 'Moi Received' : 'Moi Paid') : ''}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                             <strong>Payment Method:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{printData?.paymentType || 'CASH'}</span>
                         </div>
 
-                        <div style={{ borderBottom: '1px dashed #ccc', margin: '15px 0' }} />
+                        <div className="dashed-divider" style={{ borderBottom: '1px dashed #000', margin: '15px 0' }} />
 
                         <div style={{ marginBottom: '15px' }}>
-                            <h4 style={{ margin: '0 0 8px 0', textTransform: 'uppercase', fontSize: '12px', color: '#333', borderBottom: '1px solid #eee', paddingBottom: '4px' }}>Guest Details</h4>
-                            <div style={{ paddingLeft: '5px' }}>
+                            <h4 className="section-title" style={{ margin: '0 0 8px 0', textTransform: 'uppercase', fontSize: '12px', color: '#000', borderBottom: '1px solid #000', paddingBottom: '4px' }}>Guest Details</h4>
+                            <div className="details-block" style={{ paddingLeft: '5px' }}>
                                 <div><strong>Name:</strong> {printData ? `${printData.initial ? printData.initial + ' ' : ''}${printData.partyName}` : ''}</div>
                                 {printData?.spouseName && <div><strong>Spouse:</strong> {printData.spouseName}</div>}
                                 {printData?.mobile && <div><strong>Mobile:</strong> {printData.mobile}</div>}
@@ -1431,29 +1547,29 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                             </div>
                         </div>
 
-                        <div style={{ borderBottom: '1px dashed #ccc', margin: '15px 0' }} />
+                        <div className="dashed-divider" style={{ borderBottom: '1px dashed #000', margin: '15px 0' }} />
 
                         <div style={{ marginBottom: '15px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                 <strong>Event Name:</strong> <span>{printData ? (printData.eventId?.eventName || printData.eventName || '') : ''}</span>
                             </div>
                         </div>
 
-                        <div style={{ borderBottom: '2px solid #000', margin: '15px 0' }} />
+                        <div className="double-divider" style={{ borderBottom: '2px solid #000', margin: '15px 0' }} />
 
-                        <div style={{ textAlign: 'center', padding: '15px', background: '#f9f9f9', border: '1px solid #ccc', margin: '10px 0' }}>
-                            <div style={{ fontSize: '11px', color: '#555', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Amount</div>
-                            <div style={{ fontSize: '26px', fontWeight: '800', color: '#000' }}>₹{printData ? printData.cashAmount : '0'}</div>
-                            <div style={{ fontSize: '12px', fontStyle: 'italic', marginTop: '6px', textTransform: 'capitalize', color: '#333' }}>
+                        <div className="amount-container" style={{ textAlign: 'center', padding: '15px', background: '#fff', border: '1px solid #000', margin: '10px 0' }}>
+                            <div className="amount-title" style={{ fontSize: '11px', color: '#000', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Amount</div>
+                            <div className="amount-value" style={{ fontSize: '26px', fontWeight: '800', color: '#000' }}>₹{printData ? printData.cashAmount : '0'}</div>
+                            <div className="amount-words" style={{ fontSize: '12px', fontStyle: 'italic', marginTop: '6px', textTransform: 'capitalize', color: '#000' }}>
                                 {printData ? `${numberToWords(printData.cashAmount, 'en')} Only` : ''}
                             </div>
                         </div>
                     </div>
 
-                    <div style={{ marginTop: '30px', textAlign: 'center', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '4px' }}>Powered by Leela Tech</div>
-                        <div style={{ fontSize: '10px', color: '#666' }}>&copy; {new Date().getFullYear()} Leela Tech. All rights reserved.</div>
-                        <div style={{ fontSize: '9px', color: '#999', marginTop: '4px', fontStyle: 'italic' }}>Moi Vibaram - Modern Ledger for Traditional Celebrations</div>
+                    <div className="footer-container" style={{ marginTop: '30px', textAlign: 'center', borderTop: '1px solid #000', paddingTop: '15px' }}>
+                        <div className="footer-powered" style={{ fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '4px' }}>Powered by Leela Tech</div>
+                        <div className="footer-copyright" style={{ fontSize: '10px', color: '#000' }}>&copy; {new Date().getFullYear()} Leela Tech. All rights reserved.</div>
+                        <div className="footer-tagline" style={{ fontSize: '9px', color: '#000', marginTop: '4px', fontStyle: 'italic' }}>Moi Vibaram - Modern Ledger for Traditional Celebrations</div>
                     </div>
                 </div>
             </div>

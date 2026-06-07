@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { eventsAPI, transactionsAPI } from "../api/api";
 import QrScanner from "./QrScanner";
 import { numberToWords } from "../utils/numberToWords";
-import { Plus, QrCode, ClipboardList, Gift, Coins, Banknote, Save, User, RefreshCw, Search, ArrowLeft, CalendarPlus } from "lucide-react";
+import { Plus, QrCode, ClipboardList, Gift, Coins, Banknote, Save, User, RefreshCw, Search, ArrowLeft, CalendarPlus, Smartphone } from "lucide-react";
 
 const SEER_FIELDS = [
   { key: "dress", icon: "👗" },
@@ -57,6 +57,7 @@ export default function CreateMoi() {
     street: "",
     mobile: "",
     type: initialType,
+    paymentType: "cash",
     cashAmount: "",
     date: new Date().toISOString().slice(0, 10),
     thaiMama: false,
@@ -422,6 +423,18 @@ export default function CreateMoi() {
               </select>
             </div>
             <div className="form-group">
+              <label className="form-label">{t("paymentType")} *</label>
+              <select
+                className="form-control"
+                name="paymentType"
+                value={form.paymentType}
+                onChange={onChange}
+              >
+                <option value="cash">{t("cash")}</option>
+                <option value="gpay">{t("gpay")}</option>
+              </select>
+            </div>
+            <div className="form-group">
               <label className="form-label">{t("date")}</label>
               <input
                 className="form-control"
@@ -438,7 +451,10 @@ export default function CreateMoi() {
               />
             </div>
             <div className="form-group">
-              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Banknote size={14} /> Cash {t("amount")} (₹) *</label>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {form.paymentType === "gpay" ? <Smartphone size={14} /> : <Banknote size={14} />}{" "}
+                {form.paymentType === "gpay" ? t("gpay") : t("cash")} {t("amount")} (₹) *
+              </label>
               <input
                 className="form-control"
                 name="cashAmount"
