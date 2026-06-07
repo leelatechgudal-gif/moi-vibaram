@@ -8,10 +8,11 @@ import Footer from '../components/Footer'
 export default function ForgotPassword() {
     const { t } = useTranslation()
     const [step, setStep] = useState(1)
-    const [form, setForm] = useState({ email: '', otp: '', newPassword: '' })
+    const [form, setForm] = useState({ email: '', otp: '', newPassword: '', confirmPassword: '' })
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     const onChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }))
 
@@ -34,6 +35,10 @@ export default function ForgotPassword() {
     const verifyOTP = async e => {
         e.preventDefault()
         setError('')
+        if (form.newPassword !== form.confirmPassword) {
+            setError(t('passwordsDoNotMatch'))
+            return
+        }
         setLoading(true)
         try {
             const trimmedForm = {
@@ -63,8 +68,8 @@ export default function ForgotPassword() {
                 {step === 1 && (
                     <form onSubmit={sendOTP}>
                         <div className="form-group">
-                            <label className="form-label">{t('email')}</label>
-                            <input className="form-control" name="email" type="email" value={form.email} onChange={onChange} required placeholder="your@email.com" />
+                            <label className="form-label">{t('emailOrMobile')}</label>
+                            <input className="form-control" name="email" type="text" value={form.email} onChange={onChange} required placeholder="Email or mobile number" />
                         </div>
                         <div className="text-muted mt-8" style={{ fontSize: 12, marginBottom: 14 }}>
                             💡 In dev mode, the OTP is printed to the server console.
@@ -83,9 +88,36 @@ export default function ForgotPassword() {
                             <label className="form-label">OTP Code</label>
                             <input className="form-control" name="otp" value={form.otp} onChange={onChange} required placeholder="Enter 6-digit OTP" maxLength={6} />
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">{t('newPassword')}</label>
-                            <input className="form-control" name="newPassword" type="password" value={form.newPassword} onChange={onChange} required placeholder="New password" minLength={6} />
+                        <div className="form-group" style={{ position: 'relative' }}>
+                            <label className="form-label">{t('newPassword')} *</label>
+                            <input 
+                                className="form-control" 
+                                name="newPassword" 
+                                type={showPassword ? 'text' : 'password'} 
+                                value={form.newPassword} 
+                                onChange={onChange} 
+                                required 
+                                placeholder="New password" 
+                                minLength={6} 
+                            />
+                            <span 
+                                onClick={() => setShowPassword(!showPassword)} 
+                                style={{ position: 'absolute', right: 12, top: 38, cursor: 'pointer', opacity: 0.6 }}>
+                                {showPassword ? '👁️‍🗨️' : '👁'}
+                            </span>
+                        </div>
+                        <div className="form-group" style={{ position: 'relative' }}>
+                            <label className="form-label">{t('confirmPassword')} *</label>
+                            <input 
+                                className="form-control" 
+                                name="confirmPassword" 
+                                type={showPassword ? 'text' : 'password'} 
+                                value={form.confirmPassword} 
+                                onChange={onChange} 
+                                required 
+                                placeholder="Confirm new password" 
+                                minLength={6} 
+                            />
                         </div>
                         {error && <div className="error-msg">{error}</div>}
                         <button type="submit" className="btn btn-primary w-full" disabled={loading} style={{ justifyContent: 'center' }}>

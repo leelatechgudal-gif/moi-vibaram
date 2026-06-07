@@ -342,6 +342,85 @@ router.put('/:id', auth, async (req, res) => {
         const transaction = await Transaction.findOne({ _id: req.params.id, userId: { $in: tenantUserIds }, isDeleted: { $ne: true } });
         if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
+        // Clerk cashAmount edit check
+        const originalAmount = transaction.cashAmount;
+        const newAmount = req.body.cashAmount !== undefined ? parseFloat(req.body.cashAmount) : transaction.cashAmount;
+
+        const currentUser = await User.findById(req.userId).select('role');
+        if (!currentUser) return res.status(401).json({ message: 'User not found' });
+
+        if (currentUser.role === 'clerk' && originalAmount !== newAmount) {
+            const { otp } = req.body;
+            const owner = await User.findOne({ tenantId: req.tenantId, tenantRole: 'owner', isDeleted: { $ne: true } });
+            if (!owner) {
+                return res.status(400).json({ message: 'No tenant owner found to authorize this edit.' });
+            }
+
+            if (!otp) {
+                // Generate and send OTP to owner
+                const { generateOTP } = require('../utils/email');
+                const generatedOtp = generateOTP();
+                owner.otpCode = generatedOtp;
+                owner.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+                await owner.save();
+
+                // Send OTP via SMS to owner
+                const { sendSMS } = require('../utils/sms');
+                await sendSMS(owner.mobile, generatedOtp);
+                
+                // Fallback to sending OTP via email if nodemailer is set up
+                if (owner.email) {
+                    try {
+                        const nodemailer = require('nodemailer');
+                        if (process.env.EMAIL_USER && process.env.EMAIL_USER !== 'your_gmail@gmail.com') {
+                            const transporter = nodemailer.createTransport({
+                                service: 'gmail',
+                                auth: {
+                                    user: process.env.EMAIL_USER,
+                                    pass: process.env.EMAIL_PASS,
+                                },
+                            });
+                            await transporter.sendMail({
+                                from: `"MOI VIBARAM" <${process.env.EMAIL_USER}>`,
+                                to: owner.email,
+                                subject: 'MOI VIBARAM - Clerk Edit Authorization OTP',
+                                html: `
+                                  <div style="font-family:Arial,sans-serif;max-width:400px;margin:0 auto;padding:20px;border:1px solid #e0e0e0;border-radius:8px;">
+                                    <h2 style="color:#6c63ff;">MOI VIBARAM</h2>
+                                    <p>A clerk is trying to edit a transaction amount. The authorization OTP is:</p>
+                                    <h1 style="color:#6c63ff;letter-spacing:8px;">${generatedOtp}</h1>
+                                    <p>This OTP expires in <strong>10 minutes</strong>.</p>
+                                  </div>
+                                `,
+                            });
+                        }
+                    } catch (e) {
+                        logger.error('[clerk-edit-otp] Email fallback failed', e);
+                    }
+                }
+
+                return res.json({ otpRequired: true, message: `An authorization OTP has been sent to the owner's mobile ending in ${owner.mobile ? owner.mobile.slice(-4) : 'xxxx'}.` });
+            } else {
+                // Verify OTP
+                const crypto = require('crypto');
+                if (!owner.otpCode || new Date() > owner.otpExpiry) {
+                    return res.status(400).json({ message: 'OTP expired or not requested. Please try saving again to request a new OTP.' });
+                }
+                const otpMatch = crypto.timingSafeEqual(
+                    Buffer.from(String(owner.otpCode)),
+                    Buffer.from(String(otp))
+                );
+                if (!otpMatch) {
+                    return res.status(400).json({ message: 'Invalid OTP. Please check the OTP sent to owner.' });
+                }
+
+                // Clear OTP after successful verify
+                owner.otpCode = undefined;
+                owner.otpExpiry = undefined;
+                await owner.save();
+            }
+        }
+
         const fields = ['eventId', 'eventName', 'type', 'cashAmount', 'date', 'seerVarisai', 'remarks', 'thaiMama', 'labels', 'paymentType'];
         fields.forEach(f => { 
             if (req.body[f] !== undefined) {

@@ -9,6 +9,32 @@ const { generateOTP, sendOTPEmail } = require('../utils/email');
 const logger = require('../utils/logger');
 const { isWhitelistedAdmin } = require('../utils/admin');
 
+/**
+ * Normalizes input identifier to support email or mobile number queries.
+ * For mobile numbers, matches exact input, last 10 digits, 91+last 10, or +91+last 10.
+ * @param {string} identifier - Email or mobile input from request.
+ * @returns {object} Query conditions for Mongoose User.findOne.
+ */
+const getIdentifierQuery = (identifier) => {
+    const trimmed = identifier ? identifier.trim() : '';
+    const searchTerms = [trimmed];
+    const cleanMobile = trimmed.replace(/\D/g, ''); // keep only digits
+    if (cleanMobile.length >= 10) {
+        const last10 = cleanMobile.slice(-10);
+        searchTerms.push(last10);
+        searchTerms.push('91' + last10);
+        searchTerms.push('+' + last10);
+        searchTerms.push('+91' + last10);
+    }
+    return {
+        $or: [
+            { email: trimmed },
+            { email: { $in: searchTerms } },
+            { mobile: { $in: searchTerms } }
+        ]
+    };
+};
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
@@ -51,11 +77,60 @@ router.post('/register', async (req, res) => {
     }
 });
 
+// Shared helper to generate token session responses
+const createSessionAndResponse = async (user, forceLogout, req, res) => {
+    let validSessions = [];
+    if (user.activeSessions && user.activeSessions.length > 0) {
+        // Clean up expired tokens first
+        validSessions = user.activeSessions.filter(t => {
+            try {
+                jwt.verify(t, process.env.JWT_SECRET);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        });
+        user.activeSessions = validSessions;
+    }
+
+    if (validSessions.length >= 3) {
+        if (forceLogout) {
+            logger.info('[login] Force logout — clearing all sessions', { userId: user._id, email: user.email });
+            user.activeSessions = []; // Clear all other sessions
+        } else {
+            logger.warn('[login] Session limit reached', { userId: user._id, email: user.email, sessionCount: validSessions.length });
+            return res.status(403).json({ 
+                message: 'Maximum 3 logins permitted.', 
+                code: 'SESSION_LIMIT_REACHED' 
+            });
+        }
+    }
+
+    const accessToken = jwt.sign({ userId: user._id, type: 'access' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '2h' });
+    const refreshToken = jwt.sign({ userId: user._id, type: 'refresh' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' });
+
+    if (!user.activeSessions) user.activeSessions = [];
+    user.activeSessions.push(refreshToken);
+    await user.save();
+
+    logger.info('[login] User logged in successfully', { userId: user._id, email: user.email, tenantId: user.tenantId, ip: req.ip });
+    const isSuperAdmin = await isWhitelistedAdmin(user.email);
+    res.json({
+        token: accessToken,
+        refreshToken,
+        user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole, isSuperAdmin }
+    });
+};
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
     try {
         const { email, password, forceLogout } = req.body;
-        const user = await User.findOne({ email, isDeleted: { $ne: true } });
+        const user = await User.findOne({
+            email: email ? email.trim() : '',
+            isDeleted: { $ne: true }
+        });
+
         if (!user) {
             logger.warn('[login] Invalid credentials — user not found', { email, ip: req.ip });
             return res.status(401).json({ message: 'Invalid credentials' });
@@ -72,49 +147,97 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        let validSessions = [];
-        if (user.activeSessions && user.activeSessions.length > 0) {
-            // Clean up expired tokens first
-            validSessions = user.activeSessions.filter(t => {
-                try {
-                    jwt.verify(t, process.env.JWT_SECRET);
-                    return true;
-                } catch (e) {
-                    return false;
-                }
-            });
-            user.activeSessions = validSessions;
-        }
-
-        if (validSessions.length >= 3) {
-            if (forceLogout) {
-                logger.info('[login] Force logout — clearing all sessions', { userId: user._id, email });
-                user.activeSessions = []; // Clear all other sessions
-            } else {
-                logger.warn('[login] Session limit reached', { userId: user._id, email, sessionCount: validSessions.length });
-                return res.status(403).json({ 
-                    message: 'Maximum 3 logins permitted.', 
-                    code: 'SESSION_LIMIT_REACHED' 
-                });
-            }
-        }
-
-        const accessToken = jwt.sign({ userId: user._id, type: 'access' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '2h' });
-        const refreshToken = jwt.sign({ userId: user._id, type: 'refresh' }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' });
-
-        if (!user.activeSessions) user.activeSessions = [];
-        user.activeSessions.push(refreshToken);
-        await user.save();
-
-        logger.info('[login] User logged in successfully', { userId: user._id, email, tenantId: user.tenantId, ip: req.ip });
-        const isSuperAdmin = await isWhitelistedAdmin(email);
-        res.json({
-            token: accessToken,
-            refreshToken,
-            user: { _id: user._id, name: user.name, email: user.email, mobile: user.mobile, location: user.location, qrCode: user.qrCode, role: user.role, tenantId: user.tenantId, tenantRole: user.tenantRole, isSuperAdmin }
-        });
+        await createSessionAndResponse(user, forceLogout, req, res);
     } catch (err) {
         logger.error('[login] Login failed', { message: err.message, stack: err.stack });
+        res.status(500).json({ message: 'Login failed. Please try again.' });
+    }
+});
+
+// POST /api/auth/send-login-otp
+router.post('/send-login-otp', async (req, res) => {
+    try {
+        const { email } = req.body; // Can be email or mobile
+        if (!email) {
+            return res.status(400).json({ message: 'Email or Mobile number is required' });
+        }
+        
+        const user = await User.findOne({
+            ...getIdentifierQuery(email),
+            isDeleted: { $ne: true }
+        });
+
+        if (!user) {
+            logger.warn('[send-login-otp] User not found', { identifier: email });
+            return res.status(404).json({ message: 'User not found with this email/mobile number.' });
+        }
+
+        if (user.isActive === false) {
+            return res.status(403).json({ message: 'Your account has been deactivated. Please contact your tenant owner.' });
+        }
+
+        const otp = generateOTP();
+        user.otpCode = otp;
+        user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        await user.save();
+
+        if (email.includes('@')) {
+            await sendOTPEmail(user.email, otp);
+            logger.info('[send-login-otp] Email OTP sent', { email: user.email });
+        } else {
+            const { sendSMS } = require('../utils/sms');
+            await sendSMS(user.mobile, otp);
+            logger.info('[send-login-otp] Mobile OTP sent', { mobile: user.mobile });
+        }
+
+        res.json({ message: 'OTP sent successfully.' });
+    } catch (err) {
+        logger.error('[send-login-otp] Failed', { message: err.message, stack: err.stack });
+        res.status(500).json({ message: 'Failed to send OTP. Please try again.' });
+    }
+});
+
+// POST /api/auth/login-otp
+router.post('/login-otp', async (req, res) => {
+    try {
+        const { email, otp, forceLogout } = req.body; // email can be email or mobile
+        if (!email || !otp) {
+            return res.status(400).json({ message: 'Identifier and OTP code are required.' });
+        }
+
+        const user = await User.findOne({
+            ...getIdentifierQuery(email),
+            isDeleted: { $ne: true }
+        });
+
+        if (!user) {
+            logger.warn('[login-otp] User not found', { identifier: email });
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        if (user.isActive === false) {
+            return res.status(403).json({ message: 'Your account has been deactivated. Please contact your tenant owner.' });
+        }
+
+        if (!user.otpCode || new Date() > user.otpExpiry) {
+            return res.status(400).json({ message: 'OTP expired or not requested. Please request a new OTP.' });
+        }
+
+        const otpMatch = crypto.timingSafeEqual(
+            Buffer.from(String(user.otpCode)),
+            Buffer.from(String(otp))
+        );
+        if (!otpMatch) {
+            return res.status(400).json({ message: 'Invalid OTP.' });
+        }
+
+        // Clear OTP after successful verify
+        user.otpCode = undefined;
+        user.otpExpiry = undefined;
+
+        await createSessionAndResponse(user, forceLogout, req, res);
+    } catch (err) {
+        logger.error('[login-otp] Login failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Login failed. Please try again.' });
     }
 });
@@ -122,22 +245,31 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
     try {
-        const { email } = req.body;
-        const user = await User.findOne({ email });
+        const { email } = req.body; // Can be email or mobile
+        const user = await User.findOne({
+            ...getIdentifierQuery(email),
+            isDeleted: { $ne: true }
+        });
 
         if (user) {
             const otp = generateOTP();
             user.otpCode = otp;
             user.otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
             await user.save();
-            await sendOTPEmail(email, otp);
-            logger.info('[forgot-password] OTP sent', { email });
+
+            if (email.includes('@')) {
+                await sendOTPEmail(user.email, otp);
+            } else {
+                const { sendSMS } = require('../utils/sms');
+                await sendSMS(user.mobile, otp);
+            }
+            logger.info('[forgot-password] OTP sent', { email: user.email, mobile: user.mobile });
         } else {
-            logger.debug('[forgot-password] Email not found (silent)', { email });
+            logger.debug('[forgot-password] Identifier not found (silent)', { email });
         }
 
         // Always return the same message to prevent user enumeration
-        res.json({ message: 'If an account with that email exists, an OTP has been sent.' });
+        res.json({ message: 'If the account exists, an OTP has been sent.' });
     } catch (err) {
         logger.error('[forgot-password] Failed', { message: err.message, stack: err.stack });
         res.status(500).json({ message: 'Request failed. Please try again.' });
@@ -147,13 +279,17 @@ router.post('/forgot-password', async (req, res) => {
 // POST /api/auth/verify-otp
 router.post('/verify-otp', async (req, res) => {
     try {
-        const { email, otp, newPassword } = req.body;
+        const { email, otp, newPassword } = req.body; // email can be email or mobile
 
         if (!newPassword || newPassword.length < 8) {
             return res.status(400).json({ message: 'Password must be at least 8 characters.' });
         }
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({
+            ...getIdentifierQuery(email),
+            isDeleted: { $ne: true }
+        });
+
         // Use a generic error to prevent user enumeration
         if (!user || !user.otpCode) {
             logger.warn('[verify-otp] OTP not found or user missing', { email });

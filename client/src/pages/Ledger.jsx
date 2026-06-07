@@ -5,6 +5,7 @@ import { printElement } from '../utils/print';
 import { useAuth } from '../context/AuthContext';
 import { eventsAPI, partiesAPI, transactionsAPI } from '../api/api';
 import PasswordConfirmModal from '../components/PasswordConfirmModal';
+import OwnerOtpModal from '../components/OwnerOtpModal';
 import { numberToWords } from '../utils/numberToWords';
 import logoImg from '../../assets/logo.jpeg';
 import iconImg from '../../assets/icon.png';
@@ -64,9 +65,8 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         localStorage.setItem('ledger_show_total', showTotalAmount);
     }, [showTotalAmount]);
 
-    // Delete Modal
-    const [deleteModal, setDeleteModal] = useState({ show: false, id: null, idx: null });
-    const [deleteLoading, setDeleteLoading] = useState(false);
+    // Owner OTP Approval Modal
+    const [otpModal, setOtpModal] = useState({ show: false, idx: null, loading: false, message: '', error: '', payload: null });
 
     // Printing Setup
     const [printData, setPrintData] = useState(null);
@@ -331,6 +331,20 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
             let savedTx;
             if (row._id) {
                 const res = await transactionsAPI.update(row._id, payload);
+                if (res.data && res.data.otpRequired) {
+                    setOtpModal({
+                        show: true,
+                        idx,
+                        loading: false,
+                        message: res.data.message,
+                        error: '',
+                        payload
+                    });
+                    const freshRows = [...rows];
+                    freshRows[idx].isSaving = false;
+                    setRows(freshRows);
+                    return;
+                }
                 savedTx = res.data;
             } else {
                 const res = await transactionsAPI.create(payload);
@@ -381,23 +395,63 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         }
     };
 
-    const handleDeleteClick = (id, idx) => {
-        setDeleteModal({ show: true, id, idx });
-    };
+    const handleConfirmOtp = async (otp) => {
+        const { idx, payload } = otpModal;
+        if (idx === null || !payload) return;
 
-    const confirmDelete = async (password) => {
-        setDeleteLoading(true);
+        setOtpModal(prev => ({ ...prev, loading: true, error: '' }));
+
+        const updated = [...rows];
+        const row = updated[idx];
+        row.isSaving = true;
+        setRows(updated);
+
         try {
-            await transactionsAPI.delete(deleteModal.id, password);
-            const fresh = [...rows];
-            fresh.splice(deleteModal.idx, 1);
-            setRows(fresh);
-            setDeleteModal({ show: false, id: null, idx: null });
+            const res = await transactionsAPI.update(row._id, { ...payload, otp });
+            const savedTx = res.data;
+            const pop = savedTx.data || savedTx;
+
+            // Cache new party for autocompletion
+            if (pop.partyId) {
+                const pId = typeof pop.partyId === 'object' ? pop.partyId._id : pop.partyId;
+                const pName = typeof pop.partyId === 'object' ? pop.partyId.name : pop.partyName;
+                if (!partiesList.some(p => p._id === pId)) {
+                    setPartiesList(prev => [...prev, {
+                        _id: pId,
+                        name: pName,
+                        initial: pop.initial,
+                        spouseName: pop.spouseName,
+                        mobile: pop.mobile,
+                        location: pop.location,
+                        occupation: pop.occupation || pop.partyId?.occupation || ''
+                    }]);
+                }
+            }
+
+            const freshRows = [...rows];
+            freshRows[idx] = {
+                _id: pop._id,
+                partyId: pop.partyId?._id || pop.partyId,
+                initial: pop.initial || pop.partyId?.initial || '',
+                partyName: pop.partyName || pop.partyId?.name || '',
+                spouseName: pop.spouseName || pop.partyId?.spouseName || '',
+                mobile: pop.mobile || pop.partyId?.mobile || '',
+                location: pop.location || pop.partyId?.location || '',
+                cashAmount: pop.cashAmount || 0,
+                paymentType: pop.paymentType || 'cash',
+                occupation: pop.occupation || pop.partyId?.occupation || '',
+                isEditing: false,
+                isSaving: false
+            };
+            setRows(freshRows);
+            setOtpModal({ show: false, idx: null, loading: false, message: '', error: '', payload: null });
         } catch (err) {
-            console.error('[ledger delete]', err);
-            alert(err.response?.data?.message || 'Password confirmation failed.');
-        } finally {
-            setDeleteLoading(false);
+            console.error('[ledger saveOtp]', err);
+            const errMsg = err.response?.data?.message || 'Failed to verify OTP or save entry';
+            setOtpModal(prev => ({ ...prev, loading: false, error: errMsg }));
+            const freshRows = [...rows];
+            freshRows[idx].isSaving = false;
+            setRows(freshRows);
         }
     };
 
@@ -959,13 +1013,6 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                                                 >
                                                                     <Printer size={16} />
                                                                 </button>
-                                                                <button
-                                                                    className="ledger-btn-icon danger"
-                                                                    onClick={() => handleDeleteClick(row._id, idx)}
-                                                                    title="Delete Row"
-                                                                >
-                                                                    <Trash2 size={16} />
-                                                                </button>
                                                             </>
                                                         )}
                                                     </div>
@@ -1013,14 +1060,14 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
 
 
 
-            {/* Password Confirm Modal for Delete */}
-            <PasswordConfirmModal
-                show={deleteModal.show}
-                title="Delete Transaction"
-                message="Are you sure you want to delete this transaction record? This cannot be undone."
-                onConfirm={confirmDelete}
-                onCancel={() => setDeleteModal({ show: false, id: null, idx: null })}
-                loading={deleteLoading}
+            {/* Owner OTP Modal */}
+            <OwnerOtpModal
+                show={otpModal.show}
+                onConfirm={handleConfirmOtp}
+                onCancel={() => setOtpModal({ show: false, idx: null, loading: false, message: '', error: '', payload: null })}
+                loading={otpModal.loading}
+                message={otpModal.message}
+                error={otpModal.error}
             />
 
             {/* Clerk Declaration & Sign-off Modal */}

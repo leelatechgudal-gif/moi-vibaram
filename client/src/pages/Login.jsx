@@ -96,10 +96,13 @@ export default function Login() {
         setShowForceLogout(false)
         try {
             const trimmedForm = {
-                ...form,
-                email: form.email ? form.email.trim() : ''
+                email: form.email ? form.email.trim() : '',
+                password: form.password,
+                forceLogout
             };
-            const res = await authAPI.login({ ...trimmedForm, forceLogout })
+            
+            const res = await authAPI.login(trimmedForm)
+            
             login(res.data.user, res.data.token, res.data.refreshToken)
             navigate('/')
         } catch (err) {
@@ -164,17 +167,27 @@ export default function Login() {
                 <form onSubmit={onSubmit}>
                     <div className="form-group">
                         <label className="form-label">{t('email')}</label>
-                        <input className="form-control" name="email" type="email" value={form.email} onChange={onChange} required placeholder="your@email.com" />
+                        <input 
+                            className="form-control" 
+                            name="email" 
+                            type="email" 
+                            value={form.email} 
+                            onChange={onChange} 
+                            required 
+                            placeholder="your@email.com" 
+                        />
                     </div>
+
                     <div className="form-group" style={{ position: 'relative' }}>
                         <label className="form-label">{t('password')}</label>
                         <input className="form-control" name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={onChange} required placeholder="••••••••" />
                         <span 
                             onClick={() => setShowPassword(!showPassword)} 
                             style={{ position: 'absolute', right: 12, top: 38, cursor: 'pointer', opacity: 0.6 }}>
-                            {showPassword ? '👁️‍🗨️' : '👁️'}
+                            {showPassword ? '👁️‍🗨️' : '👁'}
                         </span>
                     </div>
+
                     {error && <div className="error-msg">{error}</div>}
                     
                     {showForceLogout && (
@@ -187,31 +200,31 @@ export default function Login() {
                             fontSize: '13px',
                             color: 'var(--text)'
                         }}>
-                            <p style={{ margin: 0, marginBottom: '8px', fontWeight: 600 }}>⚠️ Maximum active sessions reached.</p>
-                            <p style={{ margin: 0, marginBottom: '12px', opacity: 0.8 }}>You are already logged in on 3 other devices. Do you want to logout from all other devices and login here?</p>
-                            <button 
-                                type="button" 
-                                className="btn btn-primary" 
-                                style={{ width: '100%', background: '#ffc107', color: '#000', border: 'none', justifyContent: 'center' }}
-                                onClick={() => onSubmit(null, true)}
-                                disabled={loading}
-                            >
-                                {loading ? <span className="spinner" style={{ borderColor: '#000', borderTopColor: 'transparent' }} /> : 'Yes, Force Logout & Login'}
-                            </button>
-                        </div>
-                    )}
+                        <p style={{ margin: 0, marginBottom: '8px', fontWeight: 600 }}>⚠️ Maximum active sessions reached.</p>
+                        <p style={{ margin: 0, marginBottom: '12px', opacity: 0.8 }}>You are already logged in on 3 other devices. Do you want to logout from all other devices and login here?</p>
+                        <button 
+                            type="button" 
+                            className="btn btn-primary" 
+                            style={{ width: '100%', background: '#ffc107', color: '#000', border: 'none', justifyContent: 'center' }}
+                            onClick={(e) => onSubmit(e, true)}
+                            disabled={loading}
+                        >
+                            {loading ? <span className="spinner" style={{ borderColor: '#000', borderTopColor: 'transparent' }} /> : 'Yes, Force Logout & Login'}
+                        </button>
+                    </div>
+                )}
 
-                    {!showForceLogout && (
-                        <>
-                            <button type="submit" className="btn btn-primary w-full mt-8" disabled={loading} style={{ justifyContent: 'center' }}>
-                                {loading ? <span className="spinner" /> : t('login')}
-                            </button>
-                            <button type="button" className="btn btn-secondary w-full" onClick={onFingerprintLogin} disabled={loading} style={{ justifyContent: 'center', marginTop: 12 }}>
-                                👆 {t('loginWithFingerprint')}
-                            </button>
-                        </>
-                    )}
-                </form>
+                {!showForceLogout && (
+                    <>
+                        <button type="submit" className="btn btn-primary w-full mt-8" disabled={loading} style={{ justifyContent: 'center' }}>
+                            {loading ? <span className="spinner" /> : t('login')}
+                        </button>
+                        <button type="button" className="btn btn-secondary w-full" onClick={onFingerprintLogin} disabled={loading} style={{ justifyContent: 'center', marginTop: 12 }}>
+                            👆 {t('loginWithFingerprint')}
+                        </button>
+                    </>
+                )}
+            </form>
                 <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-muted)' }}>
                     <Link to="/forgot-password" className="auth-link">{t('forgotPassword')}</Link>
                     <span style={{ margin: '0 10px' }}>·</span>
