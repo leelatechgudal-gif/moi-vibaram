@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
-import { useReactToPrint } from 'react-to-print'
+import { printElement } from '../utils/print'
 import ResponsiveTable from '../components/ResponsiveTable'
 import { Search as SearchIcon, Share2, Printer, MapPin } from 'lucide-react'
 
@@ -46,7 +46,11 @@ export default function Search() {
         }
     }
 
-    const handlePrint = useReactToPrint({ content: () => printRef.current })
+    const handlePrint = () => {
+        if (printRef.current) {
+            printElement(printRef.current)
+        }
+    }
     const handleShare = () => navigator.share?.({ title: 'Search Results - MOI VIBARAM' })
     const fmt = n => `₹${(n || 0).toLocaleString('en-IN')}`
 

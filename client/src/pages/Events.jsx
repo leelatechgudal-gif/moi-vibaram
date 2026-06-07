@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { eventsAPI } from '../api/api'
-import { useReactToPrint } from 'react-to-print'
+import { printElement } from '../utils/print'
 import { useNavigate } from 'react-router-dom'
 import PasswordConfirmModal from '../components/PasswordConfirmModal'
 import { Tent, Share2, Printer, Plus, Edit2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
@@ -232,7 +232,11 @@ export default function Events() {
         }
     }
 
-    const handlePrint = useReactToPrint({ content: () => printRef.current })
+    const handlePrint = () => {
+        if (printRef.current) {
+            printElement(printRef.current)
+        }
+    }
     const handleShare = () => navigator.share?.({ title: 'My Events - MOI VIBARAM', text: `I have ${events.length} events` })
 
     return (

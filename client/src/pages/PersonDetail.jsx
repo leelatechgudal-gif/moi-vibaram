@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { transactionsAPI } from "../api/api";
 import { useTranslation } from "react-i18next";
-import { useReactToPrint } from "react-to-print";
+import { printElement } from "../utils/print";
 import PasswordConfirmModal from "../components/PasswordConfirmModal";
 import TransactionHistory from "../components/TransactionHistory";
 import SeerVarisaiHistory from "../components/SeerVarisaiHistory";
@@ -41,9 +41,11 @@ export default function PersonDetail() {
       .finally(() => setLoading(false));
   }, [partyId, partyName, mobile, spouseName, location]);
 
-  const handlePrint = useReactToPrint({
-    content: () => printRef.current,
-  });
+  const handlePrint = () => {
+    if (printRef.current) {
+      printElement(printRef.current);
+    }
+  };
 
   const handleDeleteTransactionClick = (id) => {
     setDeleteModal({ show: true, id });

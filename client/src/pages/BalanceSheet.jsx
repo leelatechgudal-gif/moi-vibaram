@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
 import { Link } from 'react-router-dom'
-import { useReactToPrint } from 'react-to-print'
+import { printElement } from '../utils/print'
 import { Scale, Share2, Printer, Edit2, ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function BalanceSheet() {
@@ -19,7 +19,11 @@ export default function BalanceSheet() {
             .finally(() => setLoading(false))
     }, [])
 
-    const handlePrint = useReactToPrint({ content: () => printRef.current })
+    const handlePrint = () => {
+        if (printRef.current) {
+            printElement(printRef.current)
+        }
+    }
     const handleShare = () => navigator.share?.({ title: 'Balance Sheet - MOI VIBARAM' })
     const fmt = n => `₹${(n || 0).toLocaleString('en-IN')}`
 

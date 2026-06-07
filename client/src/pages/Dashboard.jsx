@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, Navigate } from 'react-router-dom'
 import { transactionsAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
-import { useReactToPrint } from 'react-to-print'
+import { printElement } from '../utils/print'
 import { ArrowLeft, Plus, Edit2, Share2, Printer, Coins, Gift, Scale, Inbox, ChevronDown, ChevronRight, Bell, BellOff, X } from 'lucide-react'
 import { remindersAPI } from '../api/api'
 
@@ -241,7 +241,11 @@ export default function Dashboard() {
         }
     };
 
-    const handlePrint = useReactToPrint({ content: () => printRef.current })
+    const handlePrint = () => {
+        if (printRef.current) {
+            printElement(printRef.current)
+        }
+    }
     const handleShare = () => {
         if (navigator.share) {
             navigator.share({ title: 'MOI VIBARAM', text: `Invested: ₹${data?.grandTotalPaid || 0} | Received: ₹${data?.grandTotalReceived || 0}` })

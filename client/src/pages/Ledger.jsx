@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { useReactToPrint } from 'react-to-print';
+import { printElement } from '../utils/print';
 import { useAuth } from '../context/AuthContext';
 import { eventsAPI, partiesAPI, transactionsAPI } from '../api/api';
 import PasswordConfirmModal from '../components/PasswordConfirmModal';
@@ -71,10 +71,11 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     // Printing Setup
     const [printData, setPrintData] = useState(null);
     const printRef = useRef();
-    const handlePrint = useReactToPrint({
-        content: () => printRef.current,
-        onAfterPrint: () => setPrintData(null),
-    });
+    const handlePrint = () => {
+        if (printRef.current) {
+            printElement(printRef.current, () => setPrintData(null));
+        }
+    };
 
     // Sign-off / Clerk Declaration Modal State
     const [isSignOffOpen, setIsSignOffOpen] = useState(false);
@@ -93,7 +94,6 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     const [witness1, setWitness1] = useState({ name: '', mobile: '' });
     const [witness2, setWitness2] = useState({ name: '', mobile: '' });
     const [isClosingEvent, setIsClosingEvent] = useState(false);
-    const [activePreviewPage, setActivePreviewPage] = useState(1);
 
     // Set clerk mobile initially if auth user is loaded
     useEffect(() => {
@@ -103,9 +103,11 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     }, [user]);
 
     const declarationPrintRef = useRef();
-    const handlePrintDeclaration = useReactToPrint({
-        content: () => declarationPrintRef.current,
-    });
+    const handlePrintDeclaration = () => {
+        if (declarationPrintRef.current) {
+            printElement(declarationPrintRef.current);
+        }
+    };
 
     // Auto-trigger printing when printData is populated
     useEffect(() => {
@@ -275,10 +277,6 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         const row = updated[idx];
 
         // Mandatory fields check
-        if (!row.initial || !row.initial.trim()) {
-            alert('Initial is required');
-            return;
-        }
         if (!row.partyName || !row.partyName.trim()) {
             alert('Name is required');
             return;
@@ -287,14 +285,12 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
             alert('Spouse Name is required');
             return;
         }
-        if (!row.mobile || !row.mobile.trim()) {
-            alert('Mobile is required');
-            return;
-        }
-        const mobileRegex = /^[6-9]\d{9}$/;
-        if (!mobileRegex.test(row.mobile.trim())) {
-            alert('Please enter a valid 10-digit mobile number starting with 6-9');
-            return;
+        if (row.mobile && row.mobile.trim()) {
+            const mobileRegex = /^[6-9]\d{9}$/;
+            if (!mobileRegex.test(row.mobile.trim())) {
+                alert('Please enter a valid 10-digit mobile number starting with 6-9');
+                return;
+            }
         }
         if (!row.location || !row.location.trim()) {
             alert('Location is required');
@@ -302,10 +298,6 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         }
         if (!row.cashAmount || parseFloat(row.cashAmount) <= 0) {
             alert('Amount must be greater than 0');
-            return;
-        }
-        if (!row.occupation || !row.occupation.trim()) {
-            alert('Occupation is required');
             return;
         }
         if (!row.paymentType) {
@@ -742,14 +734,14 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                 <thead>
                                     <tr>
                                         <th style={{ width: 50, textAlign: 'center' }}>S.No</th>
-                                        <th style={{ width: 70 }}>Initial *</th>
+                                        <th style={{ width: 70 }}>Initial</th>
                                         <th style={{ minWidth: 160 }}>{t('partyName')} *</th>
                                         <th style={{ minWidth: 150 }}>{t('spouseName')} *</th>
-                                        <th style={{ minWidth: 130 }}>{t('mobile')} *</th>
+                                        <th style={{ minWidth: 130 }}>{t('mobile')}</th>
                                         <th style={{ minWidth: 130 }}>{t('location')} *</th>
                                         <th style={{ width: 110 }}>{t('amount')} (₹) *</th>
                                         <th style={{ width: 120 }}>{t('paymentType')} *</th>
-                                        <th style={{ minWidth: 160 }}>{t('occupation')} *</th>
+                                        <th style={{ minWidth: 160 }}>{t('occupation')}</th>
                                         <th style={{ width: 120, textAlign: 'center' }}>Actions</th>
                                     </tr>
                                 </thead>
@@ -1229,230 +1221,99 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                             <div style={{ flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <h3 style={{ fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', margin: 0 }}>
-                                        Document Live Preview
+                                        Document Live Preview (Declaration Form)
                                     </h3>
-                                    <div style={{ display: 'flex', gap: '4px', background: 'var(--glass-bg)', padding: '2px', borderRadius: '4px', border: '1px solid var(--glass-border)' }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActivePreviewPage(1)}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '10px',
-                                                fontWeight: '600',
-                                                borderRadius: '3px',
-                                                border: 'none',
-                                                background: activePreviewPage === 1 ? 'var(--primary)' : 'transparent',
-                                                color: activePreviewPage === 1 ? '#fff' : 'var(--text-muted)',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Page 1 (Blank Form)
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActivePreviewPage(2)}
-                                            style={{
-                                                padding: '4px 8px',
-                                                fontSize: '10px',
-                                                fontWeight: '600',
-                                                borderRadius: '3px',
-                                                border: 'none',
-                                                background: activePreviewPage === 2 ? 'var(--primary)' : 'transparent',
-                                                color: activePreviewPage === 2 ? '#fff' : 'var(--text-muted)',
-                                                cursor: 'pointer'
-                                            }}
-                                        >
-                                            Page 2 (Declaration)
-                                        </button>
-                                    </div>
                                 </div>
 
-                                {activePreviewPage === 1 ? (
-                                    <div style={{
-                                        border: '1px solid var(--glass-border)',
-                                        borderRadius: 'var(--radius-sm)',
-                                        background: '#ffffff',
-                                        color: '#000000',
-                                        padding: '20px',
-                                        fontSize: '10px',
-                                        lineHeight: '1.4',
-                                        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                                        fontFamily: "'Outfit', sans-serif"
-                                    }}>
-                                        {/* Header */}
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #ccc', paddingBottom: '8px', marginBottom: '8px' }}>
-                                            <div>
-                                                <div style={{ fontWeight: '800', fontSize: '12px', color: '#1a1a2e' }}>LEELA TECH</div>
-                                                <div style={{ fontSize: '7px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#555' }}>Trust Begins</div>
-                                            </div>
-                                            <div style={{ width: '30px', height: '30px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5px', fontWeight: 'bold' }}>
-                                                QR CODE
-                                            </div>
-                                        </div>
-
-                                        <div style={{ fontSize: '8px', color: '#666', borderBottom: '1px dashed #eee', paddingBottom: '4px', marginBottom: '8px', fontStyle: 'italic', textAlign: 'center' }}>
-                                            (This QR Code will be displayed in Cash counter customers can capture this easily from their Moi app scanner)
-                                        </div>
-
-                                        <div style={{ marginBottom: '10px', fontSize: '10px' }}>
-                                            <div>Welcome, <strong>{user?.name || 'Anand'}</strong></div>
-                                            <div style={{ fontSize: '9px', color: '#666' }}>Your Moi Ledger at a glance</div>
-                                        </div>
-
-                                        <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-                                            <div style={{ fontWeight: '800', fontSize: '13px', color: '#000' }}>MOI VIBARAM</div>
-                                            <div style={{ fontSize: '7px', textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>Trust Begins</div>
-                                        </div>
-
-                                        {/* Event Details */}
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <div style={{ fontWeight: '700', fontSize: '10px', color: '#e74c3c', borderBottom: '1px solid #eee', paddingBottom: '2px', marginBottom: '6px', textTransform: 'uppercase' }}>Event Details</div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '9px' }}>
-                                                <div>Event Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '50px', height: '10px' }}></span></div>
-                                                <div>Type: [ ] Recv [ ] Sent</div>
-                                                <div>Date: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '60px', height: '10px' }}></span></div>
-                                                <div>Venue: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '55px', height: '10px' }}></span></div>
-                                                <div>Location: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '50px', height: '10px' }}></span></div>
-                                                <div>City: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '60px', height: '10px' }}></span></div>
-                                                <div style={{ gridColumn: 'span 2' }}>Gpay Mob No: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '120px', height: '10px' }}></span></div>
-                                                <div style={{ gridColumn: 'span 2' }}>Moi Entry Person: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '120px', height: '10px' }}></span></div>
-                                            </div>
-                                        </div>
-
-                                        {/* Transaction Details */}
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <div style={{ fontWeight: '700', fontSize: '10px', color: '#e74c3c', borderBottom: '1px solid #eee', paddingBottom: '2px', marginBottom: '6px', textTransform: 'uppercase' }}>Transaction Details</div>
-                                            <div style={{ fontSize: '9px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                    <div>Paid By: [ ] Cash &nbsp; [ ] Gpay</div>
-                                                    <div>Cash Amount (₹): <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '60px', height: '10px' }}></span></div>
-                                                </div>
-                                                <div>Amount in words: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
-                                                <div>If Gpay: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '80px', height: '10px' }}></span> <span style={{ fontSize: '7px', color: '#777' }}>(Number auto fill)</span></div>
-                                            </div>
-                                        </div>
-
-                                        {/* Personal Details */}
-                                        <div style={{ marginBottom: '12px' }}>
-                                            <div style={{ fontWeight: '700', fontSize: '10px', color: '#e74c3c', borderBottom: '1px solid #eee', paddingBottom: '2px', marginBottom: '6px', textTransform: 'uppercase' }}>Personal Detail</div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '5px', fontSize: '9px' }}>
-                                                <div>Initial: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '40px', height: '10px' }}></span></div>
-                                                <div>Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '100px', height: '10px' }}></span></div>
-                                                <div style={{ gridColumn: 'span 2' }}>Father Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
-                                                <div style={{ gridColumn: 'span 2' }}>Mother Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
-                                                <div style={{ gridColumn: 'span 2' }}>Spouse Name: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
-                                                <div style={{ gridColumn: 'span 2' }}>Mobile: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
-                                                <div style={{ gridColumn: 'span 2' }}>Location: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
-                                                <div style={{ gridColumn: 'span 2' }}>Remarks: <span style={{ borderBottom: '1px solid #ccc', display: 'inline-block', width: '140px', height: '10px' }}></span></div>
-                                            </div>
-
-                                            {/* <div style={{ display: 'flex', gap: '15px', marginTop: '10px', fontSize: '9px' }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <strong>Thai Mama (தாய் மாமன்)</strong>
-                                                    <div style={{ borderBottom: '1px solid #ccc', height: '12px' }}></div>
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <strong>Seer Varisai (Gifts)</strong>
-                                                    <div style={{ borderBottom: '1px solid #ccc', height: '12px' }}></div>
-                                                </div>
-                                            </div> */}
-                                        </div>
-
-                                        {/* Footer */}
-                                        <div style={{ marginTop: '12px', borderTop: '1px solid #eee', paddingTop: '6px', fontSize: '7px', color: '#777', display: 'flex', justifyContent: 'space-between' }}>
-                                            <span>Address: Leela Tech, Melagudalu</span>
-                                            <span>Mob: 8006880050</span>
-                                        </div>
+                                <div style={{
+                                    border: '1px solid var(--glass-border)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    background: '#ffffff',
+                                    color: '#000000',
+                                    padding: '24px',
+                                    fontSize: '13px',
+                                    lineHeight: '1.4',
+                                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                                    fontFamily: "'Outfit', sans-serif"
+                                }}>
+                                    {/* Mini printable preview structure */}
+                                    <div style={{ textAlign: 'center', borderBottom: '1px solid #ccc', paddingBottom: '12px', marginBottom: '12px' }}>
+                                        <div style={{ fontWeight: '800', fontSize: '16px' }}>LEELA TECH</div>
+                                        <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>Trust Begins</div>
+                                        <div style={{ fontWeight: '700', color: '#e74c3c', textDecoration: 'underline', marginTop: '6px', fontSize: '14px' }}>DECLARATION FORM</div>
                                     </div>
-                                ) : (
-                                    <div style={{
-                                        border: '1px solid var(--glass-border)',
-                                        borderRadius: 'var(--radius-sm)',
-                                        background: '#ffffff',
-                                        color: '#000000',
-                                        padding: '20px',
-                                        fontSize: '11px',
-                                        lineHeight: '1.4',
-                                        boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
-                                    }}>
-                                        {/* Mini printable preview structure */}
-                                        <div style={{ textAlign: 'center', borderBottom: '1px solid #ccc', paddingBottom: '10px', marginBottom: '10px' }}>
-                                            <div style={{ fontWeight: '800', fontSize: '14px' }}>LEELA TECH</div>
-                                            <div style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>Trust Begins</div>
-                                            <div style={{ fontWeight: '700', color: '#e74c3c', textDecoration: 'underline', marginTop: '6px', fontSize: '12px' }}>DECLARATION FORM</div>
-                                        </div>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', marginBottom: '10px', borderBottom: '1px solid #000', paddingBottom: '6px' }}>
-                                            <div><strong>Event:</strong> {selectedEvent?.eventName}</div>
-                                            <div><strong>Location:</strong> {selectedEvent?.location}</div>
-                                            <div><strong>Venue:</strong> {selectedEvent?.venue}</div>
-                                            <div><strong>Mobile:</strong> {clerkPhone}</div>
-                                        </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '12px', borderBottom: '1px solid #000', paddingBottom: '8px' }}>
+                                        <div><strong>Event:</strong> {selectedEvent?.eventName}</div>
+                                        <div><strong>Location:</strong> {selectedEvent?.location}</div>
+                                        <div><strong>Venue:</strong> {selectedEvent?.venue}</div>
+                                        <div><strong>Mobile:</strong> {clerkPhone}</div>
+                                    </div>
 
-                                        <div style={{ display: 'flex', gap: '15px', marginBottom: '10px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '2px', marginBottom: '4px', fontSize: '9px', textTransform: 'uppercase', color: '#e74c3c' }}>Cash Report</div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Paid count:</span><strong>{noOfPersonsPaid}</strong></div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Ledger Sum:</span><strong>₹{totalMoiReceived}</strong></div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Cash count:</span><strong>₹{totalDenomValue}</strong></div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Gpay Sum:</span><strong>₹{gpayAmount}</strong></div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Diff:</span><strong style={{ color: differenceAmount !== 0 ? '#e74c3c' : '#000' }}>₹{differenceAmount}</strong></div>
-                                            </div>
-                                            <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '8px' }}>
-                                                <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '2px', marginBottom: '4px', fontSize: '9px', textTransform: 'uppercase', color: '#e74c3c' }}>Denominations</div>
-                                                {[500, 200, 100, 50, 20, 10].map(d => (
-                                                    <div key={d} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                                        <span>{d} x</span>
-                                                        <span>{denominations[d] || 0}</span>
-                                                    </div>
-                                                ))}
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', marginTop: '2px', fontWeight: 'bold' }}>
-                                                    <span>Total:</span>
-                                                    <span>₹{totalDenomValue}</span>
+                                    <div style={{ display: 'flex', gap: '20px', marginBottom: '12px' }}>
+                                        <div style={{ flex: 1.2 }}>
+                                            <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', color: '#e74c3c' }}>Cash Report</div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Paid count:</span><strong>{noOfPersonsPaid}</strong></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Ledger Sum:</span><strong>₹{totalMoiReceived}</strong></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Cash count:</span><strong>₹{totalDenomValue}</strong></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Gpay Sum:</span><strong>₹{gpayAmount}</strong></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Diff:</span><strong style={{ color: differenceAmount !== 0 ? '#e74c3c' : '#000' }}>₹{differenceAmount}</strong></div>
+                                        </div>
+                                        <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '12px' }}>
+                                            <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', color: '#e74c3c' }}>Denominations</div>
+                                            {[500, 200, 100, 50, 20, 10].map(d => (
+                                                <div key={d} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                                    <span>{d} x</span>
+                                                    <span>{denominations[d] || 0}</span>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '4px 0', marginBottom: '10px', fontSize: '9px' }}>
-                                            <strong>Amount in words:</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic' }}>
-                                                {totalDenomValue > 0 ? `${numberToWords(totalDenomValue, 'en')} Only` : 'Zero rupees only'}
-                                            </span>
-                                        </div>
-
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8px', border: '1px solid #000', marginBottom: '10px' }}>
-                                            <thead>
-                                                <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
-                                                    <th style={{ padding: '3px', borderRight: '1px solid #000' }}>Witnesses</th>
-                                                    <th style={{ padding: '3px', borderRight: '1px solid #000' }}>Witness 1</th>
-                                                    <th style={{ padding: '3px' }}>Witness 2</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr style={{ borderBottom: '1px solid #000' }}>
-                                                    <td style={{ padding: '3px', borderRight: '1px solid #000' }}><strong>Name</strong></td>
-                                                    <td style={{ padding: '3px', borderRight: '1px solid #000' }}>{witness1.name}</td>
-                                                    <td style={{ padding: '3px' }}>{witness2.name}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style={{ padding: '3px', borderRight: '1px solid #000' }}><strong>Mobile</strong></td>
-                                                    <td style={{ padding: '3px', borderRight: '1px solid #000' }}>{witness1.mobile}</td>
-                                                    <td style={{ padding: '3px' }}>{witness2.mobile}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
-                                            <div style={{ fontSize: '9px' }}>
-                                                Clerk: <strong>{user?.name}</strong>
-                                            </div>
-                                            <div style={{ borderTop: '1px solid #000', width: '90px', textAlign: 'center', fontSize: '8px', paddingTop: '2px', fontWeight: 'bold' }}>
-                                                Clerk Signature
+                                            ))}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', marginTop: '4px', fontWeight: 'bold' }}>
+                                                <span>Total:</span>
+                                                <span>₹{totalDenomValue}</span>
                                             </div>
                                         </div>
                                     </div>
-                                )}
+
+                                    <div style={{ borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '6px 0', marginBottom: '12px', fontSize: '11px' }}>
+                                        <strong>Amount in words:</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic' }}>
+                                            {totalDenomValue > 0 ? `${numberToWords(totalDenomValue, 'en')} Only` : 'Zero rupees only'}
+                                        </span>
+                                    </div>
+
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', border: '1px solid #000', marginBottom: '12px' }}>
+                                        <thead>
+                                            <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
+                                                <th style={{ padding: '4px', borderRight: '1px solid #000' }}>Witnesses</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid #000' }}>Witness 1</th>
+                                                <th style={{ padding: '4px' }}>Witness 2</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr style={{ borderBottom: '1px solid #000' }}>
+                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}><strong>Name</strong></td>
+                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}>{witness1.name}</td>
+                                                <td style={{ padding: '4px' }}>{witness2.name}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}><strong>Mobile</strong></td>
+                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}>{witness1.mobile}</td>
+                                                <td style={{ padding: '4px' }}>{witness2.mobile}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px' }}>
+                                        <div style={{ fontSize: '11px' }}>
+                                            Clerk: <strong>{user?.name}</strong>
+                                        </div>
+                                        <div style={{ borderTop: '1px solid #000', width: '110px', textAlign: 'center', fontSize: '10px', paddingTop: '4px', fontWeight: 'bold' }}>
+                                            Clerk Signature
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
 
                         {/* Modal Action Footer */}
                         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
@@ -1560,7 +1421,10 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                     width: '100%',
                     maxWidth: '800px',
                     margin: '0 auto',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    border: 'none',
+                    outline: 'none',
+                    boxShadow: 'none'
                 }}>
                     <style>{`
                         @page {
@@ -1576,10 +1440,13 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                             }
                             .print-declaration-sheet {
                                 display: block !important;
-                                padding: 0 !important;
-                                margin: 0 !important;
+                                padding: 10mm 15mm !important;
+                                margin: 0 auto !important;
                                 width: 100% !important;
                                 max-width: 100% !important;
+                                border: none !important;
+                                outline: none !important;
+                                box-shadow: none !important;
                             }
                             .print-page-break {
                                 page-break-after: always !important;
@@ -1592,133 +1459,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                             }
                         }
                     `}</style>
-                    {/* PAGE 1: Blank Manual Entry Form */}
-                    <div className="print-page-break" style={{
-                        pageBreakAfter: 'always',
-                        breakAfter: 'page',
-                        boxSizing: 'border-box',
-                        display: 'block',
-                        paddingBottom: '20px'
-                    }}>
-                        <div style={{ display: 'block' }}>
-                            {/* Header */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                                <div>
-                                    <img src={logoImg} alt="Leela Tech Logo" style={{ height: '42px', objectFit: 'contain' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <img src={iconImg} alt="Leela Tech Icon" style={{ height: '35px', width: '35px', objectFit: 'contain' }} />
-                                    {/* QR Code SVG */}
-                                    <svg width="45" height="45" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#000' }}>
-                                        <rect width="5" height="5" x="3" y="3" rx="1" />
-                                        <rect width="5" height="5" x="16" y="3" rx="1" />
-                                        <rect width="5" height="5" x="3" y="16" rx="1" />
-                                        <path d="M21 16V21H16" />
-                                        <path d="M21 12H16" />
-                                        <path d="M12 21v-5" />
-                                        <path d="M12 12H9" />
-                                        <path d="M12 3v6" />
-                                        <path d="M3 12h3" />
-                                        <path d="M16 8h2" />
-                                        <path d="M8 16h2" />
-                                        <path d="M16 16h2" />
-                                    </svg>
-                                </div>
-                            </div>
 
-                            <div style={{ fontSize: '9px', color: '#555', fontStyle: 'italic', marginBottom: '12px', borderBottom: '1px dashed #ccc', paddingBottom: '6px' }}>
-                                (This QR Code will be displayed in Cash counter customers can capture this easily from their Moi app scanner)
-                            </div>
-
-                            <div style={{ marginBottom: '15px' }}>
-                                <div style={{ fontSize: '12px', color: '#333' }}>Welcome, <strong>{user?.name || 'Anand'}</strong></div>
-                                <div style={{ fontSize: '12px', color: '#666', marginTop: '1px' }}>Your Moi Ledger at a glance</div>
-                            </div>
-
-                            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                                <h2 style={{ fontSize: '20px', fontWeight: '800', letterSpacing: '1px', margin: '0 0 2px 0', color: '#000' }}>MOI VIBARAM</h2>
-                                <div style={{ fontSize: '10px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600 }}>Trust Begins</div>
-                            </div>
-
-                            {/* Event Details Section */}
-                            <div style={{ marginBottom: '22px' }}>
-                                <h4 style={{ fontSize: '12px', fontWeight: '800', color: '#000000', textTransform: 'uppercase', borderBottom: '1.5px solid #000', paddingBottom: '3px', marginBottom: '12px' }}>Event Details</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px', fontSize: '11px' }}>
-                                    <div>Event Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div>Type: <span style={{ display: 'inline-block', border: '1px solid #000', width: '10px', height: '10px', verticalAlign: 'middle', marginRight: '3px' }}></span> Received &nbsp;&nbsp;&nbsp;&nbsp; <span style={{ display: 'inline-block', border: '1px solid #000', width: '10px', height: '10px', verticalAlign: 'middle', marginRight: '3px' }}></span> Sent</div>
-                                    <div>Date: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '75%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div>Venue: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div>Location: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div>City: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '75%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div>Gpay Mobile Number: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '45%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div>Mobile No: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div style={{ gridColumn: 'span 2' }}>Moi Entry Person Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                </div>
-                            </div>
-
-                            {/* Transaction Details Section */}
-                            <div style={{ marginBottom: '22px' }}>
-                                <h4 style={{ fontSize: '12px', fontWeight: '800', color: '#000000', textTransform: 'uppercase', borderBottom: '1.5px solid #000', paddingBottom: '3px', marginBottom: '12px' }}>Transaction Details</h4>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11px' }}>
-                                    <div style={{ display: 'flex', gap: '20px' }}>
-                                        <div>Paid By: <span style={{ display: 'inline-block', border: '1px solid #000', width: '10px', height: '10px', verticalAlign: 'middle', marginRight: '3px' }}></span> Cash &nbsp;&nbsp;&nbsp;&nbsp; <span style={{ display: 'inline-block', border: '1px solid #000', width: '10px', height: '10px', verticalAlign: 'middle', marginRight: '3px' }}></span> Gpay</div>
-                                        <div style={{ flex: 1 }}>if Cash Amount (₹): <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '55%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    </div>
-                                    <div>(Amount in words): <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '80%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div>If Gpay: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '35%', height: '13px', verticalAlign: 'bottom' }}></span> <span style={{ fontSize: '9px', color: '#555', marginLeft: '8px' }}>(Number auto fill as mentioned in event create)</span></div>
-                                </div>
-                            </div>
-
-                            {/* Personal Detail Section */}
-                            <div style={{ marginBottom: '22px' }}>
-                                <h4 style={{ fontSize: '12px', fontWeight: '800', color: '#000000', textTransform: 'uppercase', borderBottom: '1.5px solid #000', paddingBottom: '3px', marginBottom: '12px' }}>Personal Detail</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px 20px', fontSize: '11px' }}>
-                                    <div>Initial: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div style={{ gridColumn: 'span 2' }}>Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '80%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-
-                                    <div style={{ gridColumn: 'span 3', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
-                                        <div>Father Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                        <div>Mother Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-
-                                        <div>Spouse Name: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                        <div>Nickname: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    </div>
-
-                                    <div style={{ gridColumn: 'span 3', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
-                                        <div>Occupation: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '60%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                        <div>Mobile: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-
-                                        <div>Location: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '65%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                        <div>Street: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    </div>
-
-                                    <div style={{ gridColumn: 'span 3' }}>Remarks: <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '85%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                    <div style={{ gridColumn: 'span 3' }}>Labels (comma separated): <span style={{ display: 'inline-block', borderBottom: '1px solid #000', width: '70%', height: '13px', verticalAlign: 'bottom' }}></span></div>
-                                </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '40px', marginTop: '20px', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        Thai Mama (தாய் மாமன்)
-                                        <div style={{ borderBottom: '1px solid #000', height: '24px', marginTop: '8px' }}></div>
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        Seer Varisai (Gifts)
-                                        <div style={{ borderBottom: '1px solid #000', height: '24px', marginTop: '8px' }}></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div style={{ borderTop: '1px solid #eee', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#555', marginTop: '16px' }}>
-                            <div>
-                                <strong>Address:</strong> Leela Tech, No -3m, 1st Ward, Pasumpon Nagar, Melagudalu, Theni -DT, Gudalur - 625518
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                                <strong>Contact Details:</strong> Mob: 8006880050 | Email: anand@leelatech.co.in
-                            </div>
-                        </div>
-                    </div>
 
                     {/* PAGE 2: Declaration Summary */}
                     <div style={{
@@ -1734,39 +1475,39 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <img src={iconImg} alt="Leela Tech Icon" style={{ height: '32px', width: '32px', objectFit: 'contain' }} />
-                                    <div style={{ fontSize: '11px', fontWeight: '600', textAlign: 'right' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: '600', textAlign: 'right' }}>
                                         Date : {new Date(selectedEvent?.date || new Date()).toLocaleDateString('en-IN').replace(/\//g, '/')}
                                     </div>
                                 </div>
                             </div>
 
                             <div style={{ marginBottom: '8px' }}>
-                                <div style={{ fontSize: '11px', color: '#333' }}>Welcome, <strong>{user?.name || 'Anand'}</strong></div>
-                                <div style={{ fontSize: '11px', color: '#666', marginTop: '1px' }}>Your Moi Ledger at a glance</div>
+                                <div style={{ fontSize: '13px', color: '#333' }}>Welcome, <strong>{user?.name || 'Anand'}</strong></div>
+                                <div style={{ fontSize: '13px', color: '#666', marginTop: '1px' }}>Your Moi Ledger at a glance</div>
                             </div>
 
                             <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                                <h2 style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '1px', margin: '0 0 2px 0', color: '#000' }}>MOI VIBARAM</h2>
-                                <div style={{ fontSize: '9px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600 }}>Trust Begins</div>
-                                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#000000', textDecoration: 'underline', marginTop: '4px', textTransform: 'uppercase' }}>Declaration Form</h3>
+                                <h2 style={{ fontSize: '24px', fontWeight: '800', letterSpacing: '1px', margin: '0 0 2px 0', color: '#000' }}>MOI VIBARAM</h2>
+                                <div style={{ fontSize: '11px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600 }}>Trust Begins</div>
+                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#000000', textDecoration: 'underline', marginTop: '4px', textTransform: 'uppercase' }}>Declaration Form</h3>
                             </div>
 
                             {/* Event Details Grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px', marginBottom: '12px', borderBottom: '1.5px solid #000', paddingBottom: '8px' }}>
-                                <div style={{ fontSize: '11px' }}><strong>Event Name:</strong> {selectedEvent?.eventName || '—'}</div>
-                                <div style={{ fontSize: '11px' }}><strong>Location:</strong> {selectedEvent?.location || '—'}</div>
-                                <div style={{ fontSize: '11px' }}><strong>Venue:</strong> {selectedEvent?.venue || '—'}</div>
-                                <div style={{ fontSize: '11px' }}><strong>Mobile No:</strong> {clerkPhone || '—'}</div>
+                                <div style={{ fontSize: '13px' }}><strong>Event Name:</strong> {selectedEvent?.eventName || '—'}</div>
+                                <div style={{ fontSize: '13px' }}><strong>Location:</strong> {selectedEvent?.location || '—'}</div>
+                                <div style={{ fontSize: '13px' }}><strong>Venue:</strong> {selectedEvent?.venue || '—'}</div>
+                                <div style={{ fontSize: '13px' }}><strong>Mobile No:</strong> {clerkPhone || '—'}</div>
                             </div>
 
                             {/* Cash Report & Denominations columns */}
                             <div style={{ display: 'flex', gap: '24px', marginBottom: '12px' }}>
                                 {/* Left Side: Moi Cash Report */}
                                 <div style={{ flex: 1.2 }}>
-                                    <h4 style={{ fontSize: '11px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                    <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
                                         Moi Cash Report
                                     </h4>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '10px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
                                             <span>No Of Persons paid</span>
                                             <strong>{noOfPersonsPaid}</strong>
@@ -1798,10 +1539,10 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
 
                                 {/* Right Side: Denominations */}
                                 <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
-                                    <h4 style={{ fontSize: '11px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                    <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
                                         Denominations
                                     </h4>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                                         <tbody>
                                             {[500, 200, 100, 50, 20, 10].map(denom => (
                                                 <tr key={denom} style={{ borderBottom: '1px dashed #f0f0f0' }}>
@@ -1823,7 +1564,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                                     ₹{(parseFloat(denominations.coins) || 0).toLocaleString('en-IN')}
                                                 </td>
                                             </tr>
-                                            <tr style={{ fontWeight: '800', borderTop: '1.5px solid #000', fontSize: '11px' }}>
+                                            <tr style={{ fontWeight: '800', borderTop: '1.5px solid #000', fontSize: '13px' }}>
                                                 <td style={{ padding: '5px 0' }} colSpan={2}>Total Value</td>
                                                 <td style={{ padding: '5px 0', textAlign: 'right' }}>
                                                     ₹{totalDenomValue.toLocaleString('en-IN')}
@@ -1835,7 +1576,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                             </div>
 
                             {/* Cash Amount Words */}
-                            <div style={{ fontSize: '10px', borderTop: '1.5px solid #000', borderBottom: '1.5px solid #000', padding: '8px 0', marginBottom: '12px' }}>
+                            <div style={{ fontSize: '12px', borderTop: '1.5px solid #000', borderBottom: '1.5px solid #000', padding: '8px 0', marginBottom: '12px' }}>
                                 <strong>Cash Amount Words (₹):</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic', marginLeft: '6px' }}>
                                     {totalDenomValue > 0 ? `${numberToWords(totalDenomValue, 'en')} Only` : 'Zero rupees only'}
                                 </span>
@@ -1845,7 +1586,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                             <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '15px' }}>
                                 {/* Witnesses Table */}
                                 <div style={{ flex: 1.5 }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', border: '1px solid #000' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1px solid #000' }}>
                                         <thead>
                                             <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
                                                 <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>Particulars</th>
@@ -1886,7 +1627,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '9px',
+                                        fontSize: '11px',
                                         color: '#555',
                                         textAlign: 'center',
                                         padding: '6px',
@@ -1896,32 +1637,32 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                     </div>
                                     <div style={{ textAlign: 'center', marginTop: '5px' }}>
                                         <div style={{ borderTop: '1px solid #000', width: '120px', margin: '0 auto 3px' }}></div>
-                                        <div style={{ fontSize: '10px', fontWeight: '600' }}>Customer Signature</div>
+                                        <div style={{ fontSize: '12px', fontWeight: '600' }}>Customer Signature</div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Clerk Info & Signature Footer */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #000', paddingTop: '10px', marginTop: '12px' }}>
-                                <div style={{ fontSize: '10px' }}>
+                                <div style={{ fontSize: '12px' }}>
                                     Moi Entry person Name: <strong>{user?.name || 'Anand'}</strong>
                                     <span style={{ margin: '0 10px', color: '#ccc' }}>|</span>
                                     Mob No: <strong>{clerkPhone || '—'}</strong>
                                 </div>
                                 <div style={{ textAlign: 'center' }}>
                                     <div style={{ borderTop: '1px solid #000', width: '150px', margin: '0 auto 3px' }}></div>
-                                    <div style={{ fontSize: '10px', fontWeight: '600' }}>Employee Signature</div>
+                                    <div style={{ fontSize: '12px', fontWeight: '600' }}>Employee Signature</div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Branding footer */}
                         <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '8px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '9px', fontWeight: '600', color: '#1a1a2e' }}>Address: Leela Tech</div>
-                            <div style={{ fontSize: '8px', color: '#555', marginTop: '2px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '600', color: '#1a1a2e' }}>Address: Leela Tech</div>
+                            <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>
                                 No -3m, 1st Ward, Pasumpon Nagar, Melagudalu, Theni -DT, Gudalur - 625518
                             </div>
-                            <div style={{ fontSize: '8px', color: '#555', marginTop: '1px' }}>
+                            <div style={{ fontSize: '10px', color: '#555', marginTop: '1px' }}>
                                 Mob: 8006880050 | Email: anand@leelatech.co.in
                             </div>
                         </div>

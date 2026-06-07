@@ -220,12 +220,9 @@ router.post('/', auth, async (req, res) => {
                 finalOccupation = finalOccupation || party.occupation;
             }
 
-            if (!finalInitial || !finalInitial.trim()) return res.status(400).json({ message: 'Initial is required' });
             if (!finalName || !finalName.trim()) return res.status(400).json({ message: 'Name is required' });
             if (!finalSpouseName || !finalSpouseName.trim()) return res.status(400).json({ message: 'Spouse Name is required' });
-            if (!finalMobile || !finalMobile.trim()) return res.status(400).json({ message: 'Mobile number is required' });
             if (!finalLocation || !finalLocation.trim()) return res.status(400).json({ message: 'Location is required' });
-            if (!finalOccupation || !finalOccupation.trim()) return res.status(400).json({ message: 'Occupation is required' });
             if (!paymentType || !['cash', 'gpay'].includes(paymentType)) return res.status(400).json({ message: 'Valid payment type (cash or gpay) is required' });
             if (cashAmount === undefined || parseFloat(cashAmount) <= 0) return res.status(400).json({ message: 'Amount must be greater than 0' });
         }
@@ -387,12 +384,9 @@ router.put('/:id', auth, async (req, res) => {
                 }
             }
 
-            if (!finalInitial || !finalInitial.trim()) return res.status(400).json({ message: 'Initial is required' });
             if (!finalName || !finalName.trim()) return res.status(400).json({ message: 'Name is required' });
             if (!finalSpouseName || !finalSpouseName.trim()) return res.status(400).json({ message: 'Spouse Name is required' });
-            if (!finalMobile || !finalMobile.trim()) return res.status(400).json({ message: 'Mobile number is required' });
             if (!finalLocation || !finalLocation.trim()) return res.status(400).json({ message: 'Location is required' });
-            if (!finalOccupation || !finalOccupation.trim()) return res.status(400).json({ message: 'Occupation is required' });
             if (!paymentType || !['cash', 'gpay'].includes(paymentType)) return res.status(400).json({ message: 'Valid payment type (cash or gpay) is required' });
             if (cashAmount === undefined || parseFloat(cashAmount) <= 0) return res.status(400).json({ message: 'Amount must be greater than 0' });
         }

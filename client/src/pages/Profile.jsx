@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { usersAPI } from '../api/api'
 import { useAuth } from '../context/AuthContext'
 import { QRCodeCanvas } from 'qrcode.react'
-import { useReactToPrint } from 'react-to-print'
+import { printElement } from '../utils/print'
 import { startRegistration } from '@simplewebauthn/browser'
 import api from '../api/api'
 import { User, Printer, Camera, Save, Smartphone, ShieldCheck, Fingerprint } from 'lucide-react'
@@ -71,7 +71,11 @@ export default function Profile() {
         }
     }
 
-    const handlePrint = useReactToPrint({ content: () => printRef.current })
+    const handlePrint = () => {
+        if (printRef.current) {
+            printElement(printRef.current)
+        }
+    }
 
     const qrValue = profileData
         ? JSON.stringify({ name: profileData.name, mobile: profileData.mobile, location: profileData.location, street: profileData.street })
