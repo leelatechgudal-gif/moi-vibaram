@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { transactionsAPI } from '../api/api'
 import { Link } from 'react-router-dom'
 import { printElement } from '../utils/print'
+import useSort from '../hooks/useSort'
 import { Scale, Share2, Printer, Edit2, ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function BalanceSheet() {
@@ -12,6 +13,15 @@ export default function BalanceSheet() {
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const printRef = useRef()
+    const {
+        sortField,
+        sortOrder,
+        setSortField,
+        setSortOrder,
+        handleSort,
+        renderSortIcon,
+        getSortedItems
+    } = useSort('partyName', 'asc')
 
     useEffect(() => {
         transactionsAPI.getBalanceSheet()
@@ -48,6 +58,37 @@ export default function BalanceSheet() {
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
                 />
+                
+                {/* Mobile Sort UI */}
+                <div className="show-mobile" style={{ marginTop: 12 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Sort by:</span>
+                        <select 
+                            className="form-control" 
+                            style={{ flex: 1, height: 38 }} 
+                            value={sortField} 
+                            onChange={e => {
+                                setSortField(e.target.value);
+                                setSortOrder('asc');
+                            }}
+                        >
+                            <option value="partyName">Name</option>
+                            <option value="mobile">{t('mobile')}</option>
+                            <option value="location">{t('location')}</option>
+                            <option value="totalPaid">Paid</option>
+                            <option value="totalReceived">Received</option>
+                            <option value="balance">{t('balance')}</option>
+                        </select>
+                        <button 
+                            type="button" 
+                            className="btn btn-secondary" 
+                            style={{ padding: '8px 12px', height: 38, display: 'flex', alignItems: 'center' }}
+                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        >
+                            {sortOrder === 'asc' ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {loading ? (
@@ -67,7 +108,17 @@ export default function BalanceSheet() {
                     );
                 });
 
-                if (filteredSheet.length === 0) {
+                const sortedFilteredSheet = getSortedItems(filteredSheet, {
+                    partyName: (a, b, order) => {
+                        const nameA = (a.partyName || '').toLowerCase();
+                        const nameB = (b.partyName || '').toLowerCase();
+                        if (nameA < nameB) return order === 'asc' ? -1 : 1;
+                        if (nameA > nameB) return order === 'asc' ? 1 : -1;
+                        return 0;
+                    }
+                });
+
+                if (sortedFilteredSheet.length === 0) {
                     return (
                         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)' }}>No records found matching your search.</div>
                     );
@@ -81,17 +132,29 @@ export default function BalanceSheet() {
                                 <thead>
                                     <tr>
                                         <th>ID</th>
-                                        <th>Name & Spouse name</th>
-                                        <th>{t('mobile')}</th>
-                                        <th>{t('location')}</th>
-                                        <th>Paid</th>
-                                        <th>Received</th>
-                                        <th>{t('balance')}</th>
+                                        <th style={{ cursor: 'pointer' }} onClick={() => handleSort('partyName')}>
+                                            Name & Spouse name {renderSortIcon('partyName')}
+                                        </th>
+                                        <th style={{ cursor: 'pointer' }} onClick={() => handleSort('mobile')}>
+                                            {t('mobile')} {renderSortIcon('mobile')}
+                                        </th>
+                                        <th style={{ cursor: 'pointer' }} onClick={() => handleSort('location')}>
+                                            {t('location')} {renderSortIcon('location')}
+                                        </th>
+                                        <th style={{ cursor: 'pointer' }} onClick={() => handleSort('totalPaid')}>
+                                            Paid {renderSortIcon('totalPaid')}
+                                        </th>
+                                        <th style={{ cursor: 'pointer' }} onClick={() => handleSort('totalReceived')}>
+                                            Received {renderSortIcon('totalReceived')}
+                                        </th>
+                                        <th style={{ cursor: 'pointer' }} onClick={() => handleSort('balance')}>
+                                            {t('balance')} {renderSortIcon('balance')}
+                                        </th>
                                         <th className="no-print"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredSheet.map((p, i) => (
+                                    {sortedFilteredSheet.map((p, i) => (
                                         <React.Fragment key={p._id || i}>
                                             <tr>
                                                 <td className="text-muted">{i + 1}</td>
@@ -131,7 +194,7 @@ export default function BalanceSheet() {
                                                         <div style={{ background: 'var(--glass)', padding: 16, borderBottom: '1px solid var(--border)' }}>
                                                             <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>Transaction History with {p.partyName}</div>
                                                             <div className="table-wrap">
-                                                                <table className="table" style={{ fontSize: 12 }}>
+                                                                 <table className="table" style={{ fontSize: 12 }}>
                                                                     <thead>
                                                                         <tr>
                                                                             <th>Date</th>
@@ -172,10 +235,10 @@ export default function BalanceSheet() {
                                 </tbody>
                             </table>
                         </div>
-
+ 
                         {/* Mobile View */}
                         <div className="show-mobile">
-                            {filteredSheet.map((p, i) => (
+                            {sortedFilteredSheet.map((p, i) => (
                                 <div key={p._id || i} className="card" style={{ padding: 16, marginBottom: 12 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                         <div>

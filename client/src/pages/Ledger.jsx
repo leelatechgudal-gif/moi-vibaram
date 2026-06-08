@@ -9,6 +9,7 @@ import OwnerOtpModal from '../components/OwnerOtpModal';
 import { numberToWords } from '../utils/numberToWords';
 import logoImg from '../../assets/logo.jpeg';
 import iconImg from '../../assets/icon.png';
+import splashImg from '../../assets/splash.png';
 import {
     BookMarked,
     Plus,
@@ -27,7 +28,7 @@ import {
 } from 'lucide-react';
 
 export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { user } = useAuth();
     const navigate = useNavigate();
 
@@ -77,6 +78,13 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         }
     };
 
+    const getSerialNo = () => {
+        if (!printData) return '';
+        const idx = rows.findIndex(r => r._id === printData._id);
+        const seq = idx !== -1 ? idx + 1 : rows.length + 1;
+        return String(seq).padStart(3, '0');
+    };
+
     // Sign-off / Clerk Declaration Modal State
     const [isSignOffOpen, setIsSignOffOpen] = useState(false);
     const [denominations, setDenominations] = useState({
@@ -119,7 +127,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     // Load initial data
     useEffect(() => {
         loadEvents();
-        loadParties();
+        // loadParties();
     }, []);
 
     // Load transactions on filter changes
@@ -214,6 +222,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
 
     const handleAddRow = () => {
         setRows(prev => [
+            ...prev,
             {
                 tempId: Date.now() + Math.random(),
                 initial: '',
@@ -227,8 +236,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 partyId: null,
                 isEditing: true,
                 isSaving: false
-            },
-            ...prev
+            }
         ]);
     };
 
@@ -517,14 +525,16 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     // Auto-filter parties
     const filteredParties = searchQuery.trim()
         ? partiesList.filter(p =>
-            p.name?.toLowerCase().includes(searchQuery.toLowerCase())
+            p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.mobile?.toLowerCase().includes(searchQuery.toLowerCase())
         )
         : [];
 
     const filteredRows = rows.filter(r =>
         r.isEditing ||
         !filterNameQuery.trim() ||
-        r.partyName?.toLowerCase().includes(filterNameQuery.trim().toLowerCase())
+        r.partyName?.toLowerCase().includes(filterNameQuery.trim().toLowerCase()) ||
+        r.mobile?.toLowerCase().includes(filterNameQuery.trim().toLowerCase())
     );
 
     const totalAmount = filteredRows.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0);
@@ -764,15 +774,12 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 ) : (
                     <>
                         <div className="no-print" style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-                            <button className="btn btn-primary" onClick={handleAddRow} style={{ height: 38, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Plus size={16} /> Add Row
-                            </button>
                             <div style={{ display: 'flex', alignItems: 'center', flex: 1, background: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '4px 10px' }}>
                                 <Search size={16} className="text-muted" style={{ marginRight: 8 }} />
                                 <input
                                     value={filterNameQuery}
                                     onChange={e => setFilterNameQuery(e.target.value)}
-                                    placeholder="Search entries by guest name..."
+                                    placeholder="Search entries by guest name or mobile number..."
                                     style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', width: '100%', padding: '6px 0', fontSize: '13px' }}
                                 />
                             </div>
@@ -1033,8 +1040,10 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                         </div>
 
                         {/* Add Row and Totals bar */}
-                        {/* Totals bar */}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 }}>
+                            <button className="btn btn-primary" onClick={handleAddRow} style={{ height: 38, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <Plus size={16} /> Add Row
+                            </button>
                             <div className="ledger-total-bar" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                                 <span style={{ color: 'var(--text-muted)' }}>Total Count: {filteredRows.length}</span>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1286,28 +1295,28 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                     {/* Mini printable preview structure */}
                                     <div style={{ textAlign: 'center', borderBottom: '1px solid #ccc', paddingBottom: '12px', marginBottom: '12px' }}>
                                         <div style={{ fontWeight: '800', fontSize: '16px' }}>LEELA TECH</div>
-                                        <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>Trust Begins</div>
-                                        <div style={{ fontWeight: '700', color: '#e74c3c', textDecoration: 'underline', marginTop: '6px', fontSize: '14px' }}>DECLARATION FORM</div>
+                                        <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>{t('tagline')}</div>
+                                        <div style={{ fontWeight: '700', color: '#e74c3c', textDecoration: 'underline', marginTop: '6px', fontSize: '14px' }}>{t('declarationForm')}</div>
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '12px', borderBottom: '1px solid #000', paddingBottom: '8px' }}>
-                                        <div><strong>Event:</strong> {selectedEvent?.eventName}</div>
-                                        <div><strong>Location:</strong> {selectedEvent?.location}</div>
-                                        <div><strong>Venue:</strong> {selectedEvent?.venue}</div>
-                                        <div><strong>Mobile:</strong> {clerkPhone}</div>
+                                        <div><strong>{t('eventName')}:</strong> {selectedEvent?.eventName}</div>
+                                        <div><strong>{t('location')}:</strong> {selectedEvent?.location}</div>
+                                        <div><strong>{t('venue')}:</strong> {selectedEvent?.venue}</div>
+                                        <div><strong>{t('mobile')}:</strong> {clerkPhone}</div>
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '20px', marginBottom: '12px' }}>
                                         <div style={{ flex: 1.2 }}>
-                                            <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', color: '#e74c3c' }}>Cash Report</div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Paid count:</span><strong>{noOfPersonsPaid}</strong></div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Ledger Sum:</span><strong>₹{totalMoiReceived}</strong></div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Cash count:</span><strong>₹{totalDenomValue}</strong></div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Gpay Sum:</span><strong>₹{gpayAmount}</strong></div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>Diff:</span><strong style={{ color: differenceAmount !== 0 ? '#e74c3c' : '#000' }}>₹{differenceAmount}</strong></div>
+                                            <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', color: '#e74c3c' }}>{t('moiCashReport')}</div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('noOfPersonsPaid')}:</span><strong>{noOfPersonsPaid}</strong></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('totalMoiReceived')}:</span><strong>₹{totalMoiReceived}</strong></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('cashAmountText')}:</span><strong>₹{totalDenomValue}</strong></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('gpayAmountText')}:</span><strong>₹{gpayAmount}</strong></div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('differenceAmountText')}:</span><strong style={{ color: differenceAmount !== 0 ? '#e74c3c' : '#000' }}>₹{differenceAmount}</strong></div>
                                         </div>
                                         <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '12px' }}>
-                                            <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', color: '#e74c3c' }}>Denominations</div>
+                                            <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', color: '#e74c3c' }}>{t('denominationsText')}</div>
                                             {[500, 200, 100, 50, 20, 10].map(d => (
                                                 <div key={d} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                                                     <span>{d} x</span>
@@ -1315,34 +1324,34 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                                 </div>
                                             ))}
                                             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', marginTop: '4px', fontWeight: 'bold' }}>
-                                                <span>Total:</span>
+                                                <span>{t('total')}:</span>
                                                 <span>₹{totalDenomValue}</span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div style={{ borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '6px 0', marginBottom: '12px', fontSize: '11px' }}>
-                                        <strong>Amount in words:</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic' }}>
-                                            {totalDenomValue > 0 ? `${numberToWords(totalDenomValue, 'en')} Only` : 'Zero rupees only'}
+                                        <strong>{t('amountInWords')}:</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic' }}>
+                                            {totalDenomValue > 0 ? numberToWords(totalDenomValue, i18n.language?.startsWith('ta') ? 'ta' : 'en') : (i18n.language?.startsWith('ta') ? 'பூஜ்யம் ரூபாய் மட்டும்' : 'Zero rupees only')}
                                         </span>
                                     </div>
 
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', border: '1px solid #000', marginBottom: '12px' }}>
                                         <thead>
                                             <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
-                                                <th style={{ padding: '4px', borderRight: '1px solid #000' }}>Witnesses</th>
-                                                <th style={{ padding: '4px', borderRight: '1px solid #000' }}>Witness 1</th>
-                                                <th style={{ padding: '4px' }}>Witness 2</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid #000' }}>{t('witnesses')}</th>
+                                                <th style={{ padding: '4px', borderRight: '1px solid #000' }}>{t('witness1')}</th>
+                                                <th style={{ padding: '4px' }}>{t('witness2')}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr style={{ borderBottom: '1px solid #000' }}>
-                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}><strong>Name</strong></td>
+                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}><strong>{t('partyName')}</strong></td>
                                                 <td style={{ padding: '4px', borderRight: '1px solid #000' }}>{witness1.name}</td>
                                                 <td style={{ padding: '4px' }}>{witness2.name}</td>
                                             </tr>
                                             <tr>
-                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}><strong>Mobile</strong></td>
+                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}><strong>{t('mobile')}</strong></td>
                                                 <td style={{ padding: '4px', borderRight: '1px solid #000' }}>{witness1.mobile}</td>
                                                 <td style={{ padding: '4px' }}>{witness2.mobile}</td>
                                             </tr>
@@ -1351,10 +1360,10 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
 
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px' }}>
                                         <div style={{ fontSize: '11px' }}>
-                                            Clerk: <strong>{user?.name}</strong>
+                                            {t('clerkSignature')}: <strong>{user?.name}</strong>
                                         </div>
                                         <div style={{ borderTop: '1px solid #000', width: '110px', textAlign: 'center', fontSize: '10px', paddingTop: '4px', fontWeight: 'bold' }}>
-                                            Clerk Signature
+                                            {t('clerkSignature')}
                                         </div>
                                     </div>
                                 </div>
@@ -1387,20 +1396,19 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
             {/* Printable Receipt Container - Hidden on screen, visible during print */}
             <div style={{ display: 'none' }}>
                 <div ref={printRef} className="print-receipt" style={{
-                    padding: '20px 15px',
+                    padding: '4mm 4mm',
                     background: '#fff',
                     color: '#000',
-                    fontFamily: "'Outfit', sans-serif",
-                    width: '100%',
-                    maxWidth: '380px',
+                    fontFamily: "monospace, Courier, 'Courier New'",
+                    width: '80mm',
+                    maxWidth: '80mm',
                     margin: '0 auto',
-                    border: '1px dashed #000',
                     boxSizing: 'border-box'
                 }}>
                     <style>{`
                         @page {
-                            size: auto;
-                            margin: 2mm 3mm 2mm 3mm !important;
+                            size: 80mm auto;
+                            margin: 0 !important;
                         }
                         @media print {
                             html, body {
@@ -1409,187 +1417,211 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                 overflow: visible !important;
                                 background: #fff !important;
                                 color: #000 !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
                             }
                             .print-receipt {
                                 display: block !important;
-                                padding: 8px 4px !important;
-                                margin: 0 !important;
-                                width: 100% !important;
-                                max-width: 100% !important;
-                                border: 1px dashed #000 !important;
+                                padding: 4mm 4mm !important;
+                                margin: 0 auto !important;
+                                width: 80mm !important;
+                                max-width: 80mm !important;
                                 font-size: 11px !important;
-                                line-height: 1.4 !important;
+                                line-height: 1.3 !important;
                                 box-sizing: border-box !important;
+                                font-family: monospace, Courier, 'Courier New' !important;
                             }
                             .print-receipt h2 {
-                                font-size: 18px !important;
+                                font-size: 14px !important;
                                 margin: 0 0 2px 0 !important;
                                 font-weight: 800 !important;
-                                letter-spacing: 0.5px !important;
-                                color: #000 !important;
+                                text-transform: uppercase !important;
                             }
                             .print-receipt .sub-title {
                                 font-size: 8px !important;
-                                color: #000 !important;
-                                letter-spacing: 1px !important;
-                                font-weight: 600 !important;
+                                margin-bottom: 4px !important;
+                                font-weight: bold !important;
                             }
-                            .print-receipt .divider {
-                                border-bottom: 1px solid #000 !important;
-                                margin: 8px 0 !important;
+                            .print-receipt .section-header {
+                                font-size: 11px !important;
+                                font-weight: bold !important;
+                                margin: 4px 0 !important;
+                                text-transform: uppercase !important;
+                                text-align: center !important;
                             }
                             .print-receipt .dashed-divider {
-                                border-bottom: 1px dashed #000 !important;
-                                margin: 8px 0 !important;
-                            }
-                            .print-receipt .double-divider {
-                                border-bottom: 2px solid #000 !important;
-                                margin: 8px 0 !important;
-                            }
-                            .print-receipt .info-row {
-                                margin-bottom: 4px !important;
-                                font-size: 11px !important;
-                            }
-                            .print-receipt .section-title {
-                                font-size: 10px !important;
-                                margin: 0 0 4px 0 !important;
-                                border-bottom: 1px solid #000 !important;
-                                padding-bottom: 2px !important;
-                                text-transform: uppercase !important;
-                                color: #000 !important;
-                                font-weight: bold !important;
-                            }
-                            .print-receipt .details-block {
-                                padding-left: 2px !important;
-                                font-size: 11px !important;
-                            }
-                            .print-receipt .amount-container {
-                                padding: 8px !important;
-                                background: #fff !important;
-                                border: 1px solid #000 !important;
+                                border-top: 1px dashed #000 !important;
                                 margin: 6px 0 !important;
-                                text-align: center !important;
+                                height: 0 !important;
                             }
-                            .print-receipt .amount-title {
-                                font-size: 9px !important;
-                                text-transform: uppercase !important;
-                                margin-bottom: 2px !important;
-                                font-weight: 600 !important;
-                                color: #000 !important;
+                            .print-receipt table {
+                                width: 100% !important;
+                                border-collapse: collapse !important;
+                                font-size: 11px !important;
+                                margin: 2px 0 !important;
+                                table-layout: fixed !important;
                             }
-                            .print-receipt .amount-value {
-                                font-size: 20px !important;
-                                font-weight: 800 !important;
-                                color: #000 !important;
-                            }
-                            .print-receipt .amount-words {
-                                font-size: 10px !important;
-                                font-style: italic !important;
-                                margin-top: 2px !important;
-                                text-transform: capitalize !important;
-                                color: #000 !important;
-                            }
-                            .print-receipt .footer-container {
-                                margin-top: 15px !important;
-                                border-top: 1px solid #000 !important;
-                                padding-top: 8px !important;
-                                text-align: center !important;
-                            }
-                            .print-receipt .footer-powered {
-                                font-size: 10px !important;
-                                font-weight: bold !important;
-                                color: #000 !important;
-                                margin-bottom: 2px !important;
-                            }
-                            .print-receipt .footer-copyright {
-                                font-size: 8px !important;
-                                color: #000 !important;
-                            }
-                            .print-receipt .footer-tagline {
-                                font-size: 8px !important;
-                                color: #000 !important;
-                                margin-top: 2px !important;
-                                font-style: italic !important;
+                            .print-receipt td {
+                                padding: 1px 0 !important;
+                                vertical-align: top !important;
                             }
                         }
                     `}</style>
-                    <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                        <h2 style={{ margin: '0 0 5px 0', fontSize: '24px', fontWeight: '800', letterSpacing: '1px', color: '#000' }}>MOI VIBARAM</h2>
-                        <div className="sub-title" style={{ fontSize: '10px', color: '#000', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: 600 }}>Traditional Digital Ledger</div>
+                    <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+                        <img src={splashImg} alt="Moi Vibaram Logo" style={{ height: '32px', maxWidth: '100px', objectFit: 'contain', marginBottom: '4px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+                        <h2 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '800', letterSpacing: '0.5px' }}>{t('appName')}</h2>
+                        <div className="sub-title" style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>{t('traditionalDigitalLedger')}</div>
                     </div>
 
-                    <div className="divider" style={{ borderBottom: '1px solid #000', margin: '15px 0' }} />
+                    <div className="dashed-divider" />
 
-                    <div style={{ fontSize: '13px', lineHeight: '1.6', color: '#000' }}>
-                        <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <strong>Date:</strong> <span>{printData ? new Date(printData.date).toLocaleDateString('en-IN').replace(/\//g, '-') : ''}</span>
-                        </div>
-                        <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <strong>Receipt No:</strong> <span>{printData ? printData._id?.substring(18).toUpperCase() : 'TEMP'}</span>
-                        </div>
-                        <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <strong>Transaction Type:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{printData ? (printData.type === 'received' ? 'Moi Received' : 'Moi Paid') : ''}</span>
-                        </div>
-                        <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <strong>Payment Method:</strong> <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{printData?.paymentType || 'CASH'}</span>
-                        </div>
+                    {/* Section 1: Host Details */}
+                    <div className="section-header">{t('hostDetails')}</div>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('date')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData ? new Date(printData.eventId?.date || printData.date).toLocaleDateString('en-GB') : ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('hostSpouseName')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData ? (printData.eventId?.eventName || printData.eventName || '') : ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('partyName')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{user?.name || ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('hostWifeName')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>—</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('venue')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData ? (printData.eventId?.venue || printData.eventId?.location || printData.location || '') : ''}</td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                        <div className="dashed-divider" style={{ borderBottom: '1px dashed #000', margin: '15px 0' }} />
+                    <div className="dashed-divider" />
 
-                        <div style={{ marginBottom: '15px' }}>
-                            <h4 className="section-title" style={{ margin: '0 0 8px 0', textTransform: 'uppercase', fontSize: '12px', color: '#000', borderBottom: '1px solid #000', paddingBottom: '4px' }}>Guest Details</h4>
-                            <div className="details-block" style={{ paddingLeft: '5px' }}>
-                                <div><strong>Name:</strong> {printData ? `${printData.initial ? printData.initial + ' ' : ''}${printData.partyName}` : ''}</div>
-                                {printData?.spouseName && <div><strong>Spouse:</strong> {printData.spouseName}</div>}
-                                {printData?.mobile && <div><strong>Mobile:</strong> {printData.mobile}</div>}
-                                {printData?.location && <div><strong>Location:</strong> {printData.location}</div>}
-                                {printData?.occupation && <div><strong>Occupation:</strong> {printData.occupation}</div>}
-                            </div>
-                        </div>
+                    {/* Section 2: Donor Details */}
+                    <div className="section-header">{t('donorDetails')}</div>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('partyName')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData ? `${printData.initial ? printData.initial + ' ' : ''}${printData.partyName}` : ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('donorSpouseName')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData?.spouseName || '—'}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('town')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData?.location || '—'}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('occupation')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData?.occupation || '—'}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('donorMobile')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData?.mobile || '—'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                        <div className="dashed-divider" style={{ borderBottom: '1px dashed #000', margin: '15px 0' }} />
+                    <div className="dashed-divider" />
 
-                        <div style={{ marginBottom: '15px' }}>
-                            <div className="info-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <strong>Event Name:</strong> <span>{printData ? (printData.eventId?.eventName || printData.eventName || '') : ''}</span>
-                            </div>
-                        </div>
+                    {/* Section 3: Contribution Details */}
+                    <div className="section-header">{t('contributionDetails')}</div>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('receiptSerialNo')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{getSerialNo()}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('paymentMethod')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData?.paymentType === 'gpay' ? (i18n.language?.startsWith('ta') ? 'ஜிபே' : 'GPay') : (i18n.language?.startsWith('ta') ? 'பணம்' : 'Cash')}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('paymentTime')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{printData ? new Date(printData.createdAt || Date.now()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}</td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('contributionAmount')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td style={{ fontWeight: 'bold' }}>{printData ? `${printData.cashAmount}/-` : ''}</td>
+                            </tr>
+                            <tr>
+                                <td colSpan="3" style={{ paddingLeft: '130px', fontSize: '10px', fontStyle: 'italic', wordBreak: 'break-word', paddingTop: '2px', paddingBottom: '4px' }}>
+                                    {printData ? numberToWords(printData.cashAmount, i18n.language?.startsWith('ta') ? 'ta' : 'en') : ''}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('moiClerk')}</td>
+                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
+                                <td>{user?.name || ''}</td>
+                            </tr>
+                        </tbody>
+                    </table>
 
-                        <div className="double-divider" style={{ borderBottom: '2px solid #000', margin: '15px 0' }} />
+                    <div className="dashed-divider" />
 
-                        <div className="amount-container" style={{ textAlign: 'center', padding: '15px', background: '#fff', border: '1px solid #000', margin: '10px 0' }}>
-                            <div className="amount-title" style={{ fontSize: '11px', color: '#000', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Amount</div>
-                            <div className="amount-value" style={{ fontSize: '26px', fontWeight: '800', color: '#000' }}>₹{printData ? printData.cashAmount : '0'}</div>
-                            <div className="amount-words" style={{ fontSize: '12px', fontStyle: 'italic', marginTop: '6px', textTransform: 'capitalize', color: '#000' }}>
-                                {printData ? `${numberToWords(printData.cashAmount, 'en')} Only` : ''}
-                            </div>
+                    {/* Section 4: App Summary */}
+                    <div style={{ padding: '8px 2px', textAlign: 'center' }}>
+                        <div className="section-header">{t('appSummaryTitle')}</div>
+                        <div style={{ fontSize: '10px', lineHeight: '1.5' }}>
+                            <div>{t('appSummaryBullet1')}</div>
+                            <div>{t('appSummaryBullet2')}</div>
+                            <div>{t('appSummaryBullet3')}</div>
+                            <div>{t('appSummaryBullet4')}</div>
                         </div>
                     </div>
 
-                    <div className="footer-container" style={{ marginTop: '30px', textAlign: 'center', borderTop: '1px solid #000', paddingTop: '15px' }}>
-                        <div className="footer-powered" style={{ fontSize: '12px', fontWeight: 'bold', color: '#000', marginBottom: '4px' }}>Powered by Leela Tech</div>
-                        <div className="footer-copyright" style={{ fontSize: '10px', color: '#000' }}>&copy; {new Date().getFullYear()} Leela Tech. All rights reserved.</div>
-                        <div className="footer-tagline" style={{ fontSize: '9px', color: '#000', marginTop: '4px', fontStyle: 'italic' }}>Moi Vibaram - Modern Ledger for Traditional Celebrations</div>
+                    <div className="dashed-divider" />
+
+                    {/* Footer */}
+                    <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', fontWeight: 'bold' }}>
+                        {t('thankYou')}
+                    </div>
+                    <div style={{ textAlign: 'center', marginTop: '4px', fontSize: '9px', color: '#333' }}>
+                        Powered by Leela Tech
                     </div>
                 </div>
             </div>
 
             {/* Printable Declaration Sheet Container - Hidden on screen, visible during print */}
-            <div style={{ display: 'none' }}>
-                <div ref={declarationPrintRef} className="print-declaration-sheet" style={{
-                    padding: '20px 30px',
-                    background: '#fff',
-                    color: '#000',
-                    fontFamily: "'Outfit', sans-serif",
-                    width: '100%',
-                    maxWidth: '800px',
-                    margin: '0 auto',
-                    boxSizing: 'border-box',
-                    border: 'none',
-                    outline: 'none',
-                    boxShadow: 'none'
-                }}>
-                    <style>{`
+            {isSignOffOpen && (
+                <div style={{ display: 'none' }}>
+                    <div ref={declarationPrintRef} className="print-declaration-sheet" style={{
+                        padding: '20px 30px',
+                        background: '#fff',
+                        color: '#000',
+                        fontFamily: "'Outfit', sans-serif",
+                        width: '100%',
+                        maxWidth: '800px',
+                        margin: '0 auto',
+                        boxSizing: 'border-box',
+                        border: 'none',
+                        outline: 'none',
+                        boxShadow: 'none'
+                    }}>
+                        <style>{`
                         @page {
                             size: A4;
                             margin: 10mm 12mm;
@@ -1624,214 +1656,216 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                     `}</style>
 
 
-                    {/* PAGE 2: Declaration Summary */}
-                    <div style={{
-                        boxSizing: 'border-box',
-                        display: 'block',
-                        paddingTop: '10px'
-                    }}>
-                        <div style={{ display: 'block' }}>
-                            {/* Header */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                <div>
-                                    <img src={logoImg} alt="Leela Tech Logo" style={{ height: '40px', objectFit: 'contain' }} />
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <img src={iconImg} alt="Leela Tech Icon" style={{ height: '32px', width: '32px', objectFit: 'contain' }} />
-                                    <div style={{ fontSize: '13px', fontWeight: '600', textAlign: 'right' }}>
-                                        Date : {new Date(selectedEvent?.date || new Date()).toLocaleDateString('en-IN').replace(/\//g, '/')}
+                        {/* PAGE 2: Declaration Summary */}
+                        <div style={{
+                            boxSizing: 'border-box',
+                            display: 'block',
+                            paddingTop: '10px'
+                        }}>
+                            <div style={{ display: 'block' }}>
+                                {/* Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <div>
+                                        <img src={splashImg} alt="Moi Vibaram Logo" style={{ height: '40px', objectFit: 'contain' }} />
                                     </div>
-                                </div>
-                            </div>
-
-                            <div style={{ marginBottom: '8px' }}>
-                                <div style={{ fontSize: '13px', color: '#333' }}>Welcome, <strong>{user?.name || 'Anand'}</strong></div>
-                                <div style={{ fontSize: '13px', color: '#666', marginTop: '1px' }}>Your Moi Ledger at a glance</div>
-                            </div>
-
-                            <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                                <h2 style={{ fontSize: '24px', fontWeight: '800', letterSpacing: '1px', margin: '0 0 2px 0', color: '#000' }}>MOI VIBARAM</h2>
-                                <div style={{ fontSize: '11px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600 }}>Trust Begins</div>
-                                <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#000000', textDecoration: 'underline', marginTop: '4px', textTransform: 'uppercase' }}>Declaration Form</h3>
-                            </div>
-
-                            {/* Event Details Grid */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px', marginBottom: '12px', borderBottom: '1.5px solid #000', paddingBottom: '8px' }}>
-                                <div style={{ fontSize: '13px' }}><strong>Event Name:</strong> {selectedEvent?.eventName || '—'}</div>
-                                <div style={{ fontSize: '13px' }}><strong>Location:</strong> {selectedEvent?.location || '—'}</div>
-                                <div style={{ fontSize: '13px' }}><strong>Venue:</strong> {selectedEvent?.venue || '—'}</div>
-                                <div style={{ fontSize: '13px' }}><strong>Mobile No:</strong> {clerkPhone || '—'}</div>
-                            </div>
-
-                            {/* Cash Report & Denominations columns */}
-                            <div style={{ display: 'flex', gap: '24px', marginBottom: '12px' }}>
-                                {/* Left Side: Moi Cash Report */}
-                                <div style={{ flex: 1.2 }}>
-                                    <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                        Moi Cash Report
-                                    </h4>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                            <span>No Of Persons paid</span>
-                                            <strong>{noOfPersonsPaid}</strong>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                            <span>Total Moi Received</span>
-                                            <strong>₹{totalMoiReceived.toLocaleString('en-IN')}</strong>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                            <span>Cash amount</span>
-                                            <strong>₹{totalDenomValue.toLocaleString('en-IN')}</strong>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                            <span>Gpay Amount</span>
-                                            <strong>₹{(parseFloat(gpayAmount) || 0).toLocaleString('en-IN')}</strong>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                            <span>Difference Amount</span>
-                                            <strong style={{ color: '#000000' }}>
-                                                ₹{differenceAmount.toLocaleString('en-IN')}
-                                            </strong>
-                                        </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '3px', marginTop: '4px' }}>
-                                            <span>Gpay Mob No</span>
-                                            <strong>{gpayMobNo || '—'}</strong>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <img src={logoImg} alt="Leela Tech Logo" style={{ height: '32px', objectFit: 'contain' }} />
+                                        <img src={iconImg} alt="Leela Tech Icon" style={{ height: '32px', width: '32px', objectFit: 'contain' }} />
+                                        <div style={{ fontSize: '13px', fontWeight: '600', textAlign: 'right' }}>
+                                            {t('date')} : {new Date(selectedEvent?.date || new Date()).toLocaleDateString('en-IN').replace(/\//g, '/')}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Right Side: Denominations */}
-                                <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
-                                    <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                        Denominations
-                                    </h4>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                                        <tbody>
-                                            {[500, 200, 100, 50, 20, 10].map(denom => (
-                                                <tr key={denom} style={{ borderBottom: '1px dashed #f0f0f0' }}>
-                                                    <td style={{ padding: '3px 0' }}>{denom} *</td>
+                                <div style={{ marginBottom: '8px' }}>
+                                    <div style={{ fontSize: '13px', color: '#333' }}>{t('welcomeText')}, <strong>{user?.name || 'Anand'}</strong></div>
+                                    <div style={{ fontSize: '13px', color: '#666', marginTop: '1px' }}>{t('atAGlance')}</div>
+                                </div>
+
+                                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+                                    <h2 style={{ fontSize: '24px', fontWeight: '800', letterSpacing: '1px', margin: '0 0 2px 0', color: '#000' }}>{t('appName')}</h2>
+                                    <div style={{ fontSize: '11px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600 }}>{t('tagline')}</div>
+                                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#000000', textDecoration: 'underline', marginTop: '4px', textTransform: 'uppercase' }}>{t('declarationForm')}</h3>
+                                </div>
+
+                                {/* Event Details Grid */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px', marginBottom: '12px', borderBottom: '1.5px solid #000', paddingBottom: '8px' }}>
+                                    <div style={{ fontSize: '13px' }}><strong>{t('eventName')}:</strong> {selectedEvent?.eventName || '—'}</div>
+                                    <div style={{ fontSize: '13px' }}><strong>{t('location')}:</strong> {selectedEvent?.location || '—'}</div>
+                                    <div style={{ fontSize: '13px' }}><strong>{t('venue')}:</strong> {selectedEvent?.venue || '—'}</div>
+                                    <div style={{ fontSize: '13px' }}><strong>{t('mobile')}:</strong> {clerkPhone || '—'}</div>
+                                </div>
+
+                                {/* Cash Report & Denominations columns */}
+                                <div style={{ display: 'flex', gap: '24px', marginBottom: '12px' }}>
+                                    {/* Left Side: Moi Cash Report */}
+                                    <div style={{ flex: 1.2 }}>
+                                        <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                            {t('moiCashReport')}
+                                        </h4>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                                <span>{t('noOfPersonsPaid')}</span>
+                                                <strong>{noOfPersonsPaid}</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                                <span>{t('totalMoiReceived')}</span>
+                                                <strong>₹{totalMoiReceived.toLocaleString('en-IN')}</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                                <span>{t('cashAmountText')}</span>
+                                                <strong>₹{totalDenomValue.toLocaleString('en-IN')}</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                                <span>{t('gpayAmountText')}</span>
+                                                <strong>₹{(parseFloat(gpayAmount) || 0).toLocaleString('en-IN')}</strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
+                                                <span>{t('differenceAmountText')}</span>
+                                                <strong style={{ color: '#000000' }}>
+                                                    ₹{differenceAmount.toLocaleString('en-IN')}
+                                                </strong>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '3px', marginTop: '4px' }}>
+                                                <span>{t('gpayMobNoText')}</span>
+                                                <strong>{gpayMobNo || '—'}</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Side: Denominations */}
+                                    <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
+                                        <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
+                                            {t('denominationsText')}
+                                        </h4>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                                            <tbody>
+                                                {[500, 200, 100, 50, 20, 10].map(denom => (
+                                                    <tr key={denom} style={{ borderBottom: '1px dashed #f0f0f0' }}>
+                                                        <td style={{ padding: '3px 0' }}>{denom} *</td>
+                                                        <td style={{ padding: '3px 0', textAlign: 'center' }}>
+                                                            {denominations[denom] || '0'}
+                                                        </td>
+                                                        <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '600' }}>
+                                                            ₹{((parseInt(denominations[denom]) || 0) * denom).toLocaleString('en-IN')}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                <tr style={{ borderBottom: '1px dashed #f0f0f0' }}>
+                                                    <td style={{ padding: '3px 0' }}>{t('others')} *</td>
                                                     <td style={{ padding: '3px 0', textAlign: 'center' }}>
-                                                        {denominations[denom] || '0'}
+                                                        {denominations.coins ? '—' : '0'}
                                                     </td>
                                                     <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '600' }}>
-                                                        ₹{((parseInt(denominations[denom]) || 0) * denom).toLocaleString('en-IN')}
+                                                        ₹{(parseFloat(denominations.coins) || 0).toLocaleString('en-IN')}
                                                     </td>
                                                 </tr>
-                                            ))}
-                                            <tr style={{ borderBottom: '1px dashed #f0f0f0' }}>
-                                                <td style={{ padding: '3px 0' }}>Coins *</td>
-                                                <td style={{ padding: '3px 0', textAlign: 'center' }}>
-                                                    {denominations.coins ? '—' : '0'}
-                                                </td>
-                                                <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '600' }}>
-                                                    ₹{(parseFloat(denominations.coins) || 0).toLocaleString('en-IN')}
-                                                </td>
-                                            </tr>
-                                            <tr style={{ fontWeight: '800', borderTop: '1.5px solid #000', fontSize: '13px' }}>
-                                                <td style={{ padding: '5px 0' }} colSpan={2}>Total Value</td>
-                                                <td style={{ padding: '5px 0', textAlign: 'right' }}>
-                                                    ₹{totalDenomValue.toLocaleString('en-IN')}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* Cash Amount Words */}
-                            <div style={{ fontSize: '12px', borderTop: '1.5px solid #000', borderBottom: '1.5px solid #000', padding: '8px 0', marginBottom: '12px' }}>
-                                <strong>Cash Amount Words (₹):</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic', marginLeft: '6px' }}>
-                                    {totalDenomValue > 0 ? `${numberToWords(totalDenomValue, 'en')} Only` : 'Zero rupees only'}
-                                </span>
-                            </div>
-
-                            {/* Witness Table and Stamp / Customer Signature Section */}
-                            <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '15px' }}>
-                                {/* Witnesses Table */}
-                                <div style={{ flex: 1.5 }}>
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1px solid #000' }}>
-                                        <thead>
-                                            <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
-                                                <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>Particulars</th>
-                                                <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>Witness -1</th>
-                                                <th style={{ padding: '5px', textAlign: 'left' }}>Witness -2</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr style={{ borderBottom: '1px solid #000' }}>
-                                                <td style={{ padding: '5px', fontWeight: '600', borderRight: '1px solid #000' }}>Name</td>
-                                                <td style={{ padding: '5px', borderRight: '1px solid #000' }}>{witness1.name || ' '}</td>
-                                                <td style={{ padding: '5px' }}>{witness2.name || ' '}</td>
-                                            </tr>
-                                            <tr style={{ borderBottom: '1px solid #000' }}>
-                                                <td style={{ padding: '5px', fontWeight: '600', borderRight: '1px solid #000' }}>Mobile No</td>
-                                                <td style={{ padding: '5px', borderRight: '1px solid #000' }}>{witness1.mobile || ' '}</td>
-                                                <td style={{ padding: '5px' }}>{witness2.mobile || ' '}</td>
-                                            </tr>
-                                            <tr>
-                                                <td style={{ padding: '15px 5px 5px 5px', fontWeight: '600', borderRight: '1px solid #000', verticalAlign: 'bottom' }}>Signature</td>
-                                                <td style={{ padding: '15px 5px 5px 5px', borderRight: '1px solid #000', verticalAlign: 'bottom' }}>
-                                                    <div style={{ borderTop: '1px dashed #aaa', width: '100%', marginTop: '10px' }}></div>
-                                                </td>
-                                                <td style={{ padding: '15px 5px 5px 5px', verticalAlign: 'bottom' }}>
-                                                    <div style={{ borderTop: '1px dashed #aaa', width: '100%', marginTop: '10px' }}></div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Revenue Stamp & Customer Signature */}
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{
-                                        width: '80px',
-                                        height: '95px',
-                                        border: '1px dashed #888',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '11px',
-                                        color: '#555',
-                                        textAlign: 'center',
-                                        padding: '6px',
-                                        background: '#fafafa'
-                                    }}>
-                                        Revenue Stamp
-                                    </div>
-                                    <div style={{ textAlign: 'center', marginTop: '5px' }}>
-                                        <div style={{ borderTop: '1px solid #000', width: '120px', margin: '0 auto 3px' }}></div>
-                                        <div style={{ fontSize: '12px', fontWeight: '600' }}>Customer Signature</div>
+                                                <tr style={{ fontWeight: '800', borderTop: '1.5px solid #000', fontSize: '13px' }}>
+                                                    <td style={{ padding: '5px 0' }} colSpan={2}>{t('totalValue')}</td>
+                                                    <td style={{ padding: '5px 0', textAlign: 'right' }}>
+                                                        ₹{totalDenomValue.toLocaleString('en-IN')}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
+
+                                {/* Cash Amount Words */}
+                                <div style={{ fontSize: '12px', borderTop: '1.5px solid #000', borderBottom: '1.5px solid #000', padding: '8px 0', marginBottom: '12px' }}>
+                                    <strong>{t('cashAmountWords')}:</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic', marginLeft: '6px' }}>
+                                        {totalDenomValue > 0 ? numberToWords(totalDenomValue, i18n.language?.startsWith('ta') ? 'ta' : 'en') : (i18n.language?.startsWith('ta') ? 'பூஜ்யம் ரூபாய் மட்டும்' : 'Zero rupees only')}
+                                    </span>
+                                </div>
+
+                                {/* Witness Table and Stamp / Customer Signature Section */}
+                                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '15px' }}>
+                                    {/* Witnesses Table */}
+                                    <div style={{ flex: 1.5 }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1px solid #000' }}>
+                                            <thead>
+                                                <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
+                                                    <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>{t('particulars')}</th>
+                                                    <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>{t('witness1')}</th>
+                                                    <th style={{ padding: '5px', textAlign: 'left' }}>{t('witness2')}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr style={{ borderBottom: '1px solid #000' }}>
+                                                    <td style={{ padding: '5px', fontWeight: '600', borderRight: '1px solid #000' }}>{t('partyName')}</td>
+                                                    <td style={{ padding: '5px', borderRight: '1px solid #000' }}>{witness1.name || ' '}</td>
+                                                    <td style={{ padding: '5px' }}>{witness2.name || ' '}</td>
+                                                </tr>
+                                                <tr style={{ borderBottom: '1px solid #000' }}>
+                                                    <td style={{ padding: '5px', fontWeight: '600', borderRight: '1px solid #000' }}>{t('mobile')}</td>
+                                                    <td style={{ padding: '5px', borderRight: '1px solid #000' }}>{witness1.mobile || ' '}</td>
+                                                    <td style={{ padding: '5px' }}>{witness2.mobile || ' '}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td style={{ padding: '15px 5px 5px 5px', fontWeight: '600', borderRight: '1px solid #000', verticalAlign: 'bottom' }}>{t('signature')}</td>
+                                                    <td style={{ padding: '15px 5px 5px 5px', borderRight: '1px solid #000', verticalAlign: 'bottom' }}>
+                                                        <div style={{ borderTop: '1px dashed #aaa', width: '100%', marginTop: '10px' }}></div>
+                                                    </td>
+                                                    <td style={{ padding: '15px 5px 5px 5px', verticalAlign: 'bottom' }}>
+                                                        <div style={{ borderTop: '1px dashed #aaa', width: '100%', marginTop: '10px' }}></div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Revenue Stamp & Customer Signature */}
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{
+                                            width: '80px',
+                                            height: '95px',
+                                            border: '1px dashed #888',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '11px',
+                                            color: '#555',
+                                            textAlign: 'center',
+                                            padding: '6px',
+                                            background: '#fafafa'
+                                        }}>
+                                            {t('revenueStamp')}
+                                        </div>
+                                        <div style={{ textAlign: 'center', marginTop: '5px' }}>
+                                            <div style={{ borderTop: '1px solid #000', width: '120px', margin: '0 auto 3px' }}></div>
+                                            <div style={{ fontSize: '12px', fontWeight: '600' }}>{t('customerSignature')}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Clerk Info & Signature Footer */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #000', paddingTop: '10px', marginTop: '12px' }}>
+                                    <div style={{ fontSize: '12px' }}>
+                                        {t('clerkName')}: <strong>{user?.name || 'Anand'}</strong>
+                                        <span style={{ margin: '0 10px', color: '#ccc' }}>|</span>
+                                        {t('mobile')}: <strong>{clerkPhone || '—'}</strong>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ borderTop: '1px solid #000', width: '150px', margin: '0 auto 3px' }}></div>
+                                        <div style={{ fontSize: '12px', fontWeight: '600' }}>{t('employeeSignature')}</div>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Clerk Info & Signature Footer */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #000', paddingTop: '10px', marginTop: '12px' }}>
-                                <div style={{ fontSize: '12px' }}>
-                                    Moi Entry person Name: <strong>{user?.name || 'Anand'}</strong>
-                                    <span style={{ margin: '0 10px', color: '#ccc' }}>|</span>
-                                    Mob No: <strong>{clerkPhone || '—'}</strong>
+                            {/* Branding footer */}
+                            <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '8px', textAlign: 'center' }}>
+                                <div style={{ fontSize: '11px', fontWeight: '600', color: '#1a1a2e' }}>{t('addressLeelaTech')}</div>
+                                <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>
+                                    No -3m, 1st Ward, Pasumpon Nagar, Melagudalu, Theni -DT, Gudalur - 625518
                                 </div>
-                                <div style={{ textAlign: 'center' }}>
-                                    <div style={{ borderTop: '1px solid #000', width: '150px', margin: '0 auto 3px' }}></div>
-                                    <div style={{ fontSize: '12px', fontWeight: '600' }}>Employee Signature</div>
+                                <div style={{ fontSize: '10px', color: '#555', marginTop: '1px' }}>
+                                    Mob: 8006880050 | Email: anand@leelatech.co.in
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Branding footer */}
-                        <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '8px', textAlign: 'center' }}>
-                            <div style={{ fontSize: '11px', fontWeight: '600', color: '#1a1a2e' }}>Address: Leela Tech</div>
-                            <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>
-                                No -3m, 1st Ward, Pasumpon Nagar, Melagudalu, Theni -DT, Gudalur - 625518
-                            </div>
-                            <div style={{ fontSize: '10px', color: '#555', marginTop: '1px' }}>
-                                Mob: 8006880050 | Email: anand@leelatech.co.in
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

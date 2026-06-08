@@ -65,13 +65,19 @@ function AppRoutes() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/*" element={
                     <Protected>
-                         <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+                        <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                             <Navbar sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />
                             <div className="main-content">
                                 <Routes>
                                     <Route path="/" element={<Dashboard />} />
-                                    <Route path="/ledger" element={<Ledger sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />} />
-                                     <Route path="/events" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><Events /></ClerkRouteRestriction>} />
+                                    <Route path="/ledger" element={
+                                        (user?.role === 'clerk' || user?.isSuperAdmin) ? (
+                                            <Ledger sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />
+                                        ) : (
+                                            <Navigate to="/" replace />
+                                        )
+                                    } />
+                                    <Route path="/events" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><Events /></ClerkRouteRestriction>} />
                                     <Route path="/transactions/new" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><CreateMoi /></ClerkRouteRestriction>} />
                                     <Route path="/transactions/edit/:id" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><EditMoi /></ClerkRouteRestriction>} />
                                     <Route path="/upcoming" element={<ClerkRouteRestriction allowedRoles={['admin', 'member']}><UpcomingEvents /></ClerkRouteRestriction>} />

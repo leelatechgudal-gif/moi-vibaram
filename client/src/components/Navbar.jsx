@@ -125,6 +125,9 @@ export default function Navbar({ sidebarCollapsed, setSidebarCollapsed }) {
             </div>
             <nav className="sidebar-nav">
                 {navItems.filter(item => {
+                    if (item.key === 'ledger') {
+                        return user?.role === 'clerk' || user?.isSuperAdmin;
+                    }
                     if (user?.role === 'clerk') {
                         return item.key === 'ledger' || item.key === 'profile';
                     }
