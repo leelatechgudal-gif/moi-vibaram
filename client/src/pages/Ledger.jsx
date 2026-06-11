@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { printElement } from '../utils/print';
 import { useAuth } from '../context/AuthContext';
-import { eventsAPI, partiesAPI, transactionsAPI } from '../api/api';
+import { eventsAPI, partiesAPI, transactionsAPI, tenantAPI } from '../api/api';
 import PasswordConfirmModal from '../components/PasswordConfirmModal';
 import OwnerOtpModal from '../components/OwnerOtpModal';
 import { numberToWords } from '../utils/numberToWords';
@@ -102,6 +102,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     const [witness1, setWitness1] = useState({ name: '', mobile: '' });
     const [witness2, setWitness2] = useState({ name: '', mobile: '' });
     const [isClosingEvent, setIsClosingEvent] = useState(false);
+    const [ownerDetails, setOwnerDetails] = useState(null);
 
     // Set clerk mobile initially if auth user is loaded
     useEffect(() => {
@@ -127,8 +128,18 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     // Load initial data
     useEffect(() => {
         loadEvents();
-        // loadParties();
+        loadParties();
+        fetchOwnerDetails();
     }, []);
+
+    const fetchOwnerDetails = async () => {
+        try {
+            const res = await tenantAPI.getOwner();
+            setOwnerDetails(res.data);
+        } catch (err) {
+            console.error('[ledger fetchOwnerDetails]', err);
+        }
+    };
 
     // Load transactions on filter changes
     useEffect(() => {
@@ -526,7 +537,9 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     const filteredParties = searchQuery.trim()
         ? partiesList.filter(p =>
             p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            p.mobile?.toLowerCase().includes(searchQuery.toLowerCase())
+            p.mobile?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.spouseName?.toLowerCase().includes(searchQuery.toLowerCase())
         )
         : [];
 
@@ -534,7 +547,9 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         r.isEditing ||
         !filterNameQuery.trim() ||
         r.partyName?.toLowerCase().includes(filterNameQuery.trim().toLowerCase()) ||
-        r.mobile?.toLowerCase().includes(filterNameQuery.trim().toLowerCase())
+        r.mobile?.toLowerCase().includes(filterNameQuery.trim().toLowerCase()) ||
+        r.location?.toLowerCase().includes(filterNameQuery.trim().toLowerCase()) ||
+        r.spouseName?.toLowerCase().includes(filterNameQuery.trim().toLowerCase())
     );
 
     const totalAmount = filteredRows.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0);
@@ -1471,6 +1486,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                         <img src={splashImg} alt="Moi Vibaram Logo" style={{ height: '32px', maxWidth: '100px', objectFit: 'contain', marginBottom: '4px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
                         <h2 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '800', letterSpacing: '0.5px' }}>{t('appName')}</h2>
                         <div className="sub-title" style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>{t('traditionalDigitalLedger')}</div>
+                        <div className="sub-title" style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Contact : +91 80068 80050 </div>
                     </div>
 
                     <div className="dashed-divider" />
@@ -1485,19 +1501,19 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                 <td>{printData ? new Date(printData.eventId?.date || printData.date).toLocaleDateString('en-GB') : ''}</td>
                             </tr>
                             <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('hostSpouseName')}</td>
+                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('hostEventName')}</td>
                                 <td style={{ width: '15px', textAlign: 'center' }}>:</td>
                                 <td>{printData ? (printData.eventId?.eventName || printData.eventName || '') : ''}</td>
                             </tr>
                             <tr>
                                 <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('partyName')}</td>
                                 <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{user?.name || ''}</td>
+                                <td>{ownerDetails?.name || user?.name || ''}</td>
                             </tr>
                             <tr>
                                 <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('hostWifeName')}</td>
                                 <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>—</td>
+                                <td>{ownerDetails?.spouseName || '—'}</td>
                             </tr>
                             <tr>
                                 <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('venue')}</td>

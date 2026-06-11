@@ -92,18 +92,31 @@ router.get('/admin/all', auth, async (req, res) => {
 // PUT /api/users/profile
 router.put('/profile', auth, async (req, res) => {
     try {
-        const { name, mobile, themePreference } = req.body;
+        const { name, mobile, fatherName, motherName, spouseName, nickname, occupation, location, street, themePreference } = req.body;
         const user = await User.findById(req.userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        if (name) user.name = name;
-        if (mobile) user.mobile = mobile;
-        if (themePreference) {
+        if (name !== undefined) user.name = name;
+        if (mobile !== undefined) user.mobile = mobile;
+        if (fatherName !== undefined) user.fatherName = fatherName;
+        if (motherName !== undefined) user.motherName = motherName;
+        if (spouseName !== undefined) user.spouseName = spouseName;
+        if (nickname !== undefined) user.nickname = nickname;
+        if (occupation !== undefined) user.occupation = occupation;
+        if (location !== undefined) user.location = location;
+        if (street !== undefined) user.street = street;
+        if (themePreference !== undefined) {
             user.themePreference = themePreference;
         }
 
         // Regenerate QR code with updated info
-        const qrData = JSON.stringify({ userId: user._id, name: user.name, mobile: user.mobile });
+        const qrData = JSON.stringify({ 
+            userId: user._id, 
+            name: user.name, 
+            mobile: user.mobile, 
+            location: user.location || '', 
+            street: user.street || '' 
+        });
         user.qrCode = await QRCode.toDataURL(qrData);
         await user.save();
 

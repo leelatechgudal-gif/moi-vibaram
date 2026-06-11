@@ -161,6 +161,7 @@ export const transactionsAPI = {
 };
 
 export const tenantAPI = {
+    getOwner: () => api.get('/tenant/owner'),
     getMembers: () => api.get('/tenant/members'),
     invite: data => api.post('/tenant/invite', data),
     remove: userId => api.post(`/tenant/remove/${userId}`),

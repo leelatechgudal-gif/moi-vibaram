@@ -6,6 +6,25 @@ const Party = require('../models/Party');
 const auth = require('../middleware/auth');
 const verifyPassword = require('../middleware/verifyPassword');
 
+// GET /api/tenant/owner - Fetch owner details of my tenant (useful for clerk login)
+router.get('/owner', auth, async (req, res) => {
+    try {
+        const owner = await User.findOne({ 
+            tenantId: req.tenantId, 
+            tenantRole: 'owner',
+            isDeleted: { $ne: true } 
+        }).select('name mobile email location street fatherName motherName spouseName nickname occupation').lean();
+
+        if (!owner) {
+            return res.status(404).json({ message: 'Owner not found' });
+        }
+        res.json(owner);
+    } catch (err) {
+        console.error('[tenant owner]', err);
+        res.status(500).json({ message: 'Failed to fetch owner details.' });
+    }
+});
+
 // GET /api/tenant/members - List all members of my tenant
 router.get('/members', auth, async (req, res) => {
     try {
