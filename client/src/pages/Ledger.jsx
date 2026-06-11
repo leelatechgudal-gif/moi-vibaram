@@ -103,6 +103,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     const [witness2, setWitness2] = useState({ name: '', mobile: '' });
     const [isClosingEvent, setIsClosingEvent] = useState(false);
     const [ownerDetails, setOwnerDetails] = useState(null);
+    const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
 
     // Set clerk mobile initially if auth user is loaded
     useEffect(() => {
@@ -155,6 +156,9 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         const handleClickOutside = (e) => {
             if (!e.target.closest('.ledger-autocomplete-container')) {
                 setActiveRowIndex(null);
+            }
+            if (!e.target.closest('.search-autocomplete-container')) {
+                setShowSearchSuggestions(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -543,6 +547,60 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         )
         : [];
 
+    const matchingTenantParties = showSearchSuggestions && filterNameQuery.trim()
+        ? partiesList.filter(p => {
+            const alreadyInRows = rows.some(r => r.partyId === p._id);
+            if (alreadyInRows) return false;
+            const q = filterNameQuery.toLowerCase();
+            return (
+                p.name?.toLowerCase().includes(q) ||
+                p.mobile?.toLowerCase().includes(q) ||
+                p.location?.toLowerCase().includes(q) ||
+                p.spouseName?.toLowerCase().includes(q)
+            );
+        })
+        : [];
+
+    const handleAddPartyToLedger = (party) => {
+        setFilterNameQuery('');
+        setShowSearchSuggestions(false);
+        
+        const hasEditingRow = rows.findIndex(r => r.isEditing && !r.partyId && !r.partyName);
+        const targetIdx = hasEditingRow !== -1 ? hasEditingRow : rows.length;
+
+        const newRow = {
+            tempId: Date.now() + Math.random(),
+            initial: party.initial || '',
+            partyName: party.name || '',
+            spouseName: party.spouseName || '',
+            mobile: party.mobile || '',
+            location: party.location || '',
+            cashAmount: '',
+            occupation: party.occupation || '',
+            paymentType: 'cash',
+            partyId: party._id,
+            isEditing: true,
+            isSaving: false
+        };
+
+        setRows(prev => {
+            if (hasEditingRow !== -1) {
+                const updated = [...prev];
+                updated[hasEditingRow] = newRow;
+                return updated;
+            } else {
+                return [...prev, newRow];
+            }
+        });
+        
+        setTimeout(() => {
+            const input = document.getElementById(`amount-input-${targetIdx}`);
+            if (input) {
+                input.focus();
+            }
+        }, 100);
+    };
+
     const filteredRows = rows.filter(r =>
         r.isEditing ||
         !filterNameQuery.trim() ||
@@ -789,17 +847,68 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 ) : (
                     <>
                         <div className="no-print" style={{ marginBottom: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', flex: 1, background: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '4px 10px' }}>
-                                <Search size={16} className="text-muted" style={{ marginRight: 8 }} />
-                                <input
-                                    value={filterNameQuery}
-                                    onChange={e => setFilterNameQuery(e.target.value)}
-                                    placeholder="Search entries by guest name or mobile number..."
-                                    style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', width: '100%', padding: '6px 0', fontSize: '13px' }}
-                                />
+                            <div className="search-autocomplete-container" style={{ position: 'relative', flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '4px 10px' }}>
+                                    <Search size={16} className="text-muted" style={{ marginRight: 8 }} />
+                                    <input
+                                        value={filterNameQuery}
+                                        onChange={e => {
+                                            setFilterNameQuery(e.target.value);
+                                            setShowSearchSuggestions(true);
+                                        }}
+                                        onFocus={() => setShowSearchSuggestions(true)}
+                                        placeholder="Search entries by guest name or mobile number..."
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', width: '100%', padding: '6px 0', fontSize: '13px' }}
+                                    />
+                                </div>
+                                {matchingTenantParties.length > 0 && (
+                                    <ul className="ledger-autocomplete-list" style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        zIndex: 1000,
+                                        marginTop: 4,
+                                        maxHeight: 250,
+                                        overflowY: 'auto',
+                                        background: 'var(--surface)',
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        padding: 0,
+                                        listStyle: 'none'
+                                    }}>
+                                        <li style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-muted)', borderBottom: '1px solid var(--glass-border)', background: 'rgba(255,255,255,0.02)' }}>
+                                            SUGGESTED GUESTS (Click to add to ledger)
+                                        </li>
+                                        {matchingTenantParties.map((p, pIdx) => (
+                                            <li
+                                                key={pIdx}
+                                                style={{
+                                                    padding: '10px 12px',
+                                                    cursor: 'pointer',
+                                                    borderBottom: '1px solid var(--glass-border)',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                                onClick={() => handleAddPartyToLedger(p)}
+                                                className="hover-bg"
+                                            >
+                                                <div style={{ fontWeight: 'bold', color: 'var(--primary)' }}>
+                                                    {p.initial ? `${p.initial} ` : ''}{p.name}
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                                    {p.location || 'Unknown Location'} {p.mobile && `• 📞 ${p.mobile}`} {p.spouseName && `• 💍 ${p.spouseName}`}
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                             {filterNameQuery && (
-                                <button className="btn btn-secondary btn-sm" onClick={() => setFilterNameQuery('')} style={{ height: 38 }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => {
+                                    setFilterNameQuery('');
+                                    setShowSearchSuggestions(false);
+                                }} style={{ height: 38 }}>
                                     Clear
                                 </button>
                             )}
@@ -945,6 +1054,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                                 <td>
                                                     {row.isEditing ? (
                                                         <input
+                                                            id={`amount-input-${idx}`}
                                                             type="number"
                                                             className="ledger-input"
                                                             min="0"

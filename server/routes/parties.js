@@ -9,6 +9,12 @@ const auth = require('../middleware/auth');
 router.get('/', auth, async (req, res) => {
     try {
         const { page, limit, search } = req.query;
+        
+        if (!req.tenantId) {
+            logger.warn('[parties get] Missing tenantId in request context');
+            return res.status(400).json({ message: 'Tenant ID is required.' });
+        }
+
         const filter = { tenantId: req.tenantId, isDeleted: { $ne: true } };
         
         if (search) {
@@ -48,6 +54,11 @@ router.get('/', auth, async (req, res) => {
 // POST /api/parties - Create a new contact (party)
 router.post('/', auth, async (req, res) => {
     try {
+        if (!req.tenantId) {
+            logger.warn('[parties create] Missing tenantId in request context');
+            return res.status(400).json({ message: 'Tenant ID is required.' });
+        }
+
         const { partyName, name, mobile, ...rest } = req.body;
         const finalName = name || partyName;
         if (!finalName) {
@@ -99,6 +110,11 @@ router.post('/', auth, async (req, res) => {
 // PUT /api/parties/:id - Update a contact (party)
 router.put('/:id', auth, async (req, res) => {
     try {
+        if (!req.tenantId) {
+            logger.warn('[parties update] Missing tenantId in request context');
+            return res.status(400).json({ message: 'Tenant ID is required.' });
+        }
+
         const { partyName, name, mobile, ...rest } = req.body;
         const partyId = req.params.id;
 
@@ -159,6 +175,11 @@ const verifyPassword = require('../middleware/verifyPassword');
 // DELETE /api/parties/:id - Delete a contact (party)
 router.delete('/:id', auth, verifyPassword, async (req, res) => {
     try {
+        if (!req.tenantId) {
+            logger.warn('[parties delete] Missing tenantId in request context');
+            return res.status(400).json({ message: 'Tenant ID is required.' });
+        }
+
         const partyObj = await Party.findOneAndUpdate(
             { _id: req.params.id, tenantId: req.tenantId },
             { isDeleted: true },
