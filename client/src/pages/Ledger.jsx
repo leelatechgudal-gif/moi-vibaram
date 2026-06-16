@@ -6,10 +6,13 @@ import { useAuth } from '../context/AuthContext';
 import { eventsAPI, partiesAPI, transactionsAPI, tenantAPI } from '../api/api';
 import PasswordConfirmModal from '../components/PasswordConfirmModal';
 import OwnerOtpModal from '../components/OwnerOtpModal';
-import { numberToWords } from '../utils/numberToWords';
-import logoImg from '../../assets/logo.jpeg';
-import iconImg from '../../assets/icon.png';
-import splashImg from '../../assets/splash.png';
+
+// Modular imported components
+import GiftModal from '../components/GiftModal';
+import ClerkSignOffModal from '../components/ClerkSignOffModal';
+import PrintReceiptLayout from '../components/PrintReceiptLayout';
+import PrintDeclarationLayout from '../components/PrintDeclarationLayout';
+import PrintA4LedgerLayout from '../components/PrintA4LedgerLayout';
 import {
     BookMarked,
     Plus,
@@ -27,6 +30,22 @@ import {
     EyeOff,
     Download
 } from 'lucide-react';
+
+const SEER_FIELDS = [
+    { key: "dress", icon: "👗" },
+    { key: "thattuVarisai", icon: "🍽️" },
+    { key: "jewels", icon: "💍" },
+    { key: "marakkal", icon: "🌾" },
+    { key: "maalai", icon: "💐" },
+    { key: "arisMootai", icon: "🌾" },
+    { key: "paathirangal", icon: "🥘" },
+    { key: "others", icon: "📦" }
+];
+
+const defaultSeer = () =>
+    Object.fromEntries(
+        SEER_FIELDS.map((f) => [f.key, { value: "", quantity: "", remarks: "" }])
+    );
 
 export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     const { t, i18n } = useTranslation();
@@ -105,6 +124,29 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     const [isClosingEvent, setIsClosingEvent] = useState(false);
     const [ownerDetails, setOwnerDetails] = useState(null);
     const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+
+    // Gift Modal State
+    const [giftModal, setGiftModal] = useState({ show: false, idx: null, data: null });
+
+    const handleGiftFieldChange = (field, key, value) => {
+        setGiftModal(prev => ({
+            ...prev,
+            data: {
+                ...prev.data,
+                [field]: {
+                    ...prev.data[field],
+                    [key]: value
+                }
+            }
+        }));
+    };
+
+    const handleSaveGifts = () => {
+        if (giftModal.idx !== null && giftModal.data) {
+            handleFieldChange(giftModal.idx, 'seerVarisai', giftModal.data);
+        }
+        setGiftModal({ show: false, idx: null, data: null });
+    };
 
     // Set clerk mobile initially if auth user is loaded
     useEffect(() => {
@@ -278,6 +320,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 cashAmount: t.cashAmount || '',
                 paymentType: t.paymentType || 'cash',
                 occupation: t.occupation || t.partyId?.occupation || '',
+                seerVarisai: t.seerVarisai || defaultSeer(),
                 isEditing: false,
                 isSaving: false
             }));
@@ -313,6 +356,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 occupation: '',
                 paymentType: 'cash',
                 partyId: null,
+                seerVarisai: defaultSeer(),
                 isEditing: true,
                 isSaving: false
             }
@@ -322,6 +366,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
     const handleEditRow = (idx) => {
         const updated = [...rows];
         updated[idx].original = { ...updated[idx] };
+        updated[idx].seerVarisai = updated[idx].seerVarisai || defaultSeer();
         updated[idx].isEditing = true;
         setRows(updated);
     };
@@ -355,6 +400,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
         updated[idx].location = party.location || '';
         updated[idx].occupation = party.occupation || '';
         updated[idx].partyId = party._id;
+        updated[idx].seerVarisai = updated[idx].seerVarisai || defaultSeer();
         setRows(updated);
         setActiveRowIndex(null);
     };
@@ -412,7 +458,8 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 paymentType: row.paymentType,
                 occupation: row.occupation.trim(),
                 partyId: row.partyId,
-                eventId: selectedEventId
+                eventId: selectedEventId,
+                seerVarisai: row.seerVarisai || defaultSeer()
             };
 
             let savedTx;
@@ -469,6 +516,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 cashAmount: pop.cashAmount || 0,
                 paymentType: pop.paymentType || 'cash',
                 occupation: pop.occupation || pop.partyId?.occupation || '',
+                seerVarisai: pop.seerVarisai || defaultSeer(),
                 isEditing: false,
                 isSaving: false
             };
@@ -527,6 +575,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 cashAmount: pop.cashAmount || 0,
                 paymentType: pop.paymentType || 'cash',
                 occupation: pop.occupation || pop.partyId?.occupation || '',
+                seerVarisai: pop.seerVarisai || defaultSeer(),
                 isEditing: false,
                 isSaving: false
             };
@@ -643,6 +692,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
             occupation: party.occupation || '',
             paymentType: 'cash',
             partyId: party._id,
+            seerVarisai: defaultSeer(),
             isEditing: true,
             isSaving: false
         };
@@ -1080,7 +1130,7 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                                         </div>
                                                     ) : (
                                                         <div className="ledger-text-cell" style={{ fontWeight: '600', color: 'var(--primary)' }}>
-                                                            {row.partyName}
+                                                            {row.partyName} {row.seerVarisai && Object.values(row.seerVarisai).some(v => v && (parseFloat(v.value) > 0 || parseFloat(v.quantity) > 0 || (v.remarks && v.remarks.trim()))) && <span title="Gifts/Seer Varisai Included" style={{ marginLeft: 6 }}>🎁</span>}
                                                         </div>
                                                     )}
                                                 </td>
@@ -1201,6 +1251,21 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                                                                     {row.isSaving ? <span className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={16} />}
                                                                 </button>
                                                                 <button
+                                                                    className="ledger-btn-icon"
+                                                                    onClick={() => {
+                                                                        const currentSeer = row.seerVarisai ? JSON.parse(JSON.stringify(row.seerVarisai)) : defaultSeer();
+                                                                        setGiftModal({
+                                                                            show: true,
+                                                                            idx,
+                                                                            data: currentSeer
+                                                                        });
+                                                                    }}
+                                                                    disabled={row.isSaving}
+                                                                    title="Add Gifts/Seer Varisai"
+                                                                >
+                                                                    <Gift size={16} style={row.seerVarisai && Object.values(row.seerVarisai).some(v => v && (parseFloat(v.value) > 0 || parseFloat(v.quantity) > 0 || (v.remarks && v.remarks.trim()))) ? { color: 'var(--primary)' } : {}} />
+                                                                </button>
+                                                                <button
                                                                     className="ledger-btn-icon danger"
                                                                     onClick={() => handleCancelRow(idx)}
                                                                     disabled={row.isSaving}
@@ -1284,953 +1349,84 @@ export default function Ledger({ sidebarCollapsed, setSidebarCollapsed }) {
                 error={otpModal.error}
             />
 
+            {/* Gift/Seer Varisai Modal */}
+            <GiftModal
+                show={giftModal.show}
+                guestName={giftModal.idx !== null ? (rows[giftModal.idx]?.initial ? `${rows[giftModal.idx].initial} . ` : '') + (rows[giftModal.idx]?.partyName || 'New Entry') : ''}
+                giftData={giftModal.data}
+                onChangeField={handleGiftFieldChange}
+                onClose={() => setGiftModal({ show: false, idx: null, data: null })}
+                onSave={handleSaveGifts}
+            />
+
             {/* Clerk Declaration & Sign-off Modal */}
-            {isSignOffOpen && (
-                <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setIsSignOffOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div className="modal" style={{ maxWidth: '950px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
-                        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '12px', marginBottom: '20px' }}>
-                            <h2 className="modal-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--primary)' }}>
-                                <Coins size={24} /> Clerk Declaration & Sign-off
-                            </h2>
-                            <button className="ledger-btn-icon" onClick={() => setIsSignOffOpen(false)} style={{ padding: '6px' }}>
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        {/* Modal Body: Flex row wrapper */}
-                        <div style={{ display: 'flex', gap: '24px', flexDirection: 'row', flexWrap: 'wrap' }}>
-
-                            {/* Left column: Inputs */}
-                            <div style={{ flex: '1 1 500px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                                {/* Section 1: Denominations */}
-                                <div style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '16px' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary)' }}>
-                                        Denominations Count
-                                    </h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                                        {[500, 200, 100, 50, 20, 10].map(denom => (
-                                            <div key={denom} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <span style={{ width: '45px', fontWeight: '600', fontSize: '13px' }}>₹{denom} x</span>
-                                                <input
-                                                    type="number"
-                                                    className="form-control"
-                                                    style={{ padding: '6px 10px', height: '34px' }}
-                                                    placeholder="0"
-                                                    min="0"
-                                                    value={denominations[denom]}
-                                                    onChange={e => {
-                                                        const val = e.target.value;
-                                                        const cleanVal = val === '' ? '' : Math.max(0, parseInt(val) || 0);
-                                                        setDenominations(prev => ({ ...prev, [denom]: cleanVal }));
-                                                    }}
-                                                />
-                                            </div>
-                                        ))}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', gridColumn: 'span 2' }}>
-                                            <span style={{ width: '90px', fontWeight: '600', fontSize: '13px' }}>Coins (Total ₹)</span>
-                                            <input
-                                                type="number"
-                                                className="form-control"
-                                                style={{ padding: '6px 10px', height: '34px' }}
-                                                placeholder="0.00"
-                                                min="0"
-                                                value={denominations.coins}
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    const cleanVal = val === '' ? '' : Math.max(0, parseFloat(val) || 0);
-                                                    setDenominations(prev => ({ ...prev, coins: cleanVal }));
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div style={{ textAlign: 'right', marginTop: '12px', fontWeight: '700', fontSize: '14px', borderTop: '1px dashed var(--border)', paddingTop: '8px' }}>
-                                        Counted Cash: <span style={{ color: 'var(--primary)' }}>₹{totalDenomValue.toLocaleString('en-IN')}</span>
-                                    </div>
-                                </div>
-
-                                {/* Section 2: Cash Report & GPay */}
-                                <div style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '16px' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary)' }}>
-                                        Moi Cash & GPay Report
-                                    </h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>Total Ledger Entries</label>
-                                            <div className="form-control" style={{ background: 'var(--bg)', height: '38px', display: 'flex', alignItems: 'center' }}>
-                                                {noOfPersonsPaid} guests
-                                            </div>
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>Total Ledger Sum</label>
-                                            <div className="form-control" style={{ background: 'var(--bg)', height: '38px', display: 'flex', alignItems: 'center', fontWeight: '700' }}>
-                                                ₹{totalMoiReceived.toLocaleString('en-IN')}
-                                            </div>
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>GPay Amount (₹)</label>
-                                            <input
-                                                type="number"
-                                                className="form-control"
-                                                style={{ height: '38px' }}
-                                                value={gpayAmount}
-                                                onChange={e => setGpayAmount(Math.max(0, parseFloat(e.target.value) || 0).toString())}
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>GPay Mobile No</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                style={{ height: '38px' }}
-                                                placeholder="GPay mobile number"
-                                                value={gpayMobNo}
-                                                onChange={e => setGpayMobNo(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Reconciliation Status */}
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        marginTop: '16px',
-                                        padding: '12px',
-                                        borderRadius: 'var(--radius-sm)',
-                                        background: differenceAmount === 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                        border: `1px solid ${differenceAmount === 0 ? 'var(--success)' : 'var(--danger)'}`,
-                                        fontSize: '13px'
-                                    }}>
-                                        <div>
-                                            <span style={{ color: 'var(--text-muted)' }}>Total Counted:</span> <strong>₹{(totalDenomValue + (parseFloat(gpayAmount) || 0)).toLocaleString('en-IN')}</strong>
-                                        </div>
-                                        <div>
-                                            <span style={{ color: 'var(--text-muted)' }}>Difference:</span> <strong style={{ color: differenceAmount === 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                                {differenceAmount > 0 ? `+₹${differenceAmount.toLocaleString('en-IN')}` : `₹${differenceAmount.toLocaleString('en-IN')}`}
-                                            </strong>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Section 3: Witnesses & Clerk Details */}
-                                <div style={{ background: 'var(--surface)', border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-sm)', padding: '16px' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary)' }}>
-                                        Witnesses & Clerk Contact
-                                    </h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>Witness-1 Name</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                placeholder="Name"
-                                                style={{ height: '34px', padding: '6px 10px' }}
-                                                value={witness1.name}
-                                                onChange={e => setWitness1({ ...witness1, name: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>Witness-1 Mobile</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                placeholder="Mobile"
-                                                style={{ height: '34px', padding: '6px 10px' }}
-                                                value={witness1.mobile}
-                                                onChange={e => setWitness1({ ...witness1, mobile: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>Witness-2 Name</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                placeholder="Name"
-                                                style={{ height: '34px', padding: '6px 10px' }}
-                                                value={witness2.name}
-                                                onChange={e => setWitness2({ ...witness2, name: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0 }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>Witness-2 Mobile</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                placeholder="Mobile"
-                                                style={{ height: '34px', padding: '6px 10px' }}
-                                                value={witness2.mobile}
-                                                onChange={e => setWitness2({ ...witness2, mobile: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="form-group" style={{ margin: 0, gridColumn: 'span 2' }}>
-                                            <label className="form-label" style={{ fontSize: '10px' }}>Clerk Contact Mobile (Print Format)</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                placeholder="Your mobile number"
-                                                style={{ height: '34px', padding: '6px 10px' }}
-                                                value={clerkPhone}
-                                                onChange={e => setClerkPhone(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Right column: Document Preview */}
-                            <div style={{ flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <h3 style={{ fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', margin: 0 }}>
-                                        Document Live Preview (Declaration Form)
-                                    </h3>
-                                </div>
-
-                                <div style={{
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: 'var(--radius-sm)',
-                                    background: '#ffffff',
-                                    color: '#000000',
-                                    padding: '24px',
-                                    fontSize: '13px',
-                                    lineHeight: '1.4',
-                                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-                                    fontFamily: "'Outfit', sans-serif"
-                                }}>
-                                    {/* Mini printable preview structure */}
-                                    <div style={{ textAlign: 'center', borderBottom: '1px solid #ccc', paddingBottom: '12px', marginBottom: '12px' }}>
-                                        <div style={{ fontWeight: '800', fontSize: '16px' }}>LEELA TECH</div>
-                                        <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: '#555' }}>{t('tagline')}</div>
-                                        <div style={{ fontWeight: '700', color: '#e74c3c', textDecoration: 'underline', marginTop: '6px', fontSize: '14px' }}>{t('declarationForm')}</div>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '12px', borderBottom: '1px solid #000', paddingBottom: '8px' }}>
-                                        <div><strong>{t('eventName')}:</strong> {selectedEvent?.eventName}</div>
-                                        <div><strong>{t('location')}:</strong> {selectedEvent?.location}</div>
-                                        <div><strong>{t('venue')}:</strong> {selectedEvent?.venue}</div>
-                                        <div><strong>{t('mobile')}:</strong> {clerkPhone}</div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: '20px', marginBottom: '12px' }}>
-                                        <div style={{ flex: 1.2 }}>
-                                            <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', color: '#e74c3c' }}>{t('moiCashReport')}</div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('noOfPersonsPaid')}:</span><strong>{noOfPersonsPaid}</strong></div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('totalMoiReceived')}:</span><strong>₹{totalMoiReceived}</strong></div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('cashAmountText')}:</span><strong>₹{totalDenomValue}</strong></div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('gpayAmountText')}:</span><strong>₹{gpayAmount}</strong></div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}><span>{t('differenceAmountText')}:</span><strong style={{ color: differenceAmount !== 0 ? '#e74c3c' : '#000' }}>₹{differenceAmount}</strong></div>
-                                        </div>
-                                        <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '12px' }}>
-                                            <div style={{ fontWeight: '700', borderBottom: '1px solid #ddd', paddingBottom: '3px', marginBottom: '6px', fontSize: '11px', textTransform: 'uppercase', color: '#e74c3c' }}>{t('denominationsText')}</div>
-                                            {[500, 200, 100, 50, 20, 10].map(d => (
-                                                <div key={d} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                                    <span>{d} x</span>
-                                                    <span>{denominations[d] || 0}</span>
-                                                </div>
-                                            ))}
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #eee', marginTop: '4px', fontWeight: 'bold' }}>
-                                                <span>{t('total')}:</span>
-                                                <span>₹{totalDenomValue}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ borderTop: '1px solid #000', borderBottom: '1px solid #000', padding: '6px 0', marginBottom: '12px', fontSize: '11px' }}>
-                                        <strong>{t('amountInWords')}:</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic' }}>
-                                            {totalDenomValue > 0 ? numberToWords(totalDenomValue, i18n.language?.startsWith('ta') ? 'ta' : 'en') : (i18n.language?.startsWith('ta') ? 'பூஜ்யம் ரூபாய் மட்டும்' : 'Zero rupees only')}
-                                        </span>
-                                    </div>
-
-                                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', border: '1px solid #000', marginBottom: '12px' }}>
-                                        <thead>
-                                            <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
-                                                <th style={{ padding: '4px', borderRight: '1px solid #000' }}>{t('witnesses')}</th>
-                                                <th style={{ padding: '4px', borderRight: '1px solid #000' }}>{t('witness1')}</th>
-                                                <th style={{ padding: '4px' }}>{t('witness2')}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr style={{ borderBottom: '1px solid #000' }}>
-                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}><strong>{t('partyName')}</strong></td>
-                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}>{witness1.name}</td>
-                                                <td style={{ padding: '4px' }}>{witness2.name}</td>
-                                            </tr>
-                                            <tr>
-                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}><strong>{t('mobile')}</strong></td>
-                                                <td style={{ padding: '4px', borderRight: '1px solid #000' }}>{witness1.mobile}</td>
-                                                <td style={{ padding: '4px' }}>{witness2.mobile}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '18px' }}>
-                                        <div style={{ fontSize: '11px' }}>
-                                            {t('clerkSignature')}: <strong>{user?.name}</strong>
-                                        </div>
-                                        <div style={{ borderTop: '1px solid #000', width: '110px', textAlign: 'center', fontSize: '10px', paddingTop: '4px', fontWeight: 'bold' }}>
-                                            {t('clerkSignature')}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-
-                        {/* Modal Action Footer */}
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '20px', marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                            <button className="btn btn-secondary" onClick={() => setIsSignOffOpen(false)}>
-                                Cancel
-                            </button>
-                            <button className="btn btn-secondary" onClick={handlePrintDeclaration} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <Printer size={16} /> Print Declaration Form
-                            </button>
-                            <button
-                                className="btn btn-primary"
-                                onClick={handleCloseLedger}
-                                disabled={isClosingEvent}
-                                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                            >
-                                {isClosingEvent ? <span className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={16} />}
-                                Confirm & Close Ledger
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ClerkSignOffModal
+                show={isSignOffOpen}
+                onClose={() => setIsSignOffOpen(false)}
+                selectedEvent={selectedEvent}
+                user={user}
+                denominations={denominations}
+                setDenominations={setDenominations}
+                totalDenomValue={totalDenomValue}
+                noOfPersonsPaid={noOfPersonsPaid}
+                totalMoiReceived={totalMoiReceived}
+                differenceAmount={differenceAmount}
+                gpayAmount={gpayAmount}
+                setGpayAmount={setGpayAmount}
+                gpayMobNo={gpayMobNo}
+                setGpayMobNo={setGpayMobNo}
+                clerkPhone={clerkPhone}
+                setClerkPhone={setClerkPhone}
+                witness1={witness1}
+                setWitness1={setWitness1}
+                witness2={witness2}
+                setWitness2={setWitness2}
+                handlePrintDeclaration={handlePrintDeclaration}
+                handleCloseLedger={handleCloseLedger}
+                isClosingEvent={isClosingEvent}
+            />
 
             {/* Printable Receipt Container - Hidden on screen, visible during print */}
             <div style={{ display: 'none' }}>
-                <div ref={printRef} className="print-receipt" style={{
-                    padding: '4mm 4mm',
-                    background: '#fff',
-                    color: '#000',
-                    fontFamily: "monospace, Courier, 'Courier New'",
-                    width: '80mm',
-                    maxWidth: '80mm',
-                    margin: '0 auto',
-                    boxSizing: 'border-box'
-                }}>
-                    <style>{`
-                        @page {
-                            size: 80mm auto;
-                            margin: 0 !important;
-                        }
-                        @media print {
-                            html, body {
-                                height: auto !important;
-                                min-height: auto !important;
-                                overflow: visible !important;
-                                background: #fff !important;
-                                color: #000 !important;
-                                margin: 0 !important;
-                                padding: 0 !important;
-                            }
-                            .print-receipt {
-                                display: block !important;
-                                padding: 4mm 4mm !important;
-                                margin: 0 auto !important;
-                                width: 80mm !important;
-                                max-width: 80mm !important;
-                                font-size: 11px !important;
-                                line-height: 1.3 !important;
-                                box-sizing: border-box !important;
-                                font-family: monospace, Courier, 'Courier New' !important;
-                            }
-                            .print-receipt h2 {
-                                font-size: 14px !important;
-                                margin: 0 0 2px 0 !important;
-                                font-weight: 800 !important;
-                                text-transform: uppercase !important;
-                            }
-                            .print-receipt .sub-title {
-                                font-size: 8px !important;
-                                margin-bottom: 4px !important;
-                                font-weight: bold !important;
-                            }
-                            .print-receipt .section-header {
-                                font-size: 11px !important;
-                                font-weight: bold !important;
-                                margin: 4px 0 !important;
-                                text-transform: uppercase !important;
-                                text-align: center !important;
-                            }
-                            .print-receipt .dashed-divider {
-                                border-top: 1px dashed #000 !important;
-                                margin: 6px 0 !important;
-                                height: 0 !important;
-                            }
-                            .print-receipt table {
-                                width: 100% !important;
-                                border-collapse: collapse !important;
-                                font-size: 11px !important;
-                                margin: 2px 0 !important;
-                                table-layout: fixed !important;
-                            }
-                            .print-receipt td {
-                                padding: 1px 0 !important;
-                                vertical-align: top !important;
-                            }
-                        }
-                    `}</style>
-                    <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-                        <img src={splashImg} alt="Moi Vibaram Logo" style={{ height: '32px', maxWidth: '100px', objectFit: 'contain', marginBottom: '4px', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
-                        <h2 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: '800', letterSpacing: '0.5px' }}>{t('appName')}</h2>
-                        <div className="sub-title" style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>{t('traditionalDigitalLedger')}</div>
-                        <div className="sub-title" style={{ fontSize: '8px', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Contact : +91 80068 80050 </div>
-                    </div>
-
-                    <div className="dashed-divider" />
-
-                    {/* Section 1: Host Details */}
-                    <div className="section-header">{t('hostDetails')}</div>
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('date')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData ? new Date(printData.eventId?.date || printData.date).toLocaleDateString('en-GB') : ''}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('hostEventName')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData ? (printData.eventId?.eventName || printData.eventName || '') : ''}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('partyName')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{ownerDetails?.name || user?.name || ''}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('hostWifeName')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{ownerDetails?.spouseName || '—'}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('venue')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData ? (printData.eventId?.venue || printData.eventId?.location || printData.location || '') : ''}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <div className="dashed-divider" />
-
-                    {/* Section 2: Donor Details */}
-                    <div className="section-header">{t('donorDetails')}</div>
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('partyName')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData ? `${printData.initial ? printData.initial + ' ' : ''}${printData.partyName}` : ''}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('donorSpouseName')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData?.spouseName || '—'}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('town')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData?.location || '—'}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('occupation')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData?.occupation || '—'}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('donorMobile')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData?.mobile || '—'}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <div className="dashed-divider" />
-
-                    {/* Section 3: Contribution Details */}
-                    <div className="section-header">{t('contributionDetails')}</div>
-                    <table>
-                        <tbody>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('receiptSerialNo')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{getSerialNo()}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('paymentMethod')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData?.paymentType === 'gpay' ? (i18n.language?.startsWith('ta') ? 'ஜிபே' : 'GPay') : (i18n.language?.startsWith('ta') ? 'பணம்' : 'Cash')}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('paymentTime')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{printData ? new Date(printData.createdAt || Date.now()).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : ''}</td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('contributionAmount')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td style={{ fontWeight: 'bold' }}>{printData ? `${printData.cashAmount}/-` : ''}</td>
-                            </tr>
-                            <tr>
-                                <td colSpan="3" style={{ paddingLeft: '130px', fontSize: '10px', fontStyle: 'italic', wordBreak: 'break-word', paddingTop: '2px', paddingBottom: '4px' }}>
-                                    {printData ? numberToWords(printData.cashAmount, i18n.language?.startsWith('ta') ? 'ta' : 'en') : ''}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style={{ width: '115px', whiteSpace: 'nowrap' }}>{t('moiClerk')}</td>
-                                <td style={{ width: '15px', textAlign: 'center' }}>:</td>
-                                <td>{user?.name || ''}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <div className="dashed-divider" />
-
-                    {/* Section 4: App Summary */}
-                    <div style={{ padding: '8px 2px', textAlign: 'center' }}>
-                        <div className="section-header">{t('appSummaryTitle')}</div>
-                        <div style={{ fontSize: '10px', lineHeight: '1.5' }}>
-                            <div>{t('appSummaryBullet1')}</div>
-                            <div>{t('appSummaryBullet2')}</div>
-                            <div>{t('appSummaryBullet3')}</div>
-                            <div>{t('appSummaryBullet4')}</div>
-                        </div>
-                    </div>
-
-                    <div className="dashed-divider" />
-
-                    {/* Footer */}
-                    <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '11px', fontWeight: 'bold' }}>
-                        {t('thankYou')}
-                    </div>
-                    <div style={{ textAlign: 'center', marginTop: '4px', fontSize: '9px', color: '#333' }}>
-                        Powered by Leela Tech
-                    </div>
-                </div>
+                <PrintReceiptLayout
+                    ref={printRef}
+                    printData={printData}
+                    ownerDetails={ownerDetails}
+                    user={user}
+                    serialNo={getSerialNo()}
+                />
             </div>
 
             {/* Printable Declaration Sheet Container - Hidden on screen, visible during print */}
             {isSignOffOpen && (
                 <div style={{ display: 'none' }}>
-                    <div ref={declarationPrintRef} className="print-declaration-sheet" style={{
-                        padding: '20px 30px',
-                        background: '#fff',
-                        color: '#000',
-                        fontFamily: "'Outfit', sans-serif",
-                        width: '100%',
-                        maxWidth: '800px',
-                        margin: '0 auto',
-                        boxSizing: 'border-box',
-                        border: 'none',
-                        outline: 'none',
-                        boxShadow: 'none'
-                    }}>
-                        <style>{`
-                        @page {
-                            size: A4;
-                            margin: 10mm 12mm;
-                        }
-                        @media print {
-                            html, body {
-                                height: auto !important;
-                                min-height: auto !important;
-                                overflow: visible !important;
-                                background: #fff !important;
-                            }
-                            .print-declaration-sheet {
-                                display: block !important;
-                                padding: 10mm 15mm !important;
-                                margin: 0 auto !important;
-                                width: 100% !important;
-                                max-width: 100% !important;
-                                border: none !important;
-                                outline: none !important;
-                                box-shadow: none !important;
-                            }
-                            .print-page-break {
-                                page-break-after: always !important;
-                                break-after: page !important;
-                                display: block !important;
-                                box-sizing: border-box !important;
-                                height: 100% !important;
-                                page-break-inside: avoid !important;
-                                break-inside: avoid !important;
-                            }
-                        }
-                    `}</style>
-
-
-                        {/* PAGE 2: Declaration Summary */}
-                        <div style={{
-                            boxSizing: 'border-box',
-                            display: 'block',
-                            paddingTop: '10px'
-                        }}>
-                            <div style={{ display: 'block' }}>
-                                {/* Header */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <div>
-                                        <img src={splashImg} alt="Moi Vibaram Logo" style={{ height: '40px', objectFit: 'contain' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <img src={logoImg} alt="Leela Tech Logo" style={{ height: '32px', objectFit: 'contain' }} />
-                                        <img src={iconImg} alt="Leela Tech Icon" style={{ height: '32px', width: '32px', objectFit: 'contain' }} />
-                                        <div style={{ fontSize: '13px', fontWeight: '600', textAlign: 'right' }}>
-                                            {t('date')} : {new Date(selectedEvent?.date || new Date()).toLocaleDateString('en-IN').replace(/\//g, '/')}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div style={{ marginBottom: '8px' }}>
-                                    <div style={{ fontSize: '13px', color: '#333' }}>{t('welcomeText')}, <strong>{user?.name || 'Anand'}</strong></div>
-                                    <div style={{ fontSize: '13px', color: '#666', marginTop: '1px' }}>{t('atAGlance')}</div>
-                                </div>
-
-                                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-                                    <h2 style={{ fontSize: '24px', fontWeight: '800', letterSpacing: '1px', margin: '0 0 2px 0', color: '#000' }}>{t('appName')}</h2>
-                                    <div style={{ fontSize: '11px', color: '#555', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 600 }}>{t('tagline')}</div>
-                                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#000000', textDecoration: 'underline', marginTop: '4px', textTransform: 'uppercase' }}>{t('declarationForm')}</h3>
-                                </div>
-
-                                {/* Event Details Grid */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 20px', marginBottom: '12px', borderBottom: '1.5px solid #000', paddingBottom: '8px' }}>
-                                    <div style={{ fontSize: '13px' }}><strong>{t('eventName')}:</strong> {selectedEvent?.eventName || '—'}</div>
-                                    <div style={{ fontSize: '13px' }}><strong>{t('location')}:</strong> {selectedEvent?.location || '—'}</div>
-                                    <div style={{ fontSize: '13px' }}><strong>{t('venue')}:</strong> {selectedEvent?.venue || '—'}</div>
-                                    <div style={{ fontSize: '13px' }}><strong>{t('mobile')}:</strong> {clerkPhone || '—'}</div>
-                                </div>
-
-                                {/* Cash Report & Denominations columns */}
-                                <div style={{ display: 'flex', gap: '24px', marginBottom: '12px' }}>
-                                    {/* Left Side: Moi Cash Report */}
-                                    <div style={{ flex: 1.2 }}>
-                                        <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                            {t('moiCashReport')}
-                                        </h4>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                                <span>{t('noOfPersonsPaid')}</span>
-                                                <strong>{noOfPersonsPaid}</strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                                <span>{t('totalMoiReceived')}</span>
-                                                <strong>₹{totalMoiReceived.toLocaleString('en-IN')}</strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                                <span>{t('cashAmountText')}</span>
-                                                <strong>₹{totalDenomValue.toLocaleString('en-IN')}</strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                                <span>{t('gpayAmountText')}</span>
-                                                <strong>₹{(parseFloat(gpayAmount) || 0).toLocaleString('en-IN')}</strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #eee', paddingBottom: '3px' }}>
-                                                <span>{t('differenceAmountText')}</span>
-                                                <strong style={{ color: '#000000' }}>
-                                                    ₹{differenceAmount.toLocaleString('en-IN')}
-                                                </strong>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '3px', marginTop: '4px' }}>
-                                                <span>{t('gpayMobNoText')}</span>
-                                                <strong>{gpayMobNo || '—'}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Right Side: Denominations */}
-                                    <div style={{ flex: 1, borderLeft: '1px solid #eee', paddingLeft: '20px' }}>
-                                        <h4 style={{ fontSize: '13px', fontWeight: '800', color: '#000000', borderBottom: '1px solid #ccc', paddingBottom: '4px', marginBottom: '8px', textTransform: 'uppercase' }}>
-                                            {t('denominationsText')}
-                                        </h4>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                                            <tbody>
-                                                {[500, 200, 100, 50, 20, 10].map(denom => (
-                                                    <tr key={denom} style={{ borderBottom: '1px dashed #f0f0f0' }}>
-                                                        <td style={{ padding: '3px 0' }}>{denom} *</td>
-                                                        <td style={{ padding: '3px 0', textAlign: 'center' }}>
-                                                            {denominations[denom] || '0'}
-                                                        </td>
-                                                        <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '600' }}>
-                                                            ₹{((parseInt(denominations[denom]) || 0) * denom).toLocaleString('en-IN')}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                <tr style={{ borderBottom: '1px dashed #f0f0f0' }}>
-                                                    <td style={{ padding: '3px 0' }}>{t('others')} *</td>
-                                                    <td style={{ padding: '3px 0', textAlign: 'center' }}>
-                                                        {denominations.coins ? '—' : '0'}
-                                                    </td>
-                                                    <td style={{ padding: '3px 0', textAlign: 'right', fontWeight: '600' }}>
-                                                        ₹{(parseFloat(denominations.coins) || 0).toLocaleString('en-IN')}
-                                                    </td>
-                                                </tr>
-                                                <tr style={{ fontWeight: '800', borderTop: '1.5px solid #000', fontSize: '13px' }}>
-                                                    <td style={{ padding: '5px 0' }} colSpan={2}>{t('totalValue')}</td>
-                                                    <td style={{ padding: '5px 0', textAlign: 'right' }}>
-                                                        ₹{totalDenomValue.toLocaleString('en-IN')}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-
-                                {/* Cash Amount Words */}
-                                <div style={{ fontSize: '12px', borderTop: '1.5px solid #000', borderBottom: '1.5px solid #000', padding: '8px 0', marginBottom: '12px' }}>
-                                    <strong>{t('cashAmountWords')}:</strong> <span style={{ textTransform: 'capitalize', fontStyle: 'italic', marginLeft: '6px' }}>
-                                        {totalDenomValue > 0 ? numberToWords(totalDenomValue, i18n.language?.startsWith('ta') ? 'ta' : 'en') : (i18n.language?.startsWith('ta') ? 'பூஜ்யம் ரூபாய் மட்டும்' : 'Zero rupees only')}
-                                    </span>
-                                </div>
-
-                                {/* Witness Table and Stamp / Customer Signature Section */}
-                                <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', marginBottom: '15px' }}>
-                                    {/* Witnesses Table */}
-                                    <div style={{ flex: 1.5 }}>
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1px solid #000' }}>
-                                            <thead>
-                                                <tr style={{ background: '#f5f5f5', borderBottom: '1px solid #000' }}>
-                                                    <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>{t('particulars')}</th>
-                                                    <th style={{ padding: '5px', borderRight: '1px solid #000', textAlign: 'left' }}>{t('witness1')}</th>
-                                                    <th style={{ padding: '5px', textAlign: 'left' }}>{t('witness2')}</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr style={{ borderBottom: '1px solid #000' }}>
-                                                    <td style={{ padding: '5px', fontWeight: '600', borderRight: '1px solid #000' }}>{t('partyName')}</td>
-                                                    <td style={{ padding: '5px', borderRight: '1px solid #000' }}>{witness1.name || ' '}</td>
-                                                    <td style={{ padding: '5px' }}>{witness2.name || ' '}</td>
-                                                </tr>
-                                                <tr style={{ borderBottom: '1px solid #000' }}>
-                                                    <td style={{ padding: '5px', fontWeight: '600', borderRight: '1px solid #000' }}>{t('mobile')}</td>
-                                                    <td style={{ padding: '5px', borderRight: '1px solid #000' }}>{witness1.mobile || ' '}</td>
-                                                    <td style={{ padding: '5px' }}>{witness2.mobile || ' '}</td>
-                                                </tr>
-                                                <tr>
-                                                    <td style={{ padding: '15px 5px 5px 5px', fontWeight: '600', borderRight: '1px solid #000', verticalAlign: 'bottom' }}>{t('signature')}</td>
-                                                    <td style={{ padding: '15px 5px 5px 5px', borderRight: '1px solid #000', verticalAlign: 'bottom' }}>
-                                                        <div style={{ borderTop: '1px dashed #aaa', width: '100%', marginTop: '10px' }}></div>
-                                                    </td>
-                                                    <td style={{ padding: '15px 5px 5px 5px', verticalAlign: 'bottom' }}>
-                                                        <div style={{ borderTop: '1px dashed #aaa', width: '100%', marginTop: '10px' }}></div>
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Revenue Stamp & Customer Signature */}
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{
-                                            width: '80px',
-                                            height: '95px',
-                                            border: '1px dashed #888',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '11px',
-                                            color: '#555',
-                                            textAlign: 'center',
-                                            padding: '6px',
-                                            background: '#fafafa'
-                                        }}>
-                                            {t('revenueStamp')}
-                                        </div>
-                                        <div style={{ textAlign: 'center', marginTop: '5px' }}>
-                                            <div style={{ borderTop: '1px solid #000', width: '120px', margin: '0 auto 3px' }}></div>
-                                            <div style={{ fontSize: '12px', fontWeight: '600' }}>{t('customerSignature')}</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Clerk Info & Signature Footer */}
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: '1px solid #000', paddingTop: '10px', marginTop: '12px' }}>
-                                    <div style={{ fontSize: '12px' }}>
-                                        {t('clerkName')}: <strong>{user?.name || 'Anand'}</strong>
-                                        <span style={{ margin: '0 10px', color: '#ccc' }}>|</span>
-                                        {t('mobile')}: <strong>{clerkPhone || '—'}</strong>
-                                    </div>
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ borderTop: '1px solid #000', width: '150px', margin: '0 auto 3px' }}></div>
-                                        <div style={{ fontSize: '12px', fontWeight: '600' }}>{t('employeeSignature')}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Branding footer */}
-                            <div style={{ marginTop: '20px', borderTop: '1px solid #eee', paddingTop: '8px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '11px', fontWeight: '600', color: '#1a1a2e' }}>{t('addressLeelaTech')}</div>
-                                <div style={{ fontSize: '10px', color: '#555', marginTop: '2px' }}>
-                                    No -3m, 1st Ward, Pasumpon Nagar, Melagudalu, Theni -DT, Gudalur - 625518
-                                </div>
-                                <div style={{ fontSize: '10px', color: '#555', marginTop: '1px' }}>
-                                    Mob: 8006880050 | Email: anand@leelatech.co.in
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <PrintDeclarationLayout
+                        ref={declarationPrintRef}
+                        selectedEvent={selectedEvent}
+                        user={user}
+                        clerkPhone={clerkPhone}
+                        noOfPersonsPaid={noOfPersonsPaid}
+                        totalMoiReceived={totalMoiReceived}
+                        totalDenomValue={totalDenomValue}
+                        gpayAmount={gpayAmount}
+                        differenceAmount={differenceAmount}
+                        gpayMobNo={gpayMobNo}
+                        denominations={denominations}
+                        witness1={witness1}
+                        witness2={witness2}
+                    />
                 </div>
             )}
 
             {/* Printable A4 Ledger Container */}
             <div style={{ display: 'none' }}>
-                <div ref={ledgerPrintRef} className="print-a4-ledger" style={{
-                    padding: '10mm 10mm',
-                    background: '#fff',
-                    color: '#000',
-                    fontFamily: "'Outfit', -apple-system, sans-serif",
-                    width: '100%',
-                    boxSizing: 'border-box'
-                }}>
-                    <style>{`
-                        @page {
-                            size: A4 portrait;
-                            margin: 15mm 15mm 15mm 15mm;
-                        }
-                        @media print {
-                            html, body {
-                                height: auto !important;
-                                min-height: auto !important;
-                                overflow: visible !important;
-                                background: #fff !important;
-                                color: #000 !important;
-                            }
-                            .print-a4-ledger {
-                                display: block !important;
-                                padding: 10mm 15mm !important;
-                                margin: 0 !important;
-                                width: 100% !important;
-                                max-width: 100% !important;
-                                border: none !important;
-                                outline: none !important;
-                                box-shadow: none !important;
-                            }
-                            .print-a4-ledger table {
-                                width: 100% !important;
-                                border-collapse: collapse !important;
-                                font-size: 11px !important;
-                                margin-top: 15px !important;
-                            }
-                            .print-a4-ledger th {
-                                border: 1px solid #000 !important;
-                                padding: 6px 8px !important;
-                                font-weight: bold !important;
-                                text-align: left !important;
-                                background: #f2f2f2 !important;
-                                text-transform: uppercase !important;
-                                font-size: 10px !important;
-                            }
-                            .print-a4-ledger td {
-                                border: 1px solid #000 !important;
-                                padding: 6px 8px !important;
-                                vertical-align: top !important;
-                                line-height: 1.3 !important;
-                            }
-                            .print-a4-ledger .header-title {
-                                font-size: 20px !important;
-                                font-weight: bold !important;
-                                text-align: center !important;
-                                margin-bottom: 4px !important;
-                                text-transform: uppercase !important;
-                            }
-                            .print-a4-ledger .header-subtitle {
-                                font-size: 12px !important;
-                                text-align: center !important;
-                                margin-bottom: 20px !important;
-                                border-bottom: 1px solid #000 !important;
-                                padding-bottom: 10px !important;
-                            }
-                            .print-a4-ledger .footer-summary {
-                                margin-top: 20px !important;
-                                text-align: right !important;
-                                font-size: 12px !important;
-                                font-weight: bold !important;
-                            }
-                        }
-                    `}</style>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '15px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <img src={splashImg} alt="Moi Vibaram Logo" style={{ height: '44px', objectFit: 'contain' }} />
-                            <div style={{ textAlign: 'left' }}>
-                                <h1 style={{ margin: 0, fontSize: '16px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t('appName')}</h1>
-                                <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#555', fontWeight: 600 }}>{t('traditionalDigitalLedger')}</div>
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <img src={logoImg} alt="Leela Tech Logo" style={{ height: '32px', objectFit: 'contain' }} />
-                            {/* <img src={iconImg} alt="Leela Tech Icon" style={{ height: '32px', width: '32px', objectFit: 'contain' }} /> */}
-                            <div style={{ fontSize: '10px', fontWeight: '600', textAlign: 'right', lineHeight: '1.2' }}>
-                                <div>Contact: +91 80068 80050</div>
-                                <div>{ownerDetails?.name || ''}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '10px', background: '#f9f9f9', padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '11px' }}>
-                        <div><strong>{t('eventName')}:</strong> {selectedEvent?.eventName || '—'}</div>
-                        <div><strong>{t('date')}:</strong> {selectedEvent?.date ? new Date(selectedEvent.date).toLocaleDateString('en-IN') : '—'}</div>
-                        <div><strong>{t('venue')}:</strong> {selectedEvent?.venue || '—'}</div>
-                        <div><strong>{t('location')}:</strong> {selectedEvent?.location || '—'}</div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '15px', background: '#f9f9f9', padding: '8px 10px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '11px' }}>
-                        <div><strong>Total Entries:</strong> {sortedRows.length}</div>
-                        <div><strong>Clerk Name:</strong> {user?.name || '—'}</div>
-                        <div><strong>Total Amount:</strong> ₹{sortedRows.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0).toLocaleString('en-IN')}</div>
-                    </div>
-
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style={{ width: '40px', textAlign: 'center' }}>S.No</th>
-                                <th style={{ width: '250px' }}>Name</th>
-                                <th style={{ width: '100px' }}>Mobile</th>
-                                <th style={{ width: '130px' }}>Location</th>
-                                <th style={{ width: '90px' }}>Payment Type</th>
-                                <th style={{ width: '90px', textAlign: 'right' }}>Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedRows.map((r, i) => (
-                                <tr key={r._id || r.tempId || i}>
-                                    <td style={{ textAlign: 'center' }}>{i + 1}</td>
-                                    <td>
-                                        <div style={{ fontWeight: '600' }}>
-                                            {r.initial ? `${r.initial} . ` : ''}{r.partyName}{r.spouseName ? ` - ${r.spouseName}` : ''}
-                                        </div>
-                                        {r.occupation && (
-                                            <div style={{ fontSize: '9px', color: '#555', marginTop: '1px' }}>
-                                                ({r.occupation})
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td>{r.mobile || '—'}</td>
-                                    <td>{r.location || '—'}</td>
-                                    <td style={{ textTransform: 'capitalize' }}>
-                                        {r.paymentType === 'gpay' ? 'GPay' : 'Cash'}
-                                    </td>
-                                    <td style={{ textAlign: 'right', fontWeight: '500' }}>
-                                        ₹{(parseFloat(r.cashAmount) || 0).toLocaleString('en-IN')}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                    <div className="footer-summary">
-                        Total Amount Received: ₹{sortedRows.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0).toLocaleString('en-IN')}
-                    </div>
-
-                    {/* Branding footer */}
-                    <div style={{ marginTop: '30px', borderTop: '1px solid #000', paddingTop: '10px', textAlign: 'center', fontSize: '10px', color: '#333' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '11px', color: '#1a1a2e' }}>{t('addressLeelaTech')}</div>
-                        <div style={{ marginTop: '2px' }}>
-                            No -3m, 1st Ward, Pasumpon Nagar, Melagudalu, Theni -DT, Gudalur - 625518
-                        </div>
-                        <div style={{ marginTop: '1px' }}>
-                            Mob: 8006880050 | Email: anand@leelatech.co.in
-                        </div>
-                    </div>
-                </div>
+                <PrintA4LedgerLayout
+                    ref={ledgerPrintRef}
+                    event={selectedEvent}
+                    transactions={rows}
+                    clerkName={user?.name}
+                    ownerDetails={ownerDetails}
+                />
             </div>
         </div>
     );

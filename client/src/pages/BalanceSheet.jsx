@@ -191,7 +191,7 @@ export default function BalanceSheet() {
                                             {selected === p._id && (
                                                 <tr>
                                                     <td colSpan={8} style={{ padding: 0 }}>
-                                                        <div style={{ background: 'var(--glass)', padding: 16, borderBottom: '1px solid var(--border)' }}>
+                                                        <div style={{ background: 'var(--bg-card)', padding: 16, borderBottom: '1px solid var(--border)' }}>
                                                             <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>Transaction History with {p.partyName}</div>
                                                             <div className="table-wrap">
                                                                  <table className="table" style={{ fontSize: 12 }}>
