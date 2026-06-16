@@ -1062,6 +1062,14 @@ select.form-control option {
 }
 
 @media print {
+  html,
+  body,
+  #root {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -1076,6 +1084,9 @@ select.form-control option {
   .main-content {
     margin-left: 0;
     padding: 0;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
   }
 
   .main-content::before {
