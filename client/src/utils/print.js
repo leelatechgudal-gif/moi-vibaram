@@ -40,11 +40,18 @@ export const printElement = (element, onAfterPrint) => {
   const viewportMeta = document.querySelector('meta[name="viewport"]');
   const originalViewportContent = viewportMeta ? viewportMeta.getAttribute('content') : null;
 
+  const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
   if (viewportMeta) {
     // Check if printing a narrow receipt or a full-size declaration sheet
     const isReceipt = element.classList.contains('print-receipt') || element.querySelector('.print-receipt');
     const targetWidth = isReceipt ? '380' : '800';
-    viewportMeta.setAttribute('content', `width=${targetWidth}, initial-scale=1.0, maximum-scale=1.0, user-scalable=0`);
+    if (isMobileOrTablet) {
+      // On mobile/tablet, avoid setting initial-scale, maximum-scale, or user-scalable limits that cause viewport scaling/height lock in iOS
+      viewportMeta.setAttribute('content', `width=${targetWidth}`);
+    } else {
+      viewportMeta.setAttribute('content', `width=${targetWidth}, initial-scale=1.0, maximum-scale=1.0, user-scalable=0`);
+    }
   }
 
   // 6. Define cleanup handler
@@ -69,7 +76,8 @@ export const printElement = (element, onAfterPrint) => {
   window.addEventListener('afterprint', cleanup);
 
   // 8. Trigger printing with a minor timeout to allow DOM changes and viewport update to settle
+  const printDelay = isMobileOrTablet ? 500 : 150;
   setTimeout(() => {
     window.print();
-  }, 150);
+  }, printDelay);
 };

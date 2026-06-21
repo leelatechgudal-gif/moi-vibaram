@@ -12,7 +12,24 @@ const SEER_FIELDS = [
     { key: "arisMootai", icon: "🌾" },
     { key: "paathirangal", icon: "🥘" },
     { key: "others", icon: "📦" }
-];
+];const formatGiftItem = (key, item, t) => {
+    if (!item) return null;
+    const qty = parseFloat(item.quantity) || 0;
+    const val = parseFloat(item.value) || 0;
+
+    if (qty === 0 && val === 0) return null;
+
+    const name = t(key);
+    if (qty > 0 && val > 0) {
+        return t('giftFormatQtyVal', { name, quantity: qty, value: val });
+    } else if (qty > 0) {
+        return t('giftFormatQty', { name, quantity: qty });
+    } else if (val > 0) {
+        return t('giftFormatVal', { name, value: val });
+    }
+    return t('giftFormatNameOnly', { name });
+};
+
 
 const PrintA4LedgerLayout = React.forwardRef(({ event, transactions, clerkName, ownerDetails }, ref) => {
     const { t } = useTranslation();
@@ -31,9 +48,11 @@ const PrintA4LedgerLayout = React.forwardRef(({ event, transactions, clerkName, 
         return sortedTransactions.reduce((sum, r) => sum + (parseFloat(r.cashAmount) || 0), 0);
     }, [sortedTransactions]);
 
-    const seerEntriesCount = React.useMemo(() => {
-        return sortedTransactions.filter(r => r.seerVarisai && Object.values(r.seerVarisai).some(v => v && (parseFloat(v.value) > 0 || parseFloat(v.quantity) > 0 || (v.remarks && v.remarks.trim())))).length;
+    const giftTransactions = React.useMemo(() => {
+        return sortedTransactions.filter(r => r.seerVarisai && Object.values(r.seerVarisai).some(v => v && (parseFloat(v.value) > 0 || parseFloat(v.quantity) > 0 || (v.remarks && v.remarks.trim()))));
     }, [sortedTransactions]);
+
+    const seerEntriesCount = giftTransactions.length;
 
     return (
         <div ref={ref} className="print-a4-ledger" style={{
@@ -230,52 +249,53 @@ const PrintA4LedgerLayout = React.forwardRef(({ event, transactions, clerkName, 
                 <table>
                     <thead>
                         <tr>
-                            <th style={{ width: '40px', textAlign: 'center' }}>S.No</th>
-                            <th style={{ width: '220px' }}>Name</th>
-                            <th style={{ width: '130px' }}>Location</th>
-                            <th>Seer Varisai (Gifts) Details</th>
+                            <th style={{ width: '40px', textAlign: 'center' }}>{t('sNo')}</th>
+                            <th style={{ width: '220px' }}>{t('partyName')}</th>
+                            <th style={{ width: '100px' }}>{t('mobile')}</th>
+                            <th style={{ width: '130px' }}>{t('location')}</th>
+                            <th>{t('giftColumn')}</th>
+                            <th style={{ width: '90px', textAlign: 'right' }}>{t('valueLabel', { defaultValue: 'Value' })}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {sortedTransactions.map((r, i) => {
-                            const hasSeer = r.seerVarisai && Object.values(r.seerVarisai).some(v => v && (parseFloat(v.value) > 0 || parseFloat(v.quantity) > 0 || (v.remarks && v.remarks.trim())));
-                            return (
+                        {giftTransactions.length > 0 ? (
+                            giftTransactions.map((r, i) => (
                                 <tr key={r._id || i}>
                                     <td style={{ textAlign: 'center' }}>{i + 1}</td>
                                     <td>
                                         <div style={{ fontWeight: '600' }}>
-                                            {r.initial ? `${r.initial} . ` : ''}{r.partyName}{r.spouseName ? ` - ${r.spouseName}` : ''}
+                                            {r.initial ? `${r.initial} . ` : ''}{r.partyName}{r.spouseName ? ` ${t('and')} ${r.spouseName}` : ''}
                                         </div>
                                     </td>
+                                    <td>{r.mobile || '—'}</td>
                                     <td>{r.location || '—'}</td>
                                     <td>
-                                        {hasSeer ? (
-                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', fontSize: '10px' }}>
-                                                {SEER_FIELDS.map(f => {
-                                                    const item = r.seerVarisai[f.key];
-                                                    if (item && (parseFloat(item.value) > 0 || parseFloat(item.quantity) > 0 || (item.remarks && item.remarks.trim()))) {
-                                                        const details = [];
-                                                        if (parseFloat(item.quantity) > 0) details.push(`Qty: ${item.quantity}`);
-                                                        if (parseFloat(item.value) > 0) details.push(`₹${item.value}`);
-                                                        if (item.remarks && item.remarks.trim()) details.push(item.remarks.trim());
-                                                        return (
-                                                            <span key={f.key} style={{ background: '#f5f5f5', border: '1px solid #ccc', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                                                                <span>{f.icon}</span>
-                                                                <strong>{t(f.key)}</strong>
-                                                                {details.length > 0 && ` (${details.join(', ')})`}
-                                                            </span>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })}
-                                            </div>
-                                        ) : (
-                                            <span style={{ color: '#aaa' }}>—</span>
-                                        )}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            {SEER_FIELDS.map(f => {
+                                                const item = r.seerVarisai[f.key];
+                                                const formatted = formatGiftItem(f.key, item, t);
+                                                if (!formatted) return null;
+                                                return (
+                                                    <div key={f.key} style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <span>{f.icon}</span>
+                                                        <span>{formatted}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </td>
+                                    <td style={{ textAlign: 'right', fontWeight: '500' }}>
+                                        ₹{Object.values(r.seerVarisai || {}).reduce((sum, item) => sum + (parseFloat(item?.value) || 0), 0).toLocaleString('en-IN')}
                                     </td>
                                 </tr>
-                            );
-                        })}
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="6" style={{ textAlign: 'center', padding: '12px', color: '#888' }}>
+                                    {t('noData')}
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
 

@@ -17,24 +17,6 @@ export default function SeerVarisaiHistory({ transactions, person }) {
   const { t } = useTranslation();
   const partyName = person?.name || person?.partyName || "Party";
 
-  const renderSeerCheckboxes = (seerData) => {
-    return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '10px' }}>
-        {SEER_FIELDS.map(field => {
-          const item = seerData ? seerData[field.key] : null;
-          const isChecked = item && (item.value > 0 || item.quantity > 0 || item.remarks);
-          return (
-            <div key={field.key} style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: isChecked ? 1 : 0.3 }}>
-              <input type="checkbox" checked={!!isChecked} readOnly style={{ cursor: 'default', width: '12px', height: '12px' }} />
-              <span title={t(field.key)}>{field.icon} {t(field.key)}</span>
-              {isChecked && item.quantity > 0 && <span style={{ fontWeight: 'bold', fontSize: '9px' }}>({item.quantity})</span>}
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   const seerTransactions = transactions.filter(tx => {
     return tx.seerVarisai && Object.values(tx.seerVarisai).some(v => v && (v.value > 0 || v.quantity > 0 || v.remarks));
   });
@@ -64,11 +46,11 @@ export default function SeerVarisaiHistory({ transactions, person }) {
               <th style={{ border: '1px solid black', borderRight: 'none', background: '#fff', textAlign: 'center', padding: 8, color: 'black', fontWeight: 'bold' }}>{person?.spouseName || '—'}</th>
             </tr>
             <tr>
-              <th style={{ border: '1px solid black', borderLeft: 'none', background: '#e0e0e0', padding: 8, textAlign: 'center', width: '100px', color: 'black', fontWeight: 'bold' }}>Date</th>
-              <th style={{ border: '1px solid black', background: '#e0e0e0', padding: 8, textAlign: 'left', color: 'black', fontWeight: 'bold' }}>Event Name</th>
-              <th style={{ border: '1px solid black', background: '#e0e0e0', padding: 8, textAlign: 'left', color: 'black', fontWeight: 'bold' }}>Received Items</th>
-              <th style={{ border: '1px solid black', background: '#e0e0e0', padding: 8, textAlign: 'left', color: 'black', fontWeight: 'bold' }}>Given Items (Paid)</th>
-              <th className="no-print" style={{ border: '1px solid black', borderRight: 'none', background: '#e0e0e0', padding: 8, textAlign: 'center', width: '80px', color: 'black', fontWeight: 'bold' }}>Action</th>
+              <th style={{ border: '1px solid black', borderLeft: 'none', background: '#e0e0e0', padding: 8, textAlign: 'center', width: '100px', color: 'black', fontWeight: 'bold' }}>{t('date')}</th>
+              <th style={{ border: '1px solid black', background: '#e0e0e0', padding: 8, textAlign: 'left', color: 'black', fontWeight: 'bold' }}>{t('eventName')}</th>
+              <th style={{ border: '1px solid black', background: '#e0e0e0', padding: 8, textAlign: 'left', color: 'black', fontWeight: 'bold' }}>{t('giftColumn')}</th>
+              <th style={{ border: '1px solid black', background: '#e0e0e0', padding: 8, textAlign: 'left', color: 'black', fontWeight: 'bold' }}>{t('valueLabel', { defaultValue: 'Value' })}</th>
+              <th className="no-print" style={{ border: '1px solid black', borderRight: 'none', background: '#e0e0e0', padding: 8, textAlign: 'center', width: '80px', color: 'black', fontWeight: 'bold' }}>{t('edit')}</th>
             </tr>
           </thead>
           <tbody>
@@ -78,16 +60,44 @@ export default function SeerVarisaiHistory({ transactions, person }) {
                   {new Date(tx.date).toLocaleDateString("en-IN").replace(/\//g, '-')}
                 </td>
                 <td style={{ border: '1px solid black', padding: 8, color: 'black' }}>
-                  {tx.eventId?.eventName || tx.eventName || "—"}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className={`badge ${tx.type === 'received' ? 'badge-success' : 'badge-primary'}`} style={{ fontSize: '9px', padding: '2px 6px', textTransform: 'uppercase' }}>
+                      {tx.type === 'received' ? t('received') : t('paid')}
+                    </span>
+                    <span>{tx.eventId?.eventName || tx.eventName || "—"}</span>
+                  </div>
                 </td>
                 <td style={{ border: '1px solid black', padding: 8, color: 'black' }}>
-                  {tx.type === "received" ? renderSeerCheckboxes(tx.seerVarisai) : "—"}
+                  {SEER_FIELDS.map(f => {
+                    const item = tx.seerVarisai?.[f.key];
+                    if (item && (parseFloat(item.quantity) > 0 || parseFloat(item.value) > 0 || (item.remarks && item.remarks.trim()))) {
+                      const qty = parseFloat(item.quantity) || 0;
+                      return (
+                        <div key={f.key} style={{ margin: '4px 0', minHeight: '18px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>{f.icon}</span>
+                          <span>{t(f.key)} {qty > 0 ? `- ${qty}` : ''}</span>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
                 </td>
                 <td style={{ border: '1px solid black', padding: 8, color: 'black' }}>
-                  {tx.type === "paid" ? renderSeerCheckboxes(tx.seerVarisai) : "—"}
+                  {SEER_FIELDS.map(f => {
+                    const item = tx.seerVarisai?.[f.key];
+                    if (item && (parseFloat(item.quantity) > 0 || parseFloat(item.value) > 0 || (item.remarks && item.remarks.trim()))) {
+                      const val = parseFloat(item.value) || 0;
+                      return (
+                        <div key={f.key} style={{ margin: '4px 0', minHeight: '18px', display: 'flex', alignItems: 'center', fontWeight: '500' }}>
+                          {val > 0 ? `₹${val.toLocaleString('en-IN')}` : '—'}
+                        </div>
+                      );
+                    }
+                    return null;
+                  })}
                 </td>
-                <td className="no-print" style={{ border: '1px solid black', borderRight: 'none', padding: 8, textAlign: 'center' }}>
-                  <Link to={`/transactions/edit/${tx._id}`} className="auth-link">Edit</Link>
+                <td className="no-print" style={{ border: '1px solid black', borderRight: 'none', padding: 8, textAlign: 'center', verticalAlign: 'middle' }}>
+                  <Link to={`/transactions/edit/${tx._id}`} className="auth-link">{t('edit')}</Link>
                 </td>
               </tr>
             ))}

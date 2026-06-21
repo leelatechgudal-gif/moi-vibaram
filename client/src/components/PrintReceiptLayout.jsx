@@ -3,6 +3,35 @@ import { useTranslation } from 'react-i18next';
 import { numberToWords } from '../utils/numberToWords';
 import splashImg from '../../assets/splash.png';
 
+const SEER_FIELDS = [
+    { key: "dress", icon: "👗" },
+    { key: "thattuVarisai", icon: "🍽️" },
+    { key: "jewels", icon: "💍" },
+    { key: "marakkal", icon: "🌾" },
+    { key: "maalai", icon: "💐" },
+    { key: "arisMootai", icon: "🌾" },
+    { key: "paathirangal", icon: "🥘" },
+    { key: "others", icon: "📦" }
+];
+
+const formatGiftItem = (key, item, t) => {
+    if (!item) return null;
+    const qty = parseFloat(item.quantity) || 0;
+    const val = parseFloat(item.value) || 0;
+
+    if (qty === 0 && val === 0) return null;
+
+    const name = t(key);
+    if (qty > 0 && val > 0) {
+        return t('giftFormatQtyVal', { name, quantity: qty, value: val });
+    } else if (qty > 0) {
+        return t('giftFormatQty', { name, quantity: qty });
+    } else if (val > 0) {
+        return t('giftFormatVal', { name, value: val });
+    }
+    return t('giftFormatNameOnly', { name });
+};
+
 const PrintReceiptLayout = React.forwardRef(({ printData, ownerDetails, user, serialNo }, ref) => {
     const { t, i18n } = useTranslation();
 
@@ -192,6 +221,28 @@ const PrintReceiptLayout = React.forwardRef(({ printData, ownerDetails, user, se
                     </tr>
                 </tbody>
             </table>
+
+            {printData?.seerVarisai && Object.values(printData.seerVarisai).some(v => v && (parseFloat(v.value) > 0 || parseFloat(v.quantity) > 0)) && (
+                <>
+                    <div className="dashed-divider" />
+                    <div className="section-header">{t('giftDetails')}</div>
+                    <table>
+                        <tbody>
+                            {SEER_FIELDS.map(f => {
+                                const item = printData.seerVarisai[f.key];
+                                const formatted = formatGiftItem(f.key, item, t);
+                                if (!formatted) return null;
+                                return (
+                                    <tr key={f.key}>
+                                        <td style={{ width: '25px', textAlign: 'center' }}>{f.icon}</td>
+                                        <td>{formatted}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </>
+            )}
 
             <div className="dashed-divider" />
 
