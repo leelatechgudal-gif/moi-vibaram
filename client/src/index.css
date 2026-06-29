@@ -1062,29 +1062,13 @@ select.form-control option {
 }
 
 /* Screen rules when printing is active (toggled by our custom print utility)
-   This reflows the screen layout BEFORE window.print() is called so mobile engines calculate page heights correctly */
+   We keep body and html heights auto to ensure the print canvas calculates bounds properly,
+   but we do NOT hide #root or display .print-clone on screen to prevent viewport layout collapse. */
 body.printing-active,
 body.printing-active html {
   height: auto !important;
   min-height: auto !important;
   overflow: visible !important;
-}
-
-body.printing-active #root {
-  display: none !important;
-}
-
-body.printing-active .print-clone {
-  display: block !important;
-  width: 100% !important;
-  height: auto !important;
-  position: static !important;
-  overflow: visible !important;
-}
-
-body.printing-active .print-clone * {
-  overflow: visible !important;
-  max-height: none !important;
 }
 
 @media print {

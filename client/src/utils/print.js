@@ -36,30 +36,28 @@ export const printElement = (element, onAfterPrint) => {
   // 5. Activate the printing state on body
   document.body.classList.add('printing-active');
 
-  // 5.1 Adjust viewport dynamically for mobile/tablet print scaling in desktop mode
+  // 5.1 Adjust viewport dynamically only for desktop viewports if viewport tag is available
   const viewportMeta = document.querySelector('meta[name="viewport"]');
   const originalViewportContent = viewportMeta ? viewportMeta.getAttribute('content') : null;
 
   const isMobileOrTablet = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-  if (viewportMeta) {
+  if (viewportMeta && !isMobileOrTablet) {
     // Check if printing a narrow receipt or a full-size declaration sheet
     const isReceipt = element.classList.contains('print-receipt') || element.querySelector('.print-receipt');
     const targetWidth = isReceipt ? '380' : '800';
-    if (isMobileOrTablet) {
-      // On mobile/tablet, avoid setting initial-scale, maximum-scale, or user-scalable limits that cause viewport scaling/height lock in iOS
-      viewportMeta.setAttribute('content', `width=${targetWidth}`);
-    } else {
-      viewportMeta.setAttribute('content', `width=${targetWidth}, initial-scale=1.0, maximum-scale=1.0, user-scalable=0`);
-    }
+    viewportMeta.setAttribute('content', `width=${targetWidth}, initial-scale=1.0, maximum-scale=1.0, user-scalable=0`);
   }
+
+  // 5.2 Force a synchronous style recalculation and layout reflow
+  void document.body.offsetHeight;
 
   // 6. Define cleanup handler
   const cleanup = () => {
     document.body.classList.remove('printing-active');
 
     // Restore original viewport settings
-    if (viewportMeta && originalViewportContent) {
+    if (viewportMeta && originalViewportContent && !isMobileOrTablet) {
       viewportMeta.setAttribute('content', originalViewportContent);
     }
 
@@ -75,9 +73,12 @@ export const printElement = (element, onAfterPrint) => {
   // 7. Register cleanup for after-print event
   window.addEventListener('afterprint', cleanup);
 
-  // 8. Trigger printing with a minor timeout to allow DOM changes and viewport update to settle
-  const printDelay = isMobileOrTablet ? 500 : 150;
-  setTimeout(() => {
-    window.print();
-  }, printDelay);
+  // 8. Trigger printing after yielding control to the browser paint cycle to ensure style changes are visual
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.print();
+      }, isMobileOrTablet ? 300 : 50);
+    });
+  });
 };
